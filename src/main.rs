@@ -1,17 +1,19 @@
-use std::fs;
-use std::io::Write;
-
 use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
+use chrono::NaiveDate;
+use pulldown_cmark::{Event, HeadingLevel, Parser, Tag};
+use pulldown_cmark::{Options, TagEnd};
 use reqwest;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fs;
+use std::io::Write;
 use tokio;
-
-use chrono::NaiveDate;
-use pulldown_cmark::{Event, HeadingLevel, Parser, Tag};
 use url::Url;
+
+// TODO: Store the parsed entries in a database
+const JSON_OUPUT_FILE: &str = "twir.jsonl";
+const CONTENT_PATH: &str = "content";
 
 /// Entry from TWiR markdown file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,13 +21,12 @@ struct EntryId {
     title: String,
     url: Url,
     category: String,
-    // date: NaiveDate,
 }
 
-use pulldown_cmark::{Options, TagEnd};
-
-fn md_extensions() -> Options {
-    Options::all()
+#[derive(Debug, Serialize, Deserialize)]
+struct Entry {
+    id: EntryId,
+    date: NaiveDate,
 }
 
 fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
@@ -36,7 +37,7 @@ fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
     let mut current_url = String::new();
     let mut in_link = false;
 
-    let parser = Parser::new_ext(content, md_extensions());
+    let parser = Parser::new_ext(content, Options::all());
 
     for event in parser {
         match event {
@@ -92,19 +93,11 @@ fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
     entries
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Entry {
-    id: EntryId,
-    date: NaiveDate,
-}
-
 fn parse_file(content: &str) -> Vec<Entry> {
-    // TODO: Do something with meta
     let (meta, body) = content.split_once("\n\n").unwrap();
 
     let date = parse_date_from(meta).unwrap();
     let body = skip_intro(&body);
-
     let ids = content_to_entry_ids(&body);
 
     ids.into_iter().map(|id| Entry { id, date }).collect()
@@ -132,19 +125,25 @@ fn parse_date_from(meta: &str) -> Result<NaiveDate> {
     bail!("Did not find post date")
 }
 
-// TODO: Store the parsed entries in a database
-const JSON_OUPUT_FILE: &str = "twir.jsonl";
+/// Skips the intro of the TWiR markdown file
+/// by removing everything before the first `###` heading.
+fn skip_intro(body: &str) -> String {
+    body.split_once("###")
+        .map(|(_, content)| format!("###{}", content))
+        .unwrap_or_default()
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let owner = "rust-lang";
     let repo = "this-week-in-rust";
-    let path = "content";
     let branch = "master";
+
+    fs::create_dir_all(CONTENT_PATH)?;
 
     let url = format!(
         "https://api.github.com/repos/{}/{}/contents/{}?ref={}",
-        owner, repo, path, branch
+        owner, repo, CONTENT_PATH, branch
     );
 
     let client = reqwest::Client::new();
@@ -171,18 +170,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .text()
             .await?;
 
-        fs::create_dir_all(path)?;
-        fs::write(format!("{}/{}", path, file_name), &content)?;
         println!("Downloaded: {}", file_name);
-
-        println!("Parsing: {}", file_name);
-        // println!("Raw content: {}", content);
+        fs::write(format!("{}/{}", CONTENT_PATH, file_name), &content)?;
 
         let entries = parse_file(&content);
-
-        // for entry in entries {
-        //     println!("{:#?}", entry);
-        // }
 
         // Store the parsed entries in a database
         for entry in entries {
@@ -196,15 +187,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Successfully downloaded all files from the specified path.");
     Ok(())
 }
-
-/// Skips the intro of the TWiR markdown file
-/// by removing everything before the first `###` heading.
-fn skip_intro(body: &str) -> String {
-    body.split_once("###")
-        .map(|(_, content)| format!("###{}", content))
-        .unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
