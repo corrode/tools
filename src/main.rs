@@ -7,13 +7,20 @@ use reqwest;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs;
-use std::io::Write;
 use tokio;
 use url::Url;
 
-// TODO: Store the parsed entries in a database
-const JSON_OUPUT_FILE: &str = "twir.jsonl";
-const CONTENT_PATH: &str = "content";
+mod readable;
+mod text_cleanup;
+
+// Input
+const GITHUB_OWNER: &str = "rust-lang";
+const GITHUB_REPO: &str = "this-week-in-rust";
+const GITHUB_BRANCH: &str = "master";
+
+// Output
+const TWIR_OUT_PATH: &str = "content/twir";
+const INDEX_OUT_PATH: &str = "content/index";
 
 /// Entry from TWiR markdown file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,15 +28,25 @@ struct EntryId {
     title: String,
     url: Url,
     category: String,
+    date: NaiveDate,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Entry {
     id: EntryId,
-    date: NaiveDate,
+    body: Option<String>,
 }
 
-fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
+impl Entry {
+    /// Returns the unique identifier for this entry.
+    /// This is the urlencoded version of the URL with the date prepended.
+    fn id(&self) -> String {
+        let encoded = urlencoding::encode(&self.id.url.as_str());
+        format!("{}-{}", self.id.date, encoded)
+    }
+}
+
+fn content_to_entry_ids(content: &str, date: NaiveDate) -> Vec<EntryId> {
     let mut entries = Vec::new();
 
     let mut current_category = String::new();
@@ -58,8 +75,9 @@ fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
                 if let Ok(url) = Url::parse(&current_url) {
                     entries.push(EntryId {
                         title: current_title.clone(),
-                        url,
+                        url: url,
                         category: current_category.clone(),
+                        date,
                     });
                 } else {
                     println!("Failed to parse URL: {}", current_url);
@@ -93,14 +111,12 @@ fn content_to_entry_ids(content: &str) -> Vec<EntryId> {
     entries
 }
 
-fn parse_file(content: &str) -> Vec<Entry> {
+fn parse_file(content: &str) -> Vec<EntryId> {
     let (meta, body) = content.split_once("\n\n").unwrap();
 
     let date = parse_date_from(meta).unwrap();
     let body = skip_intro(&body);
-    let ids = content_to_entry_ids(&body);
-
-    ids.into_iter().map(|id| Entry { id, date }).collect()
+    content_to_entry_ids(&body, date)
 }
 
 /// Parses the date from this format:
@@ -135,32 +151,36 @@ fn skip_intro(body: &str) -> String {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let owner = "rust-lang";
-    let repo = "this-week-in-rust";
-    let branch = "master";
-
-    fs::create_dir_all(CONTENT_PATH)?;
+    fs::create_dir_all(TWIR_OUT_PATH)?;
+    fs::create_dir_all(INDEX_OUT_PATH)?;
 
     let url = format!(
-        "https://api.github.com/repos/{}/{}/contents/{}?ref={}",
-        owner, repo, CONTENT_PATH, branch
+        "https://api.github.com/repos/{}/{}/contents/content?ref={}",
+        GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH
     );
 
     let client = reqwest::Client::new();
-    let resp = client
+    let response = client
         .get(&url)
         .header("User-Agent", "Rust GitHub API Client")
         .send()
-        .await?
-        .json::<Vec<serde_json::Value>>()
         .await?;
+    dbg!(&response);
 
-    let output_file = fs::File::create(JSON_OUPUT_FILE)?;
-    let mut writer = std::io::BufWriter::new(output_file);
+    // Check that the response is successful
+    response.error_for_status_ref()?;
 
-    for item in resp {
+    let json = response.json::<Vec<serde_json::Value>>().await?;
+
+    for item in json {
         let file_name = item["name"].as_str().unwrap();
         let download_url = item["download_url"].as_str().unwrap();
+        let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
+
+        if fs::metadata(&download_file_path).is_ok() {
+            println!("Skipping: {}", file_name);
+            continue;
+        }
 
         let content = client
             .get(download_url)
@@ -171,16 +191,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
 
         println!("Downloaded: {}", file_name);
-        fs::write(format!("{}/{}", CONTENT_PATH, file_name), &content)?;
+        fs::write(download_file_path, &content)?;
 
-        let entries = parse_file(&content);
+        let entry_ids = parse_file(&content);
 
         // Store the parsed entries in a database
-        for entry in entries {
+        for id in entry_ids {
+            let response = readable::readable(&id.url).await;
+
+            let body = match response {
+                Ok(body) => body,
+                Err(e) => {
+                    println!("Failed to download: {}", id.url);
+                    println!("Error: {:?}", e);
+                    continue;
+                }
+            };
+
+            // println!("Scraped: {}", id.url);
+            // println!("Body: {:?}", body);
+
+            let entry = Entry {
+                id,
+                body: Some(body),
+            };
             let json = serde_json::to_string(&entry)?;
-            writer.write_all(json.as_bytes())?;
-            writer.write_all(b"\n")?;
-            writer.flush()?;
+            let path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id());
+            println!("Writing to: {}", path);
+            fs::write(path, json)?;
         }
     }
 
@@ -248,7 +286,8 @@ mod tests {
                 * [Async Closures MVP: Call for Testing!](https://blog.rust-lang.org/inside-rust/2024/08/09/async-closures-call-for-testing.html)
         "};
 
-        let entries = content_to_entry_ids(&content);
+        let date = NaiveDate::from_ymd(2024, 8, 21);
+        let entries = content_to_entry_ids(&content, date);
         println!("{entries:#?}");
         assert_eq!(entries.len(), 2);
 
@@ -271,7 +310,9 @@ mod tests {
                 * [This `code` in Cargo](https://example.com)
         "};
 
-        let entries = content_to_entry_ids(&content);
+        let date = NaiveDate::from_ymd(2024, 8, 21);
+        let entries = content_to_entry_ids(&content, date);
+
         println!("{entries:#?}");
         assert_eq!(entries.len(), 1);
 
