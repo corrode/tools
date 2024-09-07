@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
+use headless_chrome::Browser;
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
 use reqwest;
@@ -21,6 +22,7 @@ const GITHUB_BRANCH: &str = "master";
 // Output
 const TWIR_OUT_PATH: &str = "content/twir";
 const INDEX_OUT_PATH: &str = "content/index";
+const RAW_OUT_PATH: &str = "content/raw";
 
 /// Entry from TWiR markdown file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +36,7 @@ struct EntryId {
 #[derive(Debug, Serialize, Deserialize)]
 struct Entry {
     id: EntryId,
-    body: Option<String>,
+    html: Option<String>,
 }
 
 impl Entry {
@@ -153,6 +155,7 @@ fn skip_intro(body: &str) -> String {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;
+    fs::create_dir_all(RAW_OUT_PATH)?;
 
     let url = format!(
         "https://api.github.com/repos/{}/{}/contents/content?ref={}",
@@ -171,6 +174,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     response.error_for_status_ref()?;
 
     let json = response.json::<Vec<serde_json::Value>>().await?;
+
+    let browser = Browser::default()?;
 
     for item in json {
         let file_name = item["name"].as_str().unwrap();
@@ -197,34 +202,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Store the parsed entries in a database
         for id in entry_ids {
-            let response = readable::readable(&id.url).await;
+            let tab = browser.new_tab()?;
 
-            let body = match response {
-                Ok(body) => body,
+            if let Err(e) = tab.navigate_to(&url) {
+                println!("Failed to download: {}", id.url);
+                println!("Error: {:?}", e);
+                continue;
+            }
+
+            let html = match tab.get_content() {
+                Ok(html) => html,
                 Err(e) => {
-                    println!("Failed to download: {}", id.url);
+                    println!("Failed to get source: {}", id.url);
                     println!("Error: {:?}", e);
-                    continue;
+                    "".to_string()
                 }
             };
 
-            // println!("Scraped: {}", id.url);
-            // println!("Body: {:?}", body);
-
             let entry = Entry {
                 id,
-                body: Some(body),
+                html: Some(html.clone()),
             };
-            let json = serde_json::to_string(&entry)?;
+            let json = serde_json::to_string_pretty(&entry)?;
             let path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id());
             println!("Writing to: {}", path);
             fs::write(path, json)?;
+
+            // Store the raw HTML (for debugging)
+            let raw_path = format!("{}/{}.html", RAW_OUT_PATH, entry.id());
+            println!("Writing to: {}", raw_path);
+            fs::write(raw_path, html)?;
         }
     }
 
     println!("Successfully downloaded all files from the specified path.");
     Ok(())
 }
+
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
