@@ -2,17 +2,12 @@ use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
 use headless_chrome::Browser;
-use pulldown_cmark::{Event, HeadingLevel, Parser, Tag};
+use pulldown_cmark::{Event, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
-use reqwest;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs;
-use tokio;
 use url::Url;
-
-mod readable;
-mod text_cleanup;
 
 // Input
 const GITHUB_OWNER: &str = "rust-lang";
@@ -43,7 +38,7 @@ impl Entry {
     /// Returns the unique identifier for this entry.
     /// This is the urlencoded version of the URL with the date prepended.
     fn id(&self) -> String {
-        let encoded = urlencoding::encode(&self.id.url.as_str());
+        let encoded = urlencoding::encode(self.id.url.as_str());
         format!("{}-{}", self.id.date, encoded)
     }
 }
@@ -74,7 +69,7 @@ fn content_to_entry_ids(content: &str, date: NaiveDate) -> Vec<EntryId> {
                 if let Ok(url) = Url::parse(&current_url) {
                     entries.push(EntryId {
                         title: current_title.clone(),
-                        url: url,
+                        url,
                         category: current_category.clone(),
                         date,
                     });
@@ -114,7 +109,7 @@ fn parse_file(content: &str) -> Vec<EntryId> {
     let (meta, body) = content.split_once("\n\n").unwrap();
 
     let date = parse_date_from(meta).unwrap();
-    let body = skip_intro(&body);
+    let body = skip_intro(body);
     content_to_entry_ids(&body, date)
 }
 
@@ -283,7 +278,7 @@ mod tests {
             against a slice.
         "};
 
-        assert_eq!(skip_intro(&input), expected.trim_end());
+        assert_eq!(skip_intro(input), expected.trim_end());
     }
 
     #[test]
@@ -309,7 +304,7 @@ mod tests {
             against a slice.
         "};
 
-        assert_eq!(skip_intro(&input), expected.trim_end());
+        assert_eq!(skip_intro(input), expected.trim_end());
     }
 
     #[test]
@@ -321,7 +316,7 @@ mod tests {
             in a week, ever. 10 1.0 issues were closed this week, and 0 opened.
         "};
 
-        assert_eq!(skip_intro(&input), input);
+        assert_eq!(skip_intro(input), input);
     }
 
     #[test]
@@ -333,8 +328,8 @@ mod tests {
                 * [Async Closures MVP: Call for Testing!](https://blog.rust-lang.org/inside-rust/2024/08/09/async-closures-call-for-testing.html)
         "};
 
-        let date = NaiveDate::from_ymd(2024, 8, 21);
-        let entries = content_to_entry_ids(&content, date);
+        let date = NaiveDate::from_ymd_opt(2024, 8, 21).unwrap();
+        let entries = content_to_entry_ids(content, date);
         println!("{entries:#?}");
         assert_eq!(entries.len(), 2);
 
@@ -357,8 +352,8 @@ mod tests {
                 * [This `code` in Cargo](https://example.com)
         "};
 
-        let date = NaiveDate::from_ymd(2024, 8, 21);
-        let entries = content_to_entry_ids(&content, date);
+        let date = NaiveDate::from_ymd_opt(2024, 8, 21).unwrap();
+        let entries = content_to_entry_ids(content, date);
 
         println!("{entries:#?}");
         assert_eq!(entries.len(), 1);
@@ -378,7 +373,7 @@ mod tests {
 
         let date = parse_date_from(meta);
         assert!(date.is_ok());
-        assert_eq!(date.unwrap(), NaiveDate::from_ymd(2024, 8, 21));
+        assert_eq!(date.unwrap(), NaiveDate::from_ymd_opt(2024, 8, 21).unwrap());
     }
 
     // Old TWiR format
@@ -391,7 +386,7 @@ mod tests {
 
         let date = parse_date_from(meta);
         assert!(date.is_ok());
-        assert_eq!(date.unwrap(), NaiveDate::from_ymd(2024, 8, 21));
+        assert_eq!(date.unwrap(), NaiveDate::from_ymd_opt(2024, 8, 21).unwrap());
     }
 
     #[test]
