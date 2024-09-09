@@ -220,8 +220,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let tab = browser.new_tab()?;
 
-            log::info!("Crawling {url}");
-            if let Err(e) = tab.navigate_to(&url) {
+            log::info!("Crawling {}", id.url); // Changed from {url} to {id.url}
+            if let Err(e) = tab.navigate_to(id.url.as_str()) {
+                // Changed from &url to id.url.as_str()
                 log::error!("Failed to download: {}; Error: {e}", id.url);
                 continue;
             }
