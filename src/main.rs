@@ -28,19 +28,18 @@ struct EntryId {
     date: NaiveDate,
 }
 
+impl std::fmt::Display for EntryId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let encoded = urlencoding::encode(self.url.as_str());
+        write!(f, "{}-{}", self.date, encoded)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Entry {
     id: EntryId,
-    html: Option<String>,
-}
-
-impl Entry {
-    /// Returns the unique identifier for this entry.
-    /// This is the urlencoded version of the URL with the date prepended.
-    fn id(&self) -> String {
-        let encoded = urlencoding::encode(self.id.url.as_str());
-        format!("{}-{}", self.id.date, encoded)
-    }
+    /// Raw text of website after HTML tags got removed
+    text: Option<String>,
 }
 
 fn content_to_entry_ids(content: &str, date: NaiveDate) -> Vec<EntryId> {
@@ -162,6 +161,8 @@ fn skip_intro(body: &str) -> String {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init();
+
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
@@ -172,27 +173,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let client = reqwest::Client::new();
-    let response = client
+    let twir_api_response = client
         .get(&url)
         .header("User-Agent", "Rust GitHub API Client")
         .send()
         .await?;
-    dbg!(&response);
 
     // Check that the response is successful
-    response.error_for_status_ref()?;
+    twir_api_response.error_for_status_ref()?;
 
-    let json = response.json::<Vec<serde_json::Value>>().await?;
+    let items = twir_api_response.json::<Vec<serde_json::Value>>().await?;
 
     let browser = Browser::default()?;
 
-    for item in json {
+    for item in items {
         let file_name = item["name"].as_str().unwrap();
         let download_url = item["download_url"].as_str().unwrap();
         let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
 
         if fs::metadata(&download_file_path).is_ok() {
-            println!("Skipping: {}", file_name);
+            log::info!("Skipping: {}", file_name);
             continue;
         }
 
@@ -204,43 +204,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .text()
             .await?;
 
-        println!("Downloaded: {}", file_name);
+        log::trace!("Downloaded: {}", file_name);
         fs::write(download_file_path, &content)?;
 
         let entry_ids = parse_file(&content);
 
         // Store the parsed entries in a database
         for id in entry_ids {
-            let tab = browser.new_tab()?;
+            let entry_path = format!("{INDEX_OUT_PATH}/{}.json", id);
 
-            if let Err(e) = tab.navigate_to(&url) {
-                println!("Failed to download: {}", id.url);
-                println!("Error: {:?}", e);
+            if fs::metadata(&entry_path).is_ok() {
+                log::info!("Entry exists; skipping: {}", id);
                 continue;
             }
 
-            let html = match tab.get_content() {
-                Ok(html) => html,
+            let tab = browser.new_tab()?;
+
+            log::info!("Crawling {url}");
+            if let Err(e) = tab.navigate_to(&url) {
+                log::error!("Failed to download: {}; Error: {e}", id.url);
+                continue;
+            }
+
+            let text = match tab.get_content() {
+                Ok(html) => {
+                    log::trace!("HTML: {html}");
+                    let cleaned = nanohtml2text::html2text(&html);
+                    log::debug!("Cleaned: {cleaned}");
+                    Some(cleaned)
+                }
                 Err(e) => {
-                    println!("Failed to get source: {}", id.url);
-                    println!("Error: {:?}", e);
-                    "".to_string()
+                    log::warn!("Failed to get source: {}. Error :{e}", id.url);
+                    None
                 }
             };
 
-            let entry = Entry {
-                id,
-                html: Some(html.clone()),
-            };
+            let entry = Entry { id, text };
             let json = serde_json::to_string_pretty(&entry)?;
-            let path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id());
-            println!("Writing to: {}", path);
-            fs::write(path, json)?;
-
-            // Store the raw HTML (for debugging)
-            let raw_path = format!("{}/{}.html", RAW_OUT_PATH, entry.id());
-            println!("Writing to: {}", raw_path);
-            fs::write(raw_path, html)?;
+            log::debug!("Writing to: {entry_path}");
+            fs::write(entry_path, json)?;
         }
     }
 
