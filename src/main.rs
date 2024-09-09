@@ -60,10 +60,7 @@ fn content_to_entry_ids(content: &str, date: NaiveDate) -> Vec<EntryId> {
 
     for event in parser {
         match event {
-            Event::Start(Tag::Heading {
-                level: HeadingLevel::H3,
-                ..
-            }) => {
+            Event::Start(Tag::Heading { level: _level, .. }) => {
                 current_category = String::new();
             }
             Event::End(TagEnd::Heading(_)) => {}
@@ -144,11 +141,28 @@ fn parse_date_from(meta: &str) -> Result<NaiveDate> {
 }
 
 /// Skips the intro of the TWiR markdown file
-/// by removing everything before the first `###` heading.
 fn skip_intro(body: &str) -> String {
-    body.split_once("###")
-        .map(|(_, content)| format!("###{}", content))
-        .unwrap_or_default()
+    let mut in_header = false;
+    let mut header_line = 0;
+
+    for (i, line) in body.lines().enumerate() {
+        if line.trim_start().starts_with("#") {
+            in_header = true;
+            header_line = i;
+            continue;
+        }
+
+        if in_header && line.trim_start().starts_with("-") {
+            return body
+                .lines()
+                .skip(header_line)
+                .collect::<Vec<&str>>()
+                .join("\n");
+        }
+    }
+
+    // not found
+    body.to_string()
 }
 
 #[tokio::main]
@@ -246,49 +260,68 @@ mod tests {
 
     use super::*;
 
-    /// Skips the intro of the TWiR markdown file
-    /// by removing everything before the first `###` heading.
-    fn skip_intro(body: &str) -> String {
-        body.split_once("###")
-            .map(|(_, content)| format!("###{}", content))
-            .unwrap_or_default()
+    #[test]
+    fn test_skip_intro() {
+        let input = indoc! {"
+            # What's cooking on master?
+        
+            89 pull requests were merged this week. This is the most pull requests merged
+            in a week, ever. 10 1.0 issues were closed this week, and 0 opened.
+            
+            ## Breaking Changes
+             
+            - Unique vector patterns (matching on a `~[]`) [has been removed from the
+            language](https://github.com/mozilla/rust/pull/12244). One can still match
+            against a slice.
+        "};
+
+        let expected = indoc! {"
+            ## Breaking Changes
+             
+            - Unique vector patterns (matching on a `~[]`) [has been removed from the
+            language](https://github.com/mozilla/rust/pull/12244). One can still match
+            against a slice.
+        "};
+
+        assert_eq!(skip_intro(&input), expected.trim_end());
     }
 
     #[test]
-    fn test_normal_case() {
-        let input = "Some intro\nMore intro\n### First heading\nContent".to_string();
-        let expected = "### First heading\nContent".to_string();
-        assert_eq!(skip_intro(&input), expected);
+    fn test_skip_intro_header3() {
+        let input = indoc! {"
+            ## What's cooking on master?
+        
+            89 pull requests were merged this week. This is the most pull requests merged
+            in a week, ever. 10 1.0 issues were closed this week, and 0 opened.
+            
+            ### Breaking Changes
+             
+            - Unique vector patterns (matching on a `~[]`) [has been removed from the
+            language](https://github.com/mozilla/rust/pull/12244). One can still match
+            against a slice.
+        "};
+
+        let expected = indoc! {"
+            ### Breaking Changes
+             
+            - Unique vector patterns (matching on a `~[]`) [has been removed from the
+            language](https://github.com/mozilla/rust/pull/12244). One can still match
+            against a slice.
+        "};
+
+        assert_eq!(skip_intro(&input), expected.trim_end());
     }
 
     #[test]
-    fn test_no_heading() {
-        let input = "Some content without headings".to_string();
-        assert_eq!(skip_intro(&input), "");
-    }
+    fn test_skip_intro_not_found() {
+        let input = indoc! {"
+            ## What's cooking on master?
+        
+            89 pull requests were merged this week. This is the most pull requests merged
+            in a week, ever. 10 1.0 issues were closed this week, and 0 opened.
+        "};
 
-    #[test]
-    fn test_only_heading() {
-        let input = "### Heading".to_string();
-        assert_eq!(skip_intro(&input), "### Heading");
-    }
-
-    #[test]
-    fn test_multiple_headings() {
-        let input = "Intro\n### First\n### Second".to_string();
-        let expected = "### First\n### Second".to_string();
-        assert_eq!(skip_intro(&input), expected);
-    }
-
-    #[test]
-    fn test_heading_at_start() {
-        let input = "### No intro\nJust content".to_string();
         assert_eq!(skip_intro(&input), input);
-    }
-
-    #[test]
-    fn test_empty_string() {
-        assert_eq!(skip_intro(""), "");
     }
 
     #[test]
