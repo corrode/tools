@@ -217,6 +217,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Store the parsed entries in a database
         for id in entry_ids {
+            let supported_protocols = ["http", "https"];
+
+            if !supported_protocols
+                .iter()
+                .any(|protocol| id.url.scheme() == *protocol)
+            {
+                log::info!("Skipping unsupported protocol: {}", id.url);
+                continue;
+            }
+
             let ignored_urls = ["github.com", "reddit.com", "meetup.com"];
 
             if ignored_urls
@@ -234,31 +244,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            let tab = browser.new_tab()?;
-            tab.set_default_timeout(time::Duration::from_secs(30));
-
-            log::info!("Crawling {}", id.url); // Changed from {url} to {id.url}
-            if let Err(e) = tab.navigate_to(id.url.as_str()) {
-                // Changed from &url to id.url.as_str()
-                log::error!("Failed to download: {}; Error: {e}", id.url);
-                continue;
-            }
-
-            if tab.wait_until_navigated().is_err() {
-                log::error!("Failed to wait for navigation: {}", id.url);
-                continue;
-            }
-
-            let text = match tab.get_content() {
-                Ok(html) => {
-                    log::trace!("HTML: {html}");
-                    let cleaned = nanohtml2text::html2text(&html);
-                    log::debug!("Cleaned: {cleaned}");
-                    Some(cleaned)
-                }
+            let text = match crawl(&browser, &id.url) {
+                Ok(text) => text,
                 Err(e) => {
-                    log::warn!("Failed to get source: {}. Error :{e}", id.url);
-                    None
+                    log::error!("Failed to download: {}; Error: {e}", id.url);
+                    continue;
                 }
             };
 
@@ -271,6 +261,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Successfully downloaded all files from the specified path.");
     Ok(())
+}
+
+fn crawl(browser: &Browser, url: &Url) -> Result<Option<String>> {
+    log::info!("Crawling {}", url); // Changed from {url} to {id.url}
+
+    let tab = browser.new_tab()?;
+    tab.set_default_timeout(time::Duration::from_secs(30));
+
+    if let Err(e) = tab.navigate_to(url.as_str()) {
+        return Err(e);
+    }
+
+    if let Err(e) = tab.wait_until_navigated() {
+        log::error!("Failed to wait for navigation: {}", url);
+        return Err(e);
+    }
+
+    let text = match tab.get_content() {
+        Ok(html) => {
+            log::trace!("HTML: {html}");
+            let cleaned = nanohtml2text::html2text(&html);
+            log::debug!("Cleaned: {cleaned}");
+            Some(cleaned)
+        }
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    Ok(text)
 }
 
 #[cfg(test)]
