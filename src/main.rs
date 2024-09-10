@@ -2,11 +2,13 @@ use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
 use headless_chrome::Browser;
+use headless_chrome::LaunchOptionsBuilder;
 use pulldown_cmark::{Event, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs;
+use std::time;
 use url::Url;
 
 // Input
@@ -184,7 +186,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let items = twir_api_response.json::<Vec<serde_json::Value>>().await?;
 
-    let browser = Browser::default()?;
+    let opt = LaunchOptionsBuilder::default()
+        .headless(true)
+        .idle_browser_timeout(time::Duration::from_millis(60 * 60_000)) // Set to a very long time to avoid timeouts in general
+        .build()?;
+    let browser = Browser::new(opt)?;
 
     for item in items {
         let file_name = item["name"].as_str().unwrap();
@@ -211,6 +217,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Store the parsed entries in a database
         for id in entry_ids {
+            let ignored_urls = ["github.com", "reddit.com", "meetup.com"];
+
+            if ignored_urls
+                .iter()
+                .any(|url| id.url.to_string().contains(url))
+            {
+                log::info!("Skipping ignored URL: {}", id.url);
+                continue;
+            }
+
             let entry_path = format!("{INDEX_OUT_PATH}/{}.json", id);
 
             if fs::metadata(&entry_path).is_ok() {
@@ -219,11 +235,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             let tab = browser.new_tab()?;
+            tab.set_default_timeout(time::Duration::from_secs(30));
 
             log::info!("Crawling {}", id.url); // Changed from {url} to {id.url}
             if let Err(e) = tab.navigate_to(id.url.as_str()) {
                 // Changed from &url to id.url.as_str()
                 log::error!("Failed to download: {}; Error: {e}", id.url);
+                continue;
+            }
+
+            if tab.wait_until_navigated().is_err() {
+                log::error!("Failed to wait for navigation: {}", id.url);
                 continue;
             }
 
