@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
+use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
 use headless_chrome::LaunchOptionsBuilder;
 use pulldown_cmark::{Event, Parser, Tag};
@@ -20,6 +21,7 @@ const GITHUB_BRANCH: &str = "master";
 const TWIR_OUT_PATH: &str = "content/twir";
 const INDEX_OUT_PATH: &str = "content/index";
 const RAW_OUT_PATH: &str = "content/raw";
+const SCREENSHOT_OUT_PATH: &str = "content/screenshots";
 
 /// Entry from TWiR markdown file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,6 +170,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
+    fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
 
     let url = format!(
         "https://api.github.com/repos/{}/{}/contents/content?ref={}",
@@ -227,7 +230,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            let ignored_urls = ["github.com", "reddit.com", "meetup.com"];
+            let ignored_urls = ["github.com", "reddit.com", "meetup.com", "twitter.com"];
 
             if ignored_urls
                 .iter()
@@ -244,7 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            let text = match crawl(&browser, &id.url) {
+            let text = match crawl(&browser, &id) {
                 Ok(text) => text,
                 Err(e) => {
                     log::error!("Failed to download: {}; Error: {e}", id.url);
@@ -263,25 +266,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn crawl(browser: &Browser, url: &Url) -> Result<Option<String>> {
-    log::info!("Crawling {}", url); // Changed from {url} to {id.url}
+fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> {
+    log::info!("Crawling {}", entry_id.url); // Changed from {url} to {id.url}
 
     let tab = browser.new_tab()?;
     tab.set_default_timeout(time::Duration::from_secs(30));
 
-    if let Err(e) = tab.navigate_to(url.as_str()) {
+    if let Err(e) = tab.navigate_to(entry_id.url.as_str()) {
         return Err(e);
     }
 
     if let Err(e) = tab.wait_until_navigated() {
-        log::error!("Failed to wait for navigation: {}", url);
+        log::error!("Failed to wait for navigation: {}", entry_id.url);
         return Err(e);
     }
 
     let text = match tab.get_content() {
         Ok(html) => {
             log::trace!("HTML: {html}");
-            let cleaned = nanohtml2text::html2text(&html);
+            let cleaned = html2text::from_read(html.as_bytes(), 500);
             log::debug!("Cleaned: {cleaned}");
             Some(cleaned)
         }
@@ -289,6 +292,17 @@ fn crawl(browser: &Browser, url: &Url) -> Result<Option<String>> {
             return Err(e);
         }
     };
+
+    // "Debugging": create screenshot and store
+    let screenshot_path = format!("{SCREENSHOT_OUT_PATH}/{}.jpg", entry_id);
+    log::info!("Creating screenshot {screenshot_path}");
+    let screenshot =
+        tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
+    fs::write(screenshot_path, &screenshot)?;
+    log::info!("Done creating screenshot");
+
+    // Close tab
+    tab.close(true)?;
 
     Ok(text)
 }
