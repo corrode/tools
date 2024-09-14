@@ -12,6 +12,9 @@ use std::fs;
 use std::time;
 use url::Url;
 
+// List of unsupported file extensions for crawling
+const EXCLUDED_EXTENSIONS: [&str; 6] = ["png", "jpg", "jpeg", "webp", "avif", "pdf"];
+
 // Input
 const GITHUB_OWNER: &str = "rust-lang";
 const GITHUB_REPO: &str = "this-week-in-rust";
@@ -163,6 +166,13 @@ fn skip_intro(body: &str) -> String {
     body.to_string()
 }
 
+// Crawl a page if it doesn't end an extension on the list of unsupported extensions
+fn should_crawl(url: &Url) -> bool {
+    EXCLUDED_EXTENSIONS
+        .iter()
+        .all(|ext| !url.path().ends_with(ext))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
@@ -247,7 +257,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            let text = match crawl(&browser, &id) {
+            // Only crawl certain file extensions like `.html` or no extensions at all like `/` at the end
+            if !should_crawl(&id.url) {
+                log::info!("Skipping unsupported file extension: {}", id.url);
+                continue;
+            }
+
+            let text = match crawl(&browser, &id).await {
                 Ok(text) => text,
                 Err(e) => {
                     log::error!("Failed to download: {}; Error: {e}", id.url);
@@ -266,8 +282,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> {
+async fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> {
     log::info!("Crawling {}", entry_id.url); // Changed from {url} to {id.url}
+
+    // Quick check: if reqwest returns a known error code, return an error
+    let response = reqwest::get(entry_id.url.as_str()).await?;
+    if response.status() == 404 || response.status() == 410 {
+        bail!("404: Not Found or moved {}", entry_id.url);
+    }
 
     let tab = browser.new_tab()?;
     tab.set_default_timeout(time::Duration::from_secs(30));
