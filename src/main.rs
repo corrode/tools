@@ -240,11 +240,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            let ignored_urls = ["github.com", "reddit.com", "meetup.com", "twitter.com"];
+            let ignored_urls = [
+                "github.com",
+                "reddit.com",
+                "meetup.com",
+                "twitter.com",
+                "vimeo.com",
+                "irc.mozilla.org",
+            ];
 
             if ignored_urls
                 .iter()
                 .any(|url| id.url.to_string().contains(url))
+            {
+                log::info!("Skipping ignored URL: {}", id.url);
+                continue;
+            }
+
+            // Skip some common URLs if URL starts with ignored URL
+            if [
+                "https://www.rust-lang.org/governance",
+                "https://www.rust-lang.org/team",
+                "http://users.rust-lang.org",
+                "https://users.rust-lang.org",
+                "https://botbot.me",
+                "http://rust.jobboard.io",
+                "http://cfp.rust-belt-rust.com/",
+            ]
+            .iter()
+            .any(|url| id.url.to_string().starts_with(url))
             {
                 log::info!("Skipping ignored URL: {}", id.url);
                 continue;
@@ -266,7 +290,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let text = match crawl(&browser, &id).await {
                 Ok(text) => text,
                 Err(e) => {
-                    log::error!("Failed to download: {}; Error: {e}", id.url);
+                    log::error!("Failed to download: {} | Error: {e}", id.url);
                     continue;
                 }
             };
@@ -287,7 +311,7 @@ async fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> 
 
     // Quick check: if reqwest returns a known error code, return an error
     let response = reqwest::get(entry_id.url.as_str()).await?;
-    if response.status() == 404 || response.status() == 410 {
+    if response.status() == 403 || response.status() == 404 || response.status() == 410 {
         bail!("404: Not Found or moved {}", entry_id.url);
     }
 
@@ -325,6 +349,13 @@ async fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> 
 
     // Close tab
     tab.close(true)?;
+
+    if text
+        .as_ref()
+        .map_or(false, |t| t.contains("Verifying you are human"))
+    {
+        bail!("Captcha detected: {}", entry_id.url);
+    }
 
     Ok(text)
 }
