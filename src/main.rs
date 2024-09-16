@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
 use headless_chrome::LaunchOptionsBuilder;
+use headless_chrome::Tab;
 use pulldown_cmark::{Event, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
 use serde::Deserialize;
@@ -265,12 +266,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "https://users.rust-lang.org",
                 "https://botbot.me",
                 "http://rust.jobboard.io",
+                "https://chat.mibbit.com/",
                 "http://cfp.rust-belt-rust.com/",
+                // Always shows the current calendar month, which isn't helpful
+                "https://www.google.com/calendar/embed",
+                // This website was for finding Rustaceans. It's no longer available.
+                "https://www.rustaceans.org/",
+                // No longer available
+                "http://www.suspectsemantics.com",
             ]
             .iter()
             .any(|url| id.url.to_string().starts_with(url))
             {
                 log::info!("Skipping ignored URL: {}", id.url);
+                continue;
+            }
+
+            // Skip if URL is exact match
+            let exact_matches = vec!["http://rust-lang.org/"];
+            if exact_matches.iter().any(|url| id.url.to_string() == *url) {
+                log::info!("Skipping exact match URL: {}", id.url);
                 continue;
             }
 
@@ -306,6 +321,85 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn remove_cookie_banner(tab: &Tab) -> Result<()> {
+    // List of common selectors for cookie banners
+    let selectors = [
+        "#lightbox", // Youtube
+        "#cookie-banner",
+        ".cookie-banner",
+        "#cookieConsent",
+        ".cookie-consent",
+        "[class*='cookie-consent']",
+        "[id*='cookie-consent']",
+        "[class*='cookie-notice']",
+        "[id*='cookie-notice']",
+        "[class*='cookie-policy']",
+        "[id*='cookie-policy']",
+        "#onetrust-consent-sdk",
+        ".CookieConsent",
+        "#pz-gdpr",
+        ".cookie-disclaimer",
+        ".cookie-banner",
+        ".cookie-notice",
+        ".cookie-policy",
+        ".cookie-popup",
+        ".cookie-accept",
+        ".cookie-accepts",
+        ".cookie-acceptance",
+        ".cookie-acceptance-banner",
+        ".cookie-acceptance-container",
+        ".cookie-acceptance-overlay",
+        ".cookie-acceptance-wrapper",
+        ".cookie-accepter",
+        ".cookie-acceptor",
+        "#CybotCookiebotDialog",
+        "#disclaimer",
+        "#disclaimer-container",
+        ".disclaimer",
+        ".disclaimer-container",
+        "[id*='sp_message_container']",
+        "#gdpr-cookie-message",                                // rezilion.com
+        "#hs-eu-cookie-confirmation",                          // diffblue.com
+        ".cc-floating",                                        // trust-in-soft.com
+        "#usercentrics-root",           // usercentrics.com used by e.g. snyk.io
+        ".adroll_consent_container",    // codeclimate.com
+        ".cky-overlay",                 // bugprove.com
+        ".cky-consent-container",       // bugprove.com
+        ".cookiefirst-root",            // claranet.com
+        ".cc-banner",                   // https://eclipse.dev/cognicrypt
+        ".onetrust-consent-sdk", // https://www.microfocus.com/en-us/cyberres/application-security
+        "#iubenda-cs-banner",    // https://docs.gitguardian.com/
+        ".truste_box_overlay",   // redhat
+        ".truste_overlay",       // redhat
+        ".qc-cmp2-container",    // mathworks.com
+        ".cmpboxBG",             // sourceforge.net
+        ".cmpbox",               // sourceforge.net
+        ".personal-data-confirm", // https://pvs-studio.com/en/pvs-studio/
+        ".block-cookie-block",   // https://www.hackerone.com/
+        ".jetbrains-cookies-banner", // https://www.jetbrains.com/
+        ".wt-cli-cookie-bar-container", // https://www.styra.com
+        ".gdprconsent-container", // https://engineering.fb.com/
+        ".q-cookie-consent__container q-cookie-consent__open", // https://www.qualys.com/
+        "#cookie-consent",       // https://steampunk.si/spotter/
+        ".ch2-container",        // https://smartbear.com/
+        ".md-consent",           // https://unimport.hakancelik.dev/latest/
+        ".t-consentPrompt",      // pixee.ai
+    ];
+
+    for selector in &selectors {
+        if let Ok(_element) = tab.find_element(selector) {
+            // If found, remove the element
+            let js = format!(
+                "var el = document.querySelector('{}'); if(el) el.remove();",
+                selector
+            );
+            tab.evaluate(&js, false)?;
+            log::debug!("Removed cookie banner with selector: {}", selector);
+        }
+    }
+    Ok(())
+}
+
 async fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> {
     log::info!("Crawling {}", entry_id.url); // Changed from {url} to {id.url}
 
@@ -326,6 +420,9 @@ async fn crawl(browser: &Browser, entry_id: &EntryId) -> Result<Option<String>> 
         log::error!("Failed to wait for navigation: {}", entry_id.url);
         return Err(e);
     }
+
+    // Try to remove cookie banner
+    remove_cookie_banner(&tab)?;
 
     let text = match tab.get_content() {
         Ok(html) => {
