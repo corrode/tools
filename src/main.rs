@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
+use dotenv::dotenv;
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
 use headless_chrome::LaunchOptionsBuilder;
@@ -9,6 +10,9 @@ use pulldown_cmark::{Event, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::migrate::MigrateDatabase;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
 use std::fs;
 use std::time;
 use url::Url;
@@ -177,6 +181,22 @@ fn should_crawl(url: &Url) -> bool {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
+    dotenv().ok();
+
+    let database_url = std::env::var("DATABASE_URL")?;
+    // Ensure the database exists
+    if !sqlx::Postgres::database_exists(&database_url).await? {
+        sqlx::Postgres::create_database(&database_url).await?;
+    }
+
+    // Set up the database connection pool
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+
+    // Run migrations
+    sqlx::migrate!("./migrations").run(&pool).await?;
 
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;
@@ -314,10 +334,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let json = serde_json::to_string_pretty(&entry)?;
             log::debug!("Writing to: {entry_path}");
             fs::write(entry_path, json)?;
+
+            insert_entry(&pool, &entry).await?;
         }
     }
 
     println!("Successfully downloaded all files from the specified path.");
+    Ok(())
+}
+
+async fn insert_entry(pool: &PgPool, entry: &Entry) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        INSERT INTO twir.entries (title, url, category, date, text)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (url) DO UPDATE
+        SET title = $1, category = $3, date = $4, text = $5
+        "#,
+        entry.id.title,
+        entry.id.url.as_str(),
+        entry.id.category,
+        entry.id.date,
+        entry.text
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
 
@@ -358,45 +400,24 @@ fn remove_cookie_banner(tab: &Tab) -> Result<()> {
         ".disclaimer",
         ".disclaimer-container",
         "[id*='sp_message_container']",
-        "#gdpr-cookie-message",                                // rezilion.com
-        "#hs-eu-cookie-confirmation",                          // diffblue.com
-        ".cc-floating",                                        // trust-in-soft.com
-        "#usercentrics-root",           // usercentrics.com used by e.g. snyk.io
-        ".adroll_consent_container",    // codeclimate.com
-        ".cky-overlay",                 // bugprove.com
-        ".cky-consent-container",       // bugprove.com
-        ".cookiefirst-root",            // claranet.com
-        ".cc-banner",                   // https://eclipse.dev/cognicrypt
-        ".onetrust-consent-sdk", // https://www.microfocus.com/en-us/cyberres/application-security
-        "#iubenda-cs-banner",    // https://docs.gitguardian.com/
-        ".truste_box_overlay",   // redhat
-        ".truste_overlay",       // redhat
-        ".qc-cmp2-container",    // mathworks.com
-        ".cmpboxBG",             // sourceforge.net
-        ".cmpbox",               // sourceforge.net
-        ".personal-data-confirm", // https://pvs-studio.com/en/pvs-studio/
-        ".block-cookie-block",   // https://www.hackerone.com/
-        ".jetbrains-cookies-banner", // https://www.jetbrains.com/
-        ".wt-cli-cookie-bar-container", // https://www.styra.com
-        ".gdprconsent-container", // https://engineering.fb.com/
-        ".q-cookie-consent__container q-cookie-consent__open", // https://www.qualys.com/
-        "#cookie-consent",       // https://steampunk.si/spotter/
-        ".ch2-container",        // https://smartbear.com/
-        ".md-consent",           // https://unimport.hakancelik.dev/latest/
-        ".t-consentPrompt",      // pixee.ai
     ];
 
-    for selector in &selectors {
-        if let Ok(_element) = tab.find_element(selector) {
-            // If found, remove the element
-            let js = format!(
-                "var el = document.querySelector('{}'); if(el) el.remove();",
-                selector
-            );
-            tab.evaluate(&js, false)?;
-            log::debug!("Removed cookie banner with selector: {}", selector);
-        }
-    }
+    // Join all selectors into a single string
+    let all_selectors = selectors.join(", ");
+
+    // Create a JavaScript expression to remove all matching elements
+    let js = format!(
+        r#"
+        document.querySelectorAll('{}').forEach(el => el.remove());
+        "#,
+        all_selectors
+    );
+
+    // Execute the JavaScript
+    tab.evaluate(&js, false)?;
+
+    log::debug!("Attempted to remove cookie banner elements");
+
     Ok(())
 }
 
