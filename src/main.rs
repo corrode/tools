@@ -1,7 +1,6 @@
 use anyhow::bail;
 use anyhow::Result;
 use chrono::NaiveDate;
-use dotenv::dotenv;
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
 use headless_chrome::LaunchOptionsBuilder;
@@ -17,8 +16,9 @@ use std::fs;
 use std::time;
 use url::Url;
 
-// List of unsupported file extensions for crawling
-const EXCLUDED_EXTENSIONS: [&str; 6] = ["png", "jpg", "jpeg", "webp", "avif", "pdf"];
+mod crawl;
+
+use crawl::*;
 
 // Input
 const GITHUB_OWNER: &str = "rust-lang";
@@ -171,19 +171,15 @@ fn skip_intro(body: &str) -> String {
     body.to_string()
 }
 
-// Crawl a page if it doesn't end an extension on the list of unsupported extensions
-fn should_crawl(url: &Url) -> bool {
-    EXCLUDED_EXTENSIONS
-        .iter()
-        .all(|ext| !url.path().ends_with(ext))
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
-    dotenv().ok();
+
+    dotenvy::dotenv()?;
 
     let database_url = std::env::var("DATABASE_URL")?;
+    println!("DATABASE_URL: {}", database_url);
+
     // Ensure the database exists
     if !sqlx::Postgres::database_exists(&database_url).await? {
         sqlx::Postgres::create_database(&database_url).await?;
@@ -196,7 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     // Run migrations
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    // sqlx::migrate!("./migrations").run(&pool).await?;
 
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;

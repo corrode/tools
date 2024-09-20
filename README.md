@@ -19,22 +19,15 @@ Follow these steps to set up and run the project on your local machine.
    - On Ubuntu/Debian: `sudo service postgresql start`
    - On macOS: `brew services start postgresql`
 
-### PostgreSQL Init
-
-There's probably a better way to do this, but you have to set up your DB user manually for now:
-
-```sh
-psql postgres
-postgres=# CREATE USER username WITH PASSWORD 'password' CREATEDB;
-```
-
 Put this into a `.env` file:
 
 ```sh
-DATABASE_URL=postgres://username:password@localhost/twir
+DATABASE_PASSWORD=password
+DATABASE_URL=postgres://user:password@localhost/twir
 ```
 
+Now start the local database in the background:
+
 ```sh
-sqlx database create                                                                                           ✘
-sqlx migrate add initial_schema
+docker-compose up -d  
 ```
