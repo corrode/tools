@@ -58,14 +58,22 @@
         color: var(--color-text-muted);
         font-weight: 500;
       }
+
       .search-container {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
       }
-      #search {
+
+      .search-input-wrapper {
+        position: relative;
         flex-grow: 1;
+      }
+
+      #search {
+        width: 100%;
         padding: 16px 24px;
+        padding-right: 40px;
         font-size: 1rem;
         background-color: var(--color-surface);
         color: var(--color-text);
@@ -73,6 +81,7 @@
         border-radius: 8px;
         transition: border-color 0.3s ease;
       }
+
       #search:focus {
         outline: none;
         border-color: var(--color-primary);
@@ -80,6 +89,18 @@
       #search::placeholder {
         color: var(--color-text-muted);
       }
+
+      .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: var(--color-text-muted);
+        pointer-events: none;
+      }
+
       .filter-button {
         background-color: var(--color-surface);
         border: 2px solid var(--color-border);
@@ -257,11 +278,27 @@
       </header>
 
       <div class="search-container">
-        <input
-          type="text"
-          id="search"
-          placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
-        />
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            id="search"
+            placeholder="Search in chapters, articles, recitals, ..."
+          />
+          <svg
+            class="search-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
         <button class="filter-button" onclick="toggleFilters()">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path
