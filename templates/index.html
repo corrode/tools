@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>This Week in Rust - Advanced Search</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --color-background: #1e2028;
+        --color-surface: #2a2c36;
+        --color-primary: #f9c22e;
+        --color-text: #ffffff;
+        --color-text-muted: #a0a3b1;
+        --color-border: #3a3c48;
+
+        --icon-video: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23A0A3B1'%3E%3Crect x='0' fill='none' width='20' height='20'%3E%3C/rect%3E%3Cg%3E%3Cpath d='M19 15V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2zM8 14V6l6 4z'%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+
+        --icon-audio: url("data:image/svg+xml,%3Csvg fill='%23A0A3B1' viewBox='-1 0 19 19' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zM7.84 6.06c0-.435-.252-.54-.56-.231l-2.12 2.12H3.704a.794.794 0 0 0-.791.792v1.686a.794.794 0 0 0 .791.792h1.457l2.12 2.12c.308.308.56.204.56-.231zm1.792 5.337a2.564 2.564 0 0 0 0-3.626.396.396 0 1 0-.56.56 1.773 1.773 0 0 1 0 2.506.396.396 0 1 0 .56.56zm2.597-1.813a4.38 4.38 0 0 0-1.292-3.118.396.396 0 0 0-.56.56 3.618 3.618 0 0 1 0 5.116.396.396 0 1 0 .56.56 4.38 4.38 0 0 0 1.292-3.118z'%3E%3C/path%3E%3C/svg%3E");
+
+        --icon-website: url("data:image/svg+xml,%3Csvg fill='%23A0A3B1' viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M157.114,188.969h28.438c3.269-13.719,7.51-26.333,12.545-37.485c-9.62,5.348-18.555,12.064-26.552,20.061 C166.14,176.95,161.323,182.786,157.114,188.969z'%3E%3C/path%3E%3Cpath d='M157.114,323.031c4.21,6.183,9.026,12.019,14.431,17.424c7.997,7.997,16.932,14.713,26.552,20.061 c-5.036-11.152-9.276-23.766-12.545-37.485H157.114z'%3E%3C/path%3E%3Cpath d='M354.886,188.969c-4.21-6.183-9.026-12.019-14.431-17.424c-7.997-7.997-16.932-14.713-26.552-20.061 c5.036,11.152,9.276,23.766,12.545,37.485H354.886z'%3E%3C/path%3E%3Cpath d='M278.452,162.043c-9.626-19.252-19.283-25.48-22.452-25.48s-12.826,6.228-22.452,25.48 c-3.987,7.975-7.409,17.059-10.208,26.926h65.32C285.86,179.102,282.439,170.017,278.452,162.043z'%3E%3C/path%3E%3Cpath d='M233.548,349.957c9.626,19.252,19.283,25.48,22.452,25.48s12.826-6.228,22.452-25.48 c3.987-7.975,7.409-17.059,10.208-26.926h-65.32C226.14,332.898,229.561,341.983,233.548,349.957z'%3E%3C/path%3E%3Cpath d='M178,256c0-10.428,0.516-20.614,1.492-30.469h-39.021c-2.573,9.825-3.909,20.043-3.909,30.469s1.335,20.644,3.909,30.469 h39.021C178.516,276.614,178,266.428,178,256z'%3E%3C/path%3E%3Cpath d='M334,256c0,10.428-0.516,20.614-1.492,30.469h39.021c2.573-9.825,3.909-20.043,3.909-30.469s-1.335-20.644-3.909-30.469 h-39.021C333.484,235.386,334,245.572,334,256z'%3E%3C/path%3E%3Cpath d='M256,0C114.615,0,0,114.615,0,256s114.615,256,256,256s256-114.615,256-256S397.385,0,256,0z M256,412 c-86.156,0-156-69.844-156-156s69.844-156,156-156c86.156,0,156,69.844,156,156S342.156,412,256,412z'%3E%3C/path%3E%3Cpath d='M216.277,225.531c-1.125,9.901-1.714,20.127-1.714,30.469s0.589,20.568,1.714,30.469h79.447 c1.125-9.901,1.714-20.127,1.714-30.469s-0.589-20.568-1.714-30.469H216.277z'%3E%3C/path%3E%3Cpath d='M313.903,360.516c9.62-5.348,18.555-12.064,26.552-20.061c5.405-5.405,10.221-11.241,14.431-17.424h-28.438 C323.179,336.75,318.939,349.364,313.903,360.516z'%3E%3C/path%3E%3C/svg%3E");
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        background-color: var(--color-background);
+        color: var(--color-text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 60px 20px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+      }
+      .subtitle {
+        font-size: 1.1rem;
+        color: var(--color-text-muted);
+        font-weight: 500;
+      }
+      .search-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      #search {
+        flex-grow: 1;
+        padding: 16px 24px;
+        font-size: 1rem;
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        border: 2px solid var(--color-border);
+        border-radius: 8px;
+        transition: border-color 0.3s ease;
+      }
+      #search:focus {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+      #search::placeholder {
+        color: var(--color-text-muted);
+      }
+      .filter-button {
+        background-color: var(--color-surface);
+        border: 2px solid var(--color-border);
+        border-radius: 8px;
+        padding: 0 16px;
+        cursor: pointer;
+        transition: border-color 0.3s ease;
+      }
+      .filter-button:hover {
+        border-color: var(--color-primary);
+      }
+      .filter-button svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--color-text-muted);
+      }
+      .filter-panel {
+        background-color: var(--color-surface);
+        border: 2px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+      }
+      .filter-group {
+        margin-bottom: 20px;
+      }
+      .filter-group:last-child {
+        margin-bottom: 0;
+      }
+      .filter-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--color-text);
+      }
+      .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      .checkbox-label input {
+        margin-right: 8px;
+      }
+      .filter-select {
+        width: 100%;
+        padding: 8px 12px;
+        background-color: var(--color-background);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+      }
+      .filter-select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+      .results {
+        background-color: var(--color-surface);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .result-item {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .result-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      .result-title {
+        color: var(--color-primary);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .result-snippet {
+        color: var(--color-text);
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+      }
+      .result-meta {
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        margin-top: 12px;
+      }
+      .result-meta .domain {
+        margin-left: auto;
+        font-weight: 500;
+      }
+      .content-type-icon {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .icon-video {
+        background-image: var(--icon-video);
+      }
+      .icon-audio {
+        background-image: var(--icon-audio);
+      }
+      .icon-website {
+        background-image: var(--icon-website);
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .tag {
+        background-color: rgba(249, 194, 46, 0.1);
+        color: var(--color-primary);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .tag:hover {
+        background-color: rgba(249, 194, 46, 0.2);
+        cursor: pointer;
+      }
+      .powered-by {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+      }
+      .powered-by a {
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 40px 16px;
+        }
+        h1 {
+          font-size: 2rem;
+        }
+        .subtitle {
+          font-size: 1rem;
+        }
+        #search {
+          padding: 14px 20px;
+        }
+        .checkbox-group {
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>This Week in Rust Search</h1>
+        <div class="subtitle">
+          Discover the latest Rust news, tutorials, and discussions
+        </div>
+      </header>
+
+      <div class="search-container">
+        <input type="text" id="search" placeholder="Search for Rust content" />
+        <button class="filter-button" onclick="toggleFilters()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div id="filterPanel" class="filter-panel">
+        <div class="filter-group">
+          <label class="filter-label">Content Type:</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="content-type" value="blog" /> Blog
+              Posts
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="content-type" value="video" /> Video
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="content-type" value="audio" /> Audio
+            </label>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="date-range">Date Range:</label>
+          <select id="date-range" class="filter-select">
+            <option value="all-time">All Time</option>
+            <option value="past-week">Past Week</option>
+            <option value="past-month">Past Month</option>
+            <option value="past-year">Past Year</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="sort-by">Sort By:</label>
+          <select id="sort-by" class="filter-select">
+            <option value="relevance">Relevance</option>
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="results">
+        <div class="result-item">
+          <div class="result-title">
+            Async Rust: The Past, Present, and Future
+          </div>
+          <div class="result-snippet">
+            Exploring the evolution of asynchronous programming in Rust, from
+            early days to current best practices and future possibilities.
+          </div>
+          <div class="tags">
+            <span class="tag">async</span>
+            <span class="tag">concurrency</span>
+            <span class="tag">futures</span>
+            <span class="tag">tokio</span>
+          </div>
+          <div class="result-meta">
+            <div class="content-type-icon icon-website"></div>
+            TWIR Issue #400 | 2022-03-15 | Blog Post
+            <span class="domain">rust-lang.org</span>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-title">
+            Macro Magic: Advanced Metaprogramming in Rust
+          </div>
+          <div class="result-snippet">
+            Deep dive into Rust's powerful macro system, with examples of
+            procedural macros and their applications in real-world projects.
+          </div>
+          <div class="tags">
+            <span class="tag">macros</span>
+            <span class="tag">metaprogramming</span>
+            <span class="tag">proc-macros</span>
+            <span class="tag">code-generation</span>
+          </div>
+          <div class="result-meta">
+            <div class="content-type-icon icon-video"></div>
+            TWIR Issue #415 | 2022-06-28 | Video
+            <span class="domain">youtube.com</span>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-title">Rust on Embedded: From Zero to Hero</div>
+          <div class="result-snippet">
+            Comprehensive guide to using Rust for embedded systems development,
+            covering toolchains, libraries, and best practices.
+          </div>
+          <div class="tags">
+            <span class="tag">embedded</span>
+            <span class="tag">no-std</span>
+            <span class="tag">microcontrollers</span>
+            <span class="tag">real-time</span>
+          </div>
+          <div class="result-meta">
+            <div class="content-type-icon icon-audio"></div>
+            TWIR Issue #430 | 2022-10-11 | Audio
+            <span class="domain">rustacean-station.org</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="powered-by">
+      Powered by <a href="https://corrode.dev">corrode</a>
+    </div>
+
+    <script>
+      function toggleFilters() {
+        const filterPanel = document.getElementById("filterPanel");
+        filterPanel.style.display =
+          filterPanel.style.display === "none" ? "block" : "none";
+      }
+    </script>
+  </body>
+</html>
