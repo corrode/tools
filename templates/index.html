@@ -117,7 +117,7 @@
         height: 24px;
         fill: var(--color-text-muted);
       }
-      .filter-panel {
+      #filter-panel {
         background-color: var(--color-surface);
         border: 2px solid var(--color-border);
         border-radius: 8px;
@@ -282,7 +282,7 @@
           <input
             type="text"
             id="search"
-            placeholder="Search in chapters, articles, recitals, ..."
+            placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
           />
           <svg
             class="search-icon"
@@ -308,7 +308,7 @@
         </button>
       </div>
 
-      <div id="filterPanel" class="filter-panel">
+      <div id="filter-panel">
         <div class="filter-group">
           <label class="filter-label">Content Type:</label>
           <div class="checkbox-group">
@@ -411,9 +411,11 @@
 
     <script>
       function toggleFilters() {
-        const filterPanel = document.getElementById("filterPanel");
+        const filterPanel = document.getElementById("filter-panel");
+        console.log(filterPanel.style.display);
+        // First time `display` is empty, so we check if it's "not block"
         filterPanel.style.display =
-          filterPanel.style.display === "none" ? "block" : "none";
+          filterPanel.style.display !== "block" ? "block" : "none";
       }
     </script>
   </body>
