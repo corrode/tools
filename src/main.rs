@@ -1,5 +1,6 @@
-use anyhow::bail;
-use anyhow::Result;
+use anyhow::{bail, Result};
+use axum::routing::get;
+use axum::Router;
 use chrono::NaiveDate;
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
@@ -171,29 +172,7 @@ fn skip_intro(body: &str) -> String {
     body.to_string()
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    pretty_env_logger::init();
-
-    dotenvy::dotenv()?;
-
-    let database_url = std::env::var("DATABASE_URL")?;
-    println!("DATABASE_URL: {}", database_url);
-
-    // Ensure the database exists
-    if !sqlx::Postgres::database_exists(&database_url).await? {
-        sqlx::Postgres::create_database(&database_url).await?;
-    }
-
-    // Set up the database connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await?;
-
-    // Run migrations
-    // sqlx::migrate!("./migrations").run(&pool).await?;
-
+async fn index_all(pool: PgPool) -> Result<()> {
     fs::create_dir_all(TWIR_OUT_PATH)?;
     fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
@@ -336,6 +315,105 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("Successfully downloaded all files from the specified path.");
+
+    Ok(())
+}
+
+// Askama template for the index page
+#[derive(askama::Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {
+    entries: Vec<Entry>,
+}
+
+// Serve the index page
+async fn index() -> IndexTemplate {
+    // let pool = PgPoolOptions::new()
+    //     .max_connections(5)
+    //     .connect(&std::env::var("DATABASE_URL")?)
+    //     .await?;
+
+    // let entries = sqlx::query_as!(Entry, "SELECT * FROM twir.entries")
+    //     .fetch_all(&pool)
+    //     .await?;
+
+    // Mock entries
+    let entries = vec![
+        Entry {
+            id: EntryId {
+                title: "This Week in Rust 1".to_string(),
+                url: Url::parse("https://example.com").unwrap(),
+                category: "Official".to_string(),
+                date: NaiveDate::from_ymd_opt(2024, 8, 21).unwrap(),
+            },
+            text: Some("This is the text".to_string()),
+        },
+        Entry {
+            id: EntryId {
+                title: "This Week in Rust 2".to_string(),
+                url: Url::parse("https://example.com").unwrap(),
+                category: "Official".to_string(),
+                date: NaiveDate::from_ymd_opt(2024, 8, 21).unwrap(),
+            },
+            text: Some("This is the text".to_string()),
+        },
+    ];
+
+    IndexTemplate { entries }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    pretty_env_logger::init();
+
+    dotenvy::dotenv()?;
+
+    let database_url = std::env::var("DATABASE_URL")?;
+    println!("DATABASE_URL: {}", database_url);
+
+    // Ensure the database exists
+    if !sqlx::Postgres::database_exists(&database_url).await? {
+        sqlx::Postgres::create_database(&database_url).await?;
+    }
+
+    // Set up the database connection pool
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+
+    // check which command to run, serve or index
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        bail!("No command specified");
+    }
+
+    let command = &args[1];
+    let result = match command.as_str() {
+        "index" => {
+            // Run migrations
+            // sqlx::migrate!("./migrations").run(&pool).await?;
+
+            index_all(pool).await
+        }
+        "serve" => {
+            // Run Axum server
+            // build our application with a route
+            let app = Router::new()
+                // `GET /` goes to `root`
+                .route("/", get(index));
+
+            // // run our app with hyper, listening globally on port 3000
+            let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+            Ok(axum::serve(listener, app).await?)
+        }
+        _ => bail!("Unknown command: {}", command),
+    };
+
+    if let Err(e) = result {
+        log::error!("Error: {e}");
+    };
+
     Ok(())
 }
 
