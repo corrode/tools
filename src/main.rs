@@ -6,6 +6,8 @@ use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::Browser;
 use headless_chrome::LaunchOptionsBuilder;
 use headless_chrome::Tab;
+use log::error;
+use log::info;
 use pulldown_cmark::{Event, Parser, Tag};
 use pulldown_cmark::{Options, TagEnd};
 use serde::Deserialize;
@@ -369,7 +371,7 @@ async fn main() -> Result<()> {
     dotenvy::dotenv()?;
 
     let database_url = std::env::var("DATABASE_URL")?;
-    println!("DATABASE_URL: {}", database_url);
+    info!("DATABASE_URL: {}", database_url);
 
     // Ensure the database exists
     if !sqlx::Postgres::database_exists(&database_url).await? {
@@ -404,14 +406,16 @@ async fn main() -> Result<()> {
                 .route("/", get(index));
 
             // // run our app with hyper, listening globally on port 3000
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+            let server_address = "0.0.0.0:3000";
+            println!("Listening on: http://{server_address}");
+            let listener = tokio::net::TcpListener::bind(server_address).await.unwrap();
             Ok(axum::serve(listener, app).await?)
         }
         _ => bail!("Unknown command: {}", command),
     };
 
     if let Err(e) = result {
-        log::error!("Error: {e}");
+        error!("Error: {e}");
     };
 
     Ok(())
