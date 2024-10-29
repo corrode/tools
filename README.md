@@ -8,26 +8,22 @@ Show HN: I built a search engine for 'This Week in Rust'
 
 Follow these steps to set up and run the project on your local machine.
 
-### PostgreSQL Setup
+### Start Postgres
 
-1. **Install PostgreSQL**:
-   - On Ubuntu/Debian: `sudo apt-get install postgresql`
-   - On macOS with Homebrew: `brew install postgresql`
-   - For other systems, follow the [official PostgreSQL installation guide](https://www.postgresql.org/download/).
-
-2. **Start PostgreSQL**:
-   - On Ubuntu/Debian: `sudo service postgresql start`
-   - On macOS: `brew services start postgresql`
-
-Put this into a `.env` file:
+Either start a local Postgres instance or use Docker to run a container.
 
 ```sh
-DATABASE_PASSWORD=password
-DATABASE_URL=postgres://user:password@localhost/twir
+docker compose up db
 ```
 
-Now start the local database in the background:
+In a separate terminal, run the application:
 
 ```sh
-docker-compose up -d  
+cargo run -- serve
+```
+
+Or use `cargo-watch` to automatically restart the application when files change:
+
+```sh
+cargo watch --exec 'run -- serve'                                  
 ```
