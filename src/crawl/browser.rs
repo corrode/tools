@@ -39,9 +39,7 @@ impl Browser {
         let tab = self.inner.new_tab()?;
         tab.set_default_timeout(time::Duration::from_secs(30));
 
-        if let Err(e) = tab.navigate_to(entry_id.url.as_str()) {
-            return Err(e);
-        }
+        tab.navigate_to(entry_id.url.as_str())?;
 
         if let Err(e) = tab.wait_until_navigated() {
             log::error!("Failed to wait for navigation: {}", entry_id.url);

@@ -1,9 +1,7 @@
-//! Repository for TWiR entries using SQLite with FTS5 support via SQLx
-
 use crate::Entry;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite, Row};
 use std::path::Path;
 
 /// Manages storage and retrieval of TWiR entries
@@ -24,58 +22,81 @@ impl Repository {
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let database_url = format!("sqlite:{}", path.as_ref().display());
 
-        // Enable WAL mode and FTS5
-        // sqlx::query!("PRAGMA journal_mode = WAL")
-        //     .execute(&pool)
-        //     .await?;
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await?;
 
-        // sqlx::query!("PRAGMA synchronous = NORMAL")
-        //     .execute(&pool)
-        //     .await?;
-
-        Ok(Self {
-            pool: SqlitePoolOptions::new()
-                .max_connections(5)
-                .connect(&database_url)
-                .await?,
-        })
+        // Initialize schema if needed
+        let repo = Self { pool };
+        repo.init_db().await?;
+        Ok(repo)
     }
 
     /// Initializes the database schema
-    pub async fn init_db(&self) -> Result<()> {
-        sqlx::query!(
+    async fn init_db(&self) -> Result<()> {
+        // Create main table
+        sqlx::query(
             r#"
-            CREATE VIRTUAL TABLE IF NOT EXISTS entries USING fts5(
-                title,           -- Title of the article
-                url UNINDEXED,   -- URL is not searchable but stored
-                category,        -- Category for grouping
-                date UNINDEXED,  -- Date stored but not searchable
-                text,            -- Main content for full-text search
-                tokenize="porter unicode61",  -- Use porter stemming with Unicode support
-                content='',                   -- Contentless table for efficiency
-                columnsize=0                  -- Save space by not storing column sizes
-            )
-            "#
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query!(
-            r#"
-            CREATE TABLE IF NOT EXISTS entries_meta (
-                url TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE,
+                category TEXT NOT NULL,
                 date TEXT NOT NULL,
-                category TEXT NOT NULL
+                text TEXT
             )
-            "#
+            "#,
         )
         .execute(&self.pool)
         .await?;
 
-        sqlx::query!(
+        // Create FTS5 virtual table
+        sqlx::query(
             r#"
-            CREATE INDEX IF NOT EXISTS entries_meta_date_idx ON entries_meta(date)
-            "#
+            CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+                title, category, text,
+                content=entries,
+                content_rowid=id,
+                tokenize='porter unicode61'
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create triggers to keep FTS index in sync
+        sqlx::query(
+            r#"
+            CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries BEGIN
+                INSERT INTO entries_fts(rowid, title, category, text)
+                VALUES (new.id, new.title, new.category, new.text);
+            END;
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TRIGGER IF NOT EXISTS entries_ad AFTER DELETE ON entries BEGIN
+                INSERT INTO entries_fts(entries_fts, rowid, title, category, text)
+                VALUES('delete', old.id, old.title, old.category, old.text);
+            END;
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TRIGGER IF NOT EXISTS entries_au AFTER UPDATE ON entries BEGIN
+                INSERT INTO entries_fts(entries_fts, rowid, title, category, text)
+                VALUES('delete', old.id, old.title, old.category, old.text);
+                INSERT INTO entries_fts(rowid, title, category, text)
+                VALUES (new.id, new.title, new.category, new.text);
+            END;
+            "#,
         )
         .execute(&self.pool)
         .await?;
@@ -87,35 +108,26 @@ impl Repository {
     pub async fn insert_entry(&self, entry: &Entry) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        // Insert into FTS5 table
-        sqlx::query!(
+        let date_str = entry.id.date.format("%Y-%m-%d").to_string();
+        let url_str = entry.id.url.as_str();
+
+        sqlx::query(
             r#"
             INSERT INTO entries(title, url, category, date, text)
             VALUES (?, ?, ?, ?, ?)
-            "#,
-            entry.id.title,
-            entry.id.url.as_str(),
-            entry.id.category,
-            entry.id.date.to_string(),
-            entry.text,
-        )
-        .execute(&mut tx)
-        .await?;
-
-        // Insert into metadata table
-        sqlx::query!(
-            r#"
-            INSERT INTO entries_meta(url, date, category)
-            VALUES (?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                category = excluded.category,
                 date = excluded.date,
-                category = excluded.category
+                text = excluded.text
             "#,
-            entry.id.url.as_str(),
-            entry.id.date.to_string(),
-            entry.id.category,
         )
-        .execute(&mut tx)
+        .bind(&entry.id.title)
+        .bind(url_str)
+        .bind(&entry.id.category)
+        .bind(&date_str)
+        .bind(&entry.text)
+        .execute(&mut *tx)
         .await?;
 
         tx.commit().await?;
@@ -124,56 +136,46 @@ impl Repository {
 
     /// Performs a full-text search on entries
     pub async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
-            WITH RECURSIVE
-            -- Define snippet function since SQLite's built-in one isn't available in SQLx
-            snippet(word, snippet) AS (
-                SELECT 
-                    '',
-                    substr(text, 1, 150) || 
-                    CASE WHEN length(text) > 150 THEN '...' ELSE '' END
-                FROM entries
-                WHERE entries MATCH ?
-            ),
-            -- Main search query
-            search_results AS (
-                SELECT 
-                    title, url, category, date, text,
-                    bm25(entries) as rank,
-                    (SELECT snippet FROM snippet) as snippet
-                FROM entries
-                WHERE entries MATCH ?
-                ORDER BY rank DESC
-                LIMIT 20
-            )
-            SELECT * FROM search_results
+            SELECT
+                e.title, e.url, e.category, e.date, e.text,
+                rank,
+                snippet(entries_fts, 0, '<mark>', '</mark>', '...', 10) as snippet
+            FROM entries_fts
+            JOIN entries e ON entries_fts.rowid = e.id
+            WHERE entries_fts MATCH ?
+            ORDER BY rank
+            LIMIT 20
             "#,
-            query,
-            query
         )
+        .bind(query)
         .fetch_all(&self.pool)
         .await?;
 
         let results = rows
             .into_iter()
             .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(&row.date, "%Y-%m-%d") else {
-                    log::info!("Cannot convert row date to NaiveDate: {}", row.date);
+                let Ok(date) = NaiveDate::parse_from_str(
+                    row.get::<&str, _>("date"),
+                    "%Y-%m-%d"
+                ) else {
+                    log::info!("Cannot convert row date to NaiveDate: {}", row.get::<&str, _>("date"));
                     return None;
                 };
-                url::Url::parse(&row.url).ok().map(|url| SearchResult {
+
+                url::Url::parse(row.get("url")).ok().map(|url| SearchResult {
                     entry: Entry {
                         id: crate::EntryId {
-                            title: row.title,
+                            title: row.get("title"),
                             url,
-                            category: row.category,
+                            category: row.get("category"),
                             date,
                         },
-                        text: row.text,
+                        text: row.get("text"),
                     },
-                    rank: row.rank,
-                    snippet: row.snippet,
+                    rank: row.get("rank"),
+                    snippet: row.get("snippet"),
                 })
             })
             .collect();
@@ -183,34 +185,39 @@ impl Repository {
 
     /// Retrieves entries for a specific date
     pub async fn get_entries_by_date(&self, date: NaiveDate) -> Result<Vec<Entry>> {
-        let rows = sqlx::query!(
+        let date_str = date.format("%Y-%m-%d").to_string();
+
+        let rows = sqlx::query(
             r#"
-            SELECT e.title, e.url, e.category, e.date, e.text
-            FROM entries e
-            JOIN entries_meta m ON e.url = m.url
-            WHERE m.date = ?
-            ORDER BY m.category, e.title
+            SELECT title, url, category, date, text
+            FROM entries
+            WHERE date = ?
+            ORDER BY category, title
             "#,
-            date.to_string()
         )
+        .bind(&date_str)
         .fetch_all(&self.pool)
         .await?;
 
         let entries = rows
             .into_iter()
             .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(&row.date, "%Y-%m-%d") else {
-                    log::info!("Cannot convert row date to NaiveDate: {}", row.date);
+                let Ok(date) = NaiveDate::parse_from_str(
+                    row.get::<&str, _>("date"),
+                    "%Y-%m-%d"
+                ) else {
+                    log::info!("Cannot convert row date to NaiveDate: {}", row.get::<&str, _>("date"));
                     return None;
                 };
-                url::Url::parse(&row.url).ok().map(|url| Entry {
+
+                url::Url::parse(row.get("url")).ok().map(|url| Entry {
                     id: crate::EntryId {
-                        title: row.title,
+                        title: row.get("title"),
                         url,
-                        category: row.category,
-                        date
+                        category: row.get("category"),
+                        date,
                     },
-                    text: row.text,
+                    text: row.get("text"),
                 })
             })
             .collect();
@@ -226,9 +233,8 @@ mod tests {
 
     async fn setup_test_db() -> Result<(Repository, tempfile::TempDir)> {
         let dir = tempdir()?;
-        let db_path = dir.path().join("test.db");
+        let db_path = dir.path().join("twir.db");
         let repo = Repository::new(&db_path).await?;
-        repo.init_db().await?;
         Ok((repo, dir))
     }
 

@@ -12,6 +12,7 @@ pub use repository::Repository;
 pub use types::*;
 
 use anyhow::Result;
+use log::info;
 use std::fs;
 
 // Output paths configuration
@@ -19,15 +20,14 @@ const TWIR_OUT_PATH: &str = "./content/twir";
 const INDEX_OUT_PATH: &str = "./content/index";
 const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
-const SQLITE_DATABASE_URL: &str = "twir.db";
 
-/// Main entry point for indexing all TWiR content
+/// Main indexing function that processes and stores TWiR content
 pub async fn index_all() -> Result<()> {
     create_output_directories()?;
 
     let browser = Browser::new()?;
     let parser = TwirParser::new();
-    let repo = Repository::new("twir.db").await?;
+    let repo = Repository::new("content/db/twir.db").await?;
 
     let entries = parser.fetch_twir_entries().await?;
 
@@ -36,36 +36,42 @@ pub async fn index_all() -> Result<()> {
         let download_url = item["download_url"].as_str().unwrap();
         let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
 
+        // Skip if we've already downloaded this file
         if fs::metadata(&download_file_path).is_ok() {
-            log::info!("Skipping: {}", file_name);
+            info!("Skipping downloaded file: {}", file_name);
             continue;
         }
 
-        let content = parser.download_content(&download_url).await?;
+        // Download and save content
+        let content = parser.download_content(download_url).await?;
         fs::write(&download_file_path, &content)?;
 
-        let entry_ids = parser.parse_file(&content);
-
-        for id in entry_ids {
+        // Parse and process entries
+        for id in parser.parse_file(&content) {
+            // Skip if URL shouldn't be processed
             if !should_process_url(&id.url) {
                 continue;
             }
 
-            let entry_path = format!("{INDEX_OUT_PATH}/{}.json", id);
-            if fs::metadata(&entry_path).is_ok() {
-                log::info!("Entry exists; skipping: {}", id);
-                continue;
-            }
-
+            // Crawl and store content
             if let Ok(text) = browser.crawl(&id).await {
                 let entry = Entry { id, text };
-                repo.save_entry(&entry_path, &entry)?;
-                repo.insert_entry(&entry).await?;
+
+                // Store in database
+                if let Err(e) = repo.insert_entry(&entry).await {
+                    info!("Failed to store entry {}: {}", entry.id.url, e);
+                    continue;
+                }
+
+                let entry_path = format!("{INDEX_OUT_PATH}/{}.json", entry.id);
+                if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
+                    info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                }
             }
         }
     }
 
-    println!("Successfully downloaded all files from the specified path.");
+    info!("Successfully indexed all TWiR content");
     Ok(())
 }
 
