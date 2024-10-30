@@ -3,8 +3,6 @@ use axum::routing::get;
 use axum::Router;
 use chrono::NaiveDate;
 use log::{error, info};
-use sqlx::migrate::MigrateDatabase;
-use sqlx::postgres::PgPoolOptions;
 use url::Url;
 
 mod crawl;
@@ -52,17 +50,6 @@ async fn main() -> Result<()> {
     let database_url = std::env::var("DATABASE_URL")?;
     info!("DATABASE_URL: {}", database_url);
 
-    // Ensure the database exists
-    if !sqlx::Postgres::database_exists(&database_url).await? {
-        sqlx::Postgres::create_database(&database_url).await?;
-    }
-
-    // Set up the database connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await?;
-
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -73,7 +60,7 @@ async fn main() -> Result<()> {
     let result = match command.as_str() {
         "index" => {
             // Run the indexer
-            index_all(pool).await
+            index_all().await
         }
         "serve" => {
             // Run Axum server
