@@ -45,7 +45,8 @@
         --color-primary: #f0f6fc;
         --color-text: #c9d1d9;
         --color-text-muted: #8b949e;
-        --color-border: #30363d;
+        --color-border: #3036
+3d;
 
         /* Theme based on Dracula */
         --color-background: #282a36;
@@ -155,6 +156,12 @@
         letter-spacing: -0.5px;
         font-family: "Bebas Neue", sans-serif;
         color: var(--color-primary);
+      }
+      a {
+        color: var(--color-primary);
+      }
+      .discussion-link {
+        color: var(--color-text-muted);
       }
       .subtitle {
         font-size: 1.1rem;
@@ -444,13 +451,15 @@
           {% else %}
             {% for result in results %}
             <div class="result-item">
-              <div class="result-title">{{ result.entry.id.title }}</div>
+              <div class="result-title">
+                <a href="{{ result.entry.id.url }}">{{ result.entry.id.title }}</a>
+              </div>
               {% if let Some(snippet) = result.snippet %}
                 <div class="result-snippet">{{ snippet|safe }}</div>
               {% endif %}
               <div class="result-meta">
                 <div class="content-type-icon icon-website"></div>
-                {{ result.entry.id.category }} | {{ result.entry.id.date }}
+                {{ result.entry.id.category }} | {{ result.entry.id.date }} | <a href="https://discu.eu/?q={{ result.entry.id.url }}" class="discussion-link">Discussions</a>
                 <span class="domain">{{ result.domain() }}</span>
               </div>
             </div>
