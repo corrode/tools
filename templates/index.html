@@ -361,7 +361,7 @@
       }
     </style>
   </head>
-  <body>
+ <body>
     <div class="container">
       <header>
         <h1>This Week in Rust Search</h1>
@@ -370,36 +370,24 @@
         </div>
       </header>
 
-      <div class="search-container">
+      <form action="/search" method="GET" class="search-container">
         <div class="search-input-wrapper">
           <input
             type="text"
             id="search"
+            name="q"
             placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
           />
-          <svg
-            class="search-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        <button class="filter-button" onclick="toggleFilters()">
+        <button type="button" class="filter-button" onclick="toggleFilters()">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-            />
+            <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
           </svg>
         </button>
-      </div>
+      </form>
 
       <div id="filter-panel">
         <div class="filter-group">
@@ -436,65 +424,37 @@
         </div>
       </div>
 
-      <div class="results">
-        <div class="result-item">
-          <div class="result-title">
-            Async Rust: The Past, Present, and Future
+      <div class="results" id="search-results">
+        {% if let Some(q) = query %}
+          {% if results.is_empty() %}
+            <div class="result-item">
+              <div class="result-title">No results found</div>
+              <div class="result-snippet">Try adjusting your search terms or filters.</div>
+            </div>
+          {% else %}
+            {% for result in results %}
+            <div class="result-item">
+              <div class="result-title">{{ result.entry.id.title }}</div>
+              {% if let Some(snippet) = result.snippet %}
+                <div class="result-snippet">{{ snippet }}</div>
+              {% endif %}
+              <div class="result-meta">
+                <div class="content-type-icon icon-website"></div>
+                {{ result.entry.id.category }} | {{ result.entry.id.date }}
+                <span class="domain">{{ result.domain() }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          {% endif %}
+        {% else %}
+          <!-- Empty initial state -->
+          <div class="result-item">
+            <div class="result-title">Start searching</div>
+            <div class="result-snippet">
+              Enter your search terms above to find Rust content from This Week in Rust.
+            </div>
           </div>
-          <div class="result-snippet">
-            Exploring the evolution of asynchronous programming in Rust, from
-            early days to current best practices and future possibilities.
-          </div>
-          <div class="tags">
-            <span class="tag">async</span>
-            <span class="tag">concurrency</span>
-            <span class="tag">futures</span>
-            <span class="tag">tokio</span>
-          </div>
-          <div class="result-meta">
-            <div class="content-type-icon icon-website"></div>
-            TWIR Issue #400 | 2022-03-15 | Blog Post
-            <span class="domain">rust-lang.org</span>
-          </div>
-        </div>
-        <div class="result-item">
-          <div class="result-title">
-            Macro Magic: Advanced Metaprogramming in Rust
-          </div>
-          <div class="result-snippet">
-            Deep dive into Rust's powerful macro system, with examples of
-            procedural macros and their applications in real-world projects.
-          </div>
-          <div class="tags">
-            <span class="tag">macros</span>
-            <span class="tag">metaprogramming</span>
-            <span class="tag">proc-macros</span>
-            <span class="tag">code-generation</span>
-          </div>
-          <div class="result-meta">
-            <div class="content-type-icon icon-video"></div>
-            TWIR Issue #415 | 2022-06-28 | Video
-            <span class="domain">youtube.com</span>
-          </div>
-        </div>
-        <div class="result-item">
-          <div class="result-title">Rust on Embedded: From Zero to Hero</div>
-          <div class="result-snippet">
-            Comprehensive guide to using Rust for embedded systems development,
-            covering toolchains, libraries, and best practices.
-          </div>
-          <div class="tags">
-            <span class="tag">embedded</span>
-            <span class="tag">no-std</span>
-            <span class="tag">microcontrollers</span>
-            <span class="tag">real-time</span>
-          </div>
-          <div class="result-meta">
-            <div class="content-type-icon icon-audio"></div>
-            TWIR Issue #430 | 2022-10-11 | Audio
-            <span class="domain">rustacean-station.org</span>
-          </div>
-        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -505,11 +465,7 @@
     <script>
       function toggleFilters() {
         const filterPanel = document.getElementById("filter-panel");
-        console.log(filterPanel.style.display);
-        // First time `display` is empty, so we check if it's "not block"
-        filterPanel.style.display =
-          filterPanel.style.display !== "block" ? "block" : "none";
+        filterPanel.style.display = filterPanel.style.display !== "block" ? "block" : "none";
       }
     </script>
-  </body>
-</html>
+  </body></html>

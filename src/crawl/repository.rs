@@ -1,36 +1,39 @@
-use crate::Entry;
+use anyhow::{bail, Context};
+use crate::crawl::{Entry, EntryId};
 use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite, Row};
 use std::path::Path;
+use crate::crawl::SearchResult;
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
     pool: Pool<Sqlite>,
 }
 
-/// Search result with relevance information
-#[derive(Debug)]
-pub struct SearchResult {
-    pub entry: Entry,
-    pub rank: f64,
-    pub snippet: Option<String>,
-}
 
 impl Repository {
-    /// Creates a new repository instance
+    /// Creates a new repository instance.
+    /// Fails if the database file doesn't exist - run indexer first.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        // Check if database exists
+        if !path.as_ref().exists() {
+            bail!(
+                "Database file not found at: {}. Run indexer first with: cargo run -- index",
+                path.as_ref().display()
+            );
+        }
+
         let database_url = format!("sqlite:{}", path.as_ref().display());
+        log::info!("Opening database at: {}", database_url);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .connect(&database_url)
-            .await?;
+            .await
+            .context("Failed to connect to SQLite database")?;
 
-        // Initialize schema if needed
-        let repo = Self { pool };
-        repo.init_db().await?;
-        Ok(repo)
+        Ok(Self { pool })
     }
 
     /// Initializes the database schema
@@ -166,7 +169,7 @@ impl Repository {
 
                 url::Url::parse(row.get("url")).ok().map(|url| SearchResult {
                     entry: Entry {
-                        id: crate::EntryId {
+                        id: EntryId {
                             title: row.get("title"),
                             url,
                             category: row.get("category"),
@@ -211,7 +214,7 @@ impl Repository {
                 };
 
                 url::Url::parse(row.get("url")).ok().map(|url| Entry {
-                    id: crate::EntryId {
+                    id: EntryId {
                         title: row.get("title"),
                         url,
                         category: row.get("category"),
@@ -245,7 +248,7 @@ mod tests {
         // Insert test entries
         let entries = vec![
             Entry {
-                id: crate::EntryId {
+                id: EntryId {
                     title: "Rust Async Runtime Performance".to_string(),
                     url: url::Url::parse("https://example.com/async")?,
                     category: "Performance".to_string(),
@@ -254,7 +257,7 @@ mod tests {
                 text: Some("Detailed analysis of async runtime performance in Rust".to_string()),
             },
             Entry {
-                id: crate::EntryId {
+                id: EntryId {
                     title: "WebAssembly Tutorial".to_string(),
                     url: url::Url::parse("https://example.com/wasm")?,
                     category: "Tutorial".to_string(),
@@ -287,7 +290,7 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
 
         let entry = Entry {
-            id: crate::EntryId {
+            id: EntryId {
                 title: "Test Entry".to_string(),
                 url: url::Url::parse("https://example.com/test")?,
                 category: "Test".to_string(),

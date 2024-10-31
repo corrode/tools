@@ -4,3 +4,4 @@ content
 .env
 twir_dump.sql
 TODO.md
+twir.db*
