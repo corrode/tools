@@ -144,7 +144,7 @@ impl Repository {
             SELECT
                 e.title, e.url, e.category, e.date, e.text,
                 rank,
-                snippet(entries_fts, 0, '<mark>', '</mark>', '...', 10) as snippet
+                snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
             JOIN entries e ON entries_fts.rowid = e.id
             WHERE entries_fts MATCH ?
@@ -159,26 +159,21 @@ impl Repository {
         let results = rows
             .into_iter()
             .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(
-                    row.get::<&str, _>("date"),
-                    "%Y-%m-%d"
-                ) else {
-                    log::info!("Cannot convert row date to NaiveDate: {}", row.get::<&str, _>("date"));
-                    return None;
-                };
-
-                url::Url::parse(row.get("url")).ok().map(|url| SearchResult {
-                    entry: Entry {
-                        id: EntryId {
-                            title: row.get("title"),
-                            url,
-                            category: row.get("category"),
-                            date,
+                url::Url::parse(row.get("url")).ok().map(|url| {
+                    let date = row.get::<String, _>("date");
+                    SearchResult {
+                        entry: Entry {
+                            id: EntryId {
+                                title: row.get("title"),
+                                url,
+                                category: row.get("category"),
+                                date: NaiveDate::parse_from_str(&date, "%Y-%m-%d").unwrap_or_default(),
+                            },
+                            text: row.get("text"),
                         },
-                        text: row.get("text"),
-                    },
-                    rank: row.get("rank"),
-                    snippet: row.get("snippet"),
+                        rank: row.get("rank"),
+                        snippet: row.get("snippet"),
+                    }
                 })
             })
             .collect();

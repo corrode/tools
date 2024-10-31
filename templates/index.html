@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -45,8 +45,7 @@
         --color-primary: #f0f6fc;
         --color-text: #c9d1d9;
         --color-text-muted: #8b949e;
-        --color-border: #3036
-3d;
+        --color-border: #3036 3d;
 
         /* Theme based on Dracula */
         --color-background: #282a36;
@@ -116,10 +115,10 @@
         --color-background: #2a2a2a;
         --color-surface: #353535;
         --color-primary: #d2991d;
+        --color-primary-muted: #9a7015;
         --color-text: #f0f0f0;
         --color-text-muted: #aeaeae;
         --color-border: #353535;
-
 
         --icon-video: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23A0A3B1'%3E%3Crect x='0' fill='none' width='20' height='20'%3E%3C/rect%3E%3Cg%3E%3Cpath d='M19 15V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2zM8 14V6l6 4z'%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
         --icon-audio: url("data:image/svg+xml,%3Csvg fill='%23A0A3B1' viewBox='-1 0 19 19' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zM7.84 6.06c0-.435-.252-.54-.56-.231l-2.12 2.12H3.704a.794.794 0 0 0-.791.792v1.686a.794.794 0 0 0 .791.792h1.457l2.12 2.12c.308.308.56.204.56-.231zm1.792 5.337a2.564 2.564 0 0 0 0-3.626.396.396 0 1 0-.56.56 1.773 1.773 0 0 1 0 2.506.396.396 0 1 0 .56.56zm2.597-1.813a4.38 4.38 0 0 0-1.292-3.118.396.396 0 0 0-.56.56 3.618 3.618 0 0 1 0 5.116.396.396 0 1 0 .56.56 4.38 4.38 0 0 0 1.292-3.118z'%3E%3C/path%3E%3C/svg%3E");
@@ -132,8 +131,17 @@
         padding: 0;
       }
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Oxygen-Sans,
+          Ubuntu,
+          Cantarell,
+          "Helvetica Neue",
+          sans-serif;
         background-color: var(--color-background);
         color: var(--color-text);
         line-height: 1.6;
@@ -159,6 +167,12 @@
       }
       a {
         color: var(--color-primary);
+      }
+      a:visited {
+        color: var(--color-primary-muted);
+      }
+      mark {
+        background: var(--color-primary);
       }
       .discussion-link {
         color: var(--color-text-muted);
@@ -378,7 +392,7 @@
       }
     </style>
   </head>
- <body>
+  <body>
     <div class="container">
       <header>
         <h1>This Week in Rust Search</h1>
@@ -394,14 +408,28 @@
             id="search"
             name="q"
             placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
+            autofocus
           />
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            class="search-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
         </div>
         <button type="button" class="filter-button" onclick="toggleFilters()">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+            <path
+              d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+            />
           </svg>
         </button>
       </form>
@@ -442,37 +470,43 @@
       </div>
 
       <div class="results" id="search-results">
-        {% if let Some(q) = query %}
-          {% if results.is_empty() %}
-            <div class="result-item">
-              <div class="result-title">No results found</div>
-              <div class="result-snippet">Try adjusting your search terms or filters.</div>
-            </div>
-          {% else %}
-            {% for result in results %}
-            <div class="result-item">
-              <div class="result-title">
-                <a href="{{ result.entry.id.url }}">{{ result.entry.id.title }}</a>
-              </div>
-              {% if let Some(snippet) = result.snippet %}
-                <div class="result-snippet">{{ snippet|safe }}</div>
-              {% endif %}
-              <div class="result-meta">
-                <div class="content-type-icon icon-website"></div>
-                {{ result.entry.id.category }} | {{ result.entry.id.date }} | <a href="https://discu.eu/?q={{ result.entry.id.url }}" class="discussion-link">Discussions</a>
-                <span class="domain">{{ result.domain() }}</span>
-              </div>
-            </div>
-            {% endfor %}
-          {% endif %}
-        {% else %}
-          <!-- Empty initial state -->
-          <div class="result-item">
-            <div class="result-title">Start searching</div>
-            <div class="result-snippet">
-              Enter your search terms above to find Rust content from This Week in Rust.
-            </div>
+        {% if let Some(q) = query %} {% if results.is_empty() %}
+        <div class="result-item">
+          <div class="result-title">No results found</div>
+          <div class="result-snippet">
+            Try adjusting your search terms or filters.
           </div>
+        </div>
+        {% else %} {% for result in results %}
+        <div class="result-item">
+          <div class="result-title">
+            <a href="{{ result.entry.id.url }}">{{ result.entry.id.title }}</a>
+          </div>
+          {% if let Some(snippet) = result.snippet %}
+          <div class="result-snippet">{{ snippet|safe }}</div>
+          {% endif %}
+          <div class="result-meta">
+            {{ result.entry.id.category }}
+
+            <div class="content-type-icon icon-website"></div>
+            {{ result.entry.id.category }} | {{ result.entry.id.date }} |
+            <a
+              href="https://discu.eu/?q={{ result.entry.id.url }}"
+              class="discussion-link"
+              >Discussions</a
+            >
+            <span class="domain">{{ result.domain() }}</span>
+          </div>
+        </div>
+        {% endfor %} {% endif %} {% else %}
+        <!-- Empty initial state -->
+        <div class="result-item">
+          <div class="result-title">Start searching</div>
+          <div class="result-snippet">
+            Enter your search terms above to find Rust content from This Week in
+            Rust.
+          </div>
+        </div>
         {% endif %}
       </div>
     </div>
@@ -484,7 +518,9 @@
     <script>
       function toggleFilters() {
         const filterPanel = document.getElementById("filter-panel");
-        filterPanel.style.display = filterPanel.style.display !== "block" ? "block" : "none";
+        filterPanel.style.display =
+          filterPanel.style.display !== "block" ? "block" : "none";
       }
     </script>
-  </body></html>
+  </body>
+</html>
