@@ -4,6 +4,16 @@ This project crawls and analyzes "This Week in Rust" posts, storing the data in 
 
 ## Getting Started
 
+First, index TWIR with
+
+```sh
+cargo run -- index
+```
+
+this will create/update the twir.db sqlite file.
+
+After that, you can run the server with
+
 ```sh
 cargo run -- serve
 ```
