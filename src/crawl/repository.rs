@@ -1,16 +1,15 @@
-use anyhow::{bail, Context};
+use crate::crawl::SearchResult;
 use crate::crawl::{Entry, EntryId};
 use anyhow::Result;
+use anyhow::{bail, Context};
 use chrono::NaiveDate;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite, Row};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use std::path::Path;
-use crate::crawl::SearchResult;
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
     pool: Pool<Sqlite>,
 }
-
 
 impl Repository {
     /// Creates a new repository instance.
@@ -167,7 +166,8 @@ impl Repository {
                                 title: row.get("title"),
                                 url,
                                 category: row.get("category"),
-                                date: NaiveDate::parse_from_str(&date, "%Y-%m-%d").unwrap_or_default(),
+                                date: NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+                                    .unwrap_or_default(),
                             },
                             text: row.get("text"),
                         },
@@ -200,11 +200,12 @@ impl Repository {
         let entries = rows
             .into_iter()
             .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(
-                    row.get::<&str, _>("date"),
-                    "%Y-%m-%d"
-                ) else {
-                    log::info!("Cannot convert row date to NaiveDate: {}", row.get::<&str, _>("date"));
+                let Ok(date) = NaiveDate::parse_from_str(row.get::<&str, _>("date"), "%Y-%m-%d")
+                else {
+                    log::info!(
+                        "Cannot convert row date to NaiveDate: {}",
+                        row.get::<&str, _>("date")
+                    );
                     return None;
                 };
 

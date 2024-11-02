@@ -1,18 +1,12 @@
-use axum::{
-    extract::Query,
-    response::Html,
-    routing::get,
-    Router,
-};
-use askama::Template;
-use serde::Deserialize;
 use anyhow::Result;
+use askama::Template;
+use axum::{extract::Query, response::Html, routing::get, Router};
+use pulldown_cmark::TagEnd;
+use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::crawl::Repository;
 use crate::crawl::SearchResult;
-
-
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -42,9 +36,70 @@ async fn index_handler() -> Result<Html<String>, axum::http::StatusCode> {
         query: None,
         results: vec![],
     };
-    template.render()
+    template
+        .render()
         .map(Html)
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+// TODO: Move this to a separate file
+
+use pulldown_cmark::{Event, Parser, Tag};
+
+fn clean_preview(content: String) -> String {
+    let parser = Parser::new(&content);
+    let mut preview = String::new();
+    let mut in_brackets = false;
+    let mut link_text = String::new();
+
+    for event in parser {
+        match event {
+            // References like `[foo][someref]` aren't parsed as links in pulldown_cmark,
+            // so we have to handle them manually.
+            Event::Text(text) => {
+                let text = text.trim();
+                if text == "[" {
+                    in_brackets = true;
+                    link_text.clear();
+                } else if text == "]" {
+                    in_brackets = false;
+                    // Exclude the `42` in references like `[foo][42]`
+                    if !link_text.chars().all(|c| c.is_digit(10)) {
+                        preview.push_str(&link_text);
+                        preview.push(' ');
+                    }
+                } else if in_brackets {
+                    link_text.push_str(text);
+                } else if !text.starts_with("```") {
+                    preview.push_str(text);
+                    preview.push(' ');
+                }
+            }
+            Event::Start(Tag::Link { .. }) => {
+                in_brackets = true;
+                link_text.clear();
+            }
+            Event::End(TagEnd::Link) => {
+                in_brackets = false;
+                preview.push_str(&link_text);
+                preview.push(' ');
+                link_text.clear();
+            }
+            Event::Code(code) => {
+                preview.push('`');
+                preview.push_str(&code);
+                preview.push('`');
+                preview.push(' ');
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                preview.push(' ');
+            }
+            _ => {}
+        }
+    }
+
+    // Clean up multiple spaces and trim
+    preview.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 async fn search_handler(
@@ -59,12 +114,26 @@ async fn search_handler(
         vec![]
     };
 
+    // Clean up result text. This needs to go elsewhere later
+    let results: Vec<SearchResult> = results
+        .into_iter()
+        .map(|result| {
+            println!("call");
+            SearchResult {
+                entry: result.entry,
+                rank: result.rank,
+                snippet: result.snippet.map(clean_preview),
+            }
+        })
+        .collect();
+
     let template = SearchTemplate {
         query: params.q,
         results,
     };
 
-    template.render()
+    template
+        .render()
         .map(Html)
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
 }

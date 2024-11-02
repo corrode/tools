@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>This Week in Rust - Advanced Search</title>
+    <title>Rust Search</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -313,6 +313,14 @@
         color: var(--color-text);
         margin-bottom: 12px;
         font-size: 0.95rem;
+        text-wrap: wrap;
+        text-overflow: ellipsis;
+
+        /* Break up long strings */
+        overflow-wrap: break-word; /* Modern browsers */
+        word-wrap: break-word; /* Legacy */
+        word-break: break-word; /* For non-CJK text */
+        max-width: 100%;
       }
       .result-meta {
         display: flex;
@@ -395,7 +403,7 @@
   <body>
     <div class="container">
       <header>
-        <h1>This Week in Rust Search</h1>
+        <h1>Rust Search</h1>
         <div class="subtitle">
           Discover the latest Rust news, tutorials, and discussions
         </div>

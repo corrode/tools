@@ -38,19 +38,11 @@ pub struct SearchResult {
 impl SearchResult {
     /// Returns the hostname from the URL in a displayable format
     pub fn domain(&self) -> String {
-        self.entry.id.url
+        self.entry
+            .id
+            .url
             .host_str()
             .unwrap_or("unknown")
             .to_string()
-    }
-
-    /// Returns a formatted date string
-    pub fn date_formatted(&self) -> String {
-        self.entry.id.date.format("%Y-%m-%d").to_string()
-    }
-
-    /// Returns true if this result has a non-empty snippet
-    pub fn has_snippet(&self) -> bool {
-        self.snippet.as_ref().map_or(false, |s| !s.is_empty())
     }
 }
