@@ -117,13 +117,10 @@ async fn search_handler(
     // Clean up result text. This needs to go elsewhere later
     let results: Vec<SearchResult> = results
         .into_iter()
-        .map(|result| {
-            println!("call");
-            SearchResult {
-                entry: result.entry,
-                rank: result.rank,
-                snippet: result.snippet.map(clean_preview),
-            }
+        .map(|result| SearchResult {
+            entry: result.entry,
+            rank: result.rank,
+            snippet: result.snippet.map(clean_preview),
         })
         .collect();
 

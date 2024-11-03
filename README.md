@@ -10,9 +10,9 @@ First, index TWIR with
 cargo run -- index
 ```
 
-this will create/update the twir.db sqlite file.
+this will create/update the twir.db sqlite file in the project root.
 
-After that, you can run the server with
+After that, you can run your server with
 
 ```sh
 cargo run -- serve

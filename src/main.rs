@@ -3,6 +3,9 @@ use anyhow::Result;
 mod crawl;
 mod routes;
 
+pub use crawl::Entry;
+use twir::SQLITE_DB_PATH;
+
 use std::sync::Arc;
 
 #[tokio::main]
@@ -16,7 +19,7 @@ async fn main() -> Result<()> {
                 crawl::index_all().await?;
             }
             "serve" => {
-                let repo = Arc::new(crawl::Repository::new("twir.db").await?);
+                let repo = Arc::new(crawl::Repository::new(SQLITE_DB_PATH).await?);
 
                 let app = routes::routes(repo);
 

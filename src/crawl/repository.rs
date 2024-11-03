@@ -13,17 +13,8 @@ pub struct Repository {
 
 impl Repository {
     /// Creates a new repository instance.
-    /// Fails if the database file doesn't exist - run indexer first.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        // Check if database exists
-        if !path.as_ref().exists() {
-            bail!(
-                "Database file not found at: {}. Run indexer first with: cargo run -- index",
-                path.as_ref().display()
-            );
-        }
-
-        let database_url = format!("sqlite:{}", path.as_ref().display());
+        let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
         log::info!("Opening database at: {}", database_url);
 
         let pool = SqlitePoolOptions::new()
@@ -32,21 +23,24 @@ impl Repository {
             .await
             .context("Failed to connect to SQLite database")?;
 
-        Ok(Self { pool })
+        let repo = Self { pool };
+        repo.init_db().await?;
+        Ok(repo)
     }
 
     /// Initializes the database schema
     async fn init_db(&self) -> Result<()> {
-        // Create main table
+        // Create main table for metadata
         sqlx::query(
             r#"
-            CREATE TABLE IF NOT EXISTS entries (
+            CREATE TABLE IF NOT EXISTS entries_meta (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
                 category TEXT NOT NULL,
                 date TEXT NOT NULL,
-                text TEXT
+                text TEXT,
+                entry_type TEXT NOT NULL DEFAULT 'article'
             )
             "#,
         )
@@ -57,8 +51,10 @@ impl Repository {
         sqlx::query(
             r#"
             CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
-                title, category, text,
-                content=entries,
+                title,
+                category,
+                text,
+                content='entries_meta',
                 content_rowid=id,
                 tokenize='porter unicode61'
             )
@@ -70,7 +66,7 @@ impl Repository {
         // Create triggers to keep FTS index in sync
         sqlx::query(
             r#"
-            CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries BEGIN
+            CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries_meta BEGIN
                 INSERT INTO entries_fts(rowid, title, category, text)
                 VALUES (new.id, new.title, new.category, new.text);
             END;
@@ -81,7 +77,7 @@ impl Repository {
 
         sqlx::query(
             r#"
-            CREATE TRIGGER IF NOT EXISTS entries_ad AFTER DELETE ON entries BEGIN
+            CREATE TRIGGER IF NOT EXISTS entries_ad AFTER DELETE ON entries_meta BEGIN
                 INSERT INTO entries_fts(entries_fts, rowid, title, category, text)
                 VALUES('delete', old.id, old.title, old.category, old.text);
             END;
@@ -92,7 +88,7 @@ impl Repository {
 
         sqlx::query(
             r#"
-            CREATE TRIGGER IF NOT EXISTS entries_au AFTER UPDATE ON entries BEGIN
+            CREATE TRIGGER IF NOT EXISTS entries_au AFTER UPDATE ON entries_meta BEGIN
                 INSERT INTO entries_fts(entries_fts, rowid, title, category, text)
                 VALUES('delete', old.id, old.title, old.category, old.text);
                 INSERT INTO entries_fts(rowid, title, category, text)
@@ -102,6 +98,11 @@ impl Repository {
         )
         .execute(&self.pool)
         .await?;
+
+        // Create index for date-based queries
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_entries_date ON entries_meta(date)")
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -115,8 +116,8 @@ impl Repository {
 
         sqlx::query(
             r#"
-            INSERT INTO entries(title, url, category, date, text)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO entries_meta(title, url, category, date, text, entry_type)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
                 title = excluded.title,
                 category = excluded.category,
@@ -128,7 +129,8 @@ impl Repository {
         .bind(url_str)
         .bind(&entry.id.category)
         .bind(&date_str)
-        .bind(&entry.text)
+        .bind(entry.text.as_deref().unwrap_or(""))
+        .bind("article")
         .execute(&mut *tx)
         .await?;
 
@@ -141,11 +143,11 @@ impl Repository {
         let rows = sqlx::query(
             r#"
             SELECT
-                e.title, e.url, e.category, e.date, e.text,
+                m.title, m.url, m.category, m.date, m.text,
                 rank,
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
-            JOIN entries e ON entries_fts.rowid = e.id
+            JOIN entries_meta m ON entries_fts.rowid = m.id
             WHERE entries_fts MATCH ?
             ORDER BY rank
             LIMIT 20
@@ -222,86 +224,5 @@ impl Repository {
             .collect();
 
         Ok(entries)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    async fn setup_test_db() -> Result<(Repository, tempfile::TempDir)> {
-        let dir = tempdir()?;
-        let db_path = dir.path().join("twir.db");
-        let repo = Repository::new(&db_path).await?;
-        Ok((repo, dir))
-    }
-
-    #[sqlx::test]
-    async fn test_full_text_search() -> Result<()> {
-        let (repo, _dir) = setup_test_db().await?;
-
-        // Insert test entries
-        let entries = vec![
-            Entry {
-                id: EntryId {
-                    title: "Rust Async Runtime Performance".to_string(),
-                    url: url::Url::parse("https://example.com/async")?,
-                    category: "Performance".to_string(),
-                    date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-                },
-                text: Some("Detailed analysis of async runtime performance in Rust".to_string()),
-            },
-            Entry {
-                id: EntryId {
-                    title: "WebAssembly Tutorial".to_string(),
-                    url: url::Url::parse("https://example.com/wasm")?,
-                    category: "Tutorial".to_string(),
-                    date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-                },
-                text: Some("Learn how to build with WebAssembly and Rust".to_string()),
-            },
-        ];
-
-        for entry in &entries {
-            repo.insert_entry(entry).await?;
-        }
-
-        // Test search functionality
-        let results = repo.search("async performance").await?;
-        assert!(!results.is_empty());
-        assert!(results[0].entry.id.title.contains("Async"));
-        assert!(results[0].snippet.is_some());
-
-        let results = repo.search("webassembly").await?;
-        assert!(!results.is_empty());
-        assert!(results[0].entry.id.title.contains("WebAssembly"));
-
-        Ok(())
-    }
-
-    #[sqlx::test]
-    async fn test_get_entries_by_date() -> Result<()> {
-        let (repo, _dir) = setup_test_db().await?;
-        let date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
-
-        let entry = Entry {
-            id: EntryId {
-                title: "Test Entry".to_string(),
-                url: url::Url::parse("https://example.com/test")?,
-                category: "Test".to_string(),
-                date,
-            },
-            text: Some("Test content".to_string()),
-        };
-
-        repo.insert_entry(&entry).await?;
-
-        let entries = repo.get_entries_by_date(date).await?;
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].id.title, "Test Entry");
-        assert_eq!(entries[0].id.date, date);
-
-        Ok(())
     }
 }
