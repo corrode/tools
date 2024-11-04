@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use pretty_env_logger;
 use std::fs;
-use twir::{Entry, Repository, SQLITE_DB_PATH};
+use storage::Repository;
+use types::{Entry, SQLITE_DB_PATH};
 
 #[tokio::main]
 async fn main() -> Result<()> {

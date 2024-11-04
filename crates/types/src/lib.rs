@@ -2,6 +2,8 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+pub const SQLITE_DB_PATH: &str = "twir.db";
+
 /// Entry identifier with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntryId {

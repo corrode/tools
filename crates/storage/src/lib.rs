@@ -1,10 +1,9 @@
-use crate::crawl::SearchResult;
-use crate::crawl::{Entry, EntryId};
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use std::path::Path;
+use types::{Entry, EntryId, SearchResult};
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {

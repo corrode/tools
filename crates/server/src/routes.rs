@@ -5,8 +5,8 @@ use pulldown_cmark::TagEnd;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::crawl::Repository;
-use crate::crawl::SearchResult;
+use storage::Repository;
+use types::SearchResult;
 
 #[derive(Template)]
 #[template(path = "index.html")]

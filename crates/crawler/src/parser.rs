@@ -1,9 +1,9 @@
 //! Parser for TWiR content files
 
-use crate::crawl::EntryId;
 use anyhow::{bail, Result};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use types::EntryId;
 
 // GitHub repository configuration
 const GITHUB_OWNER: &str = "rust-lang";

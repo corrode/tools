@@ -1,6 +1,8 @@
 //! Browser automation for crawling web pages
 
-use super::{EntryId, SCREENSHOT_OUT_PATH};
+use super::SCREENSHOT_OUT_PATH;
+use types::EntryId;
+
 use anyhow::{bail, Result};
 use headless_chrome::{
     protocol::cdp::Page::CaptureScreenshotFormatOption, Browser as ChromeBrowser,

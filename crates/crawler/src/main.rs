@@ -3,13 +3,11 @@
 
 mod browser;
 mod parser;
-mod repository;
-mod types;
 mod youtube;
 
 pub use browser::Browser;
 pub use parser::TwirParser;
-pub use repository::Repository;
+pub use storage::Repository;
 pub use types::*;
 
 use anyhow::Result;
@@ -23,7 +21,8 @@ const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
 
 /// Main indexing function that processes and stores TWiR content
-pub async fn index_all() -> Result<()> {
+#[tokio::main]
+pub async fn main() -> Result<()> {
     create_output_directories()?;
 
     let browser = Browser::new()?;

@@ -1,0 +1,24 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+types = { path = "../types" }
+
+anyhow = "1.0.86"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4.22"
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+url = { version = "2.2", features = ["serde"] }
+urlencoding = "2.1.3"
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-native-tls",
+    "chrono",
+    "sqlite",
+] }
+
+[dev-dependencies]
+tempfile = "3.13.0"
