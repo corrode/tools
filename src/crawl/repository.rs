@@ -1,7 +1,7 @@
 use crate::crawl::SearchResult;
 use crate::crawl::{Entry, EntryId};
+use anyhow::Context;
 use anyhow::Result;
-use anyhow::{bail, Context};
 use chrono::NaiveDate;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use std::path::Path;

@@ -5,6 +5,7 @@ mod browser;
 mod parser;
 mod repository;
 mod types;
+mod youtube;
 
 pub use browser::Browser;
 pub use parser::TwirParser;
