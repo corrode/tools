@@ -1,6 +1,6 @@
 use anyhow::Result;
 use askama::Template;
-use axum::{extract::Query, response::Html, routing::get, Router};
+use axum::{extract::Query, response::Html};
 use pulldown_cmark::TagEnd;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -22,24 +22,6 @@ pub struct SearchParams {
     // sort: Option<String>,
     // date_range: Option<String>,
     // content_type: Option<Vec<String>>,
-}
-
-pub fn routes(repo: Arc<Repository>) -> Router {
-    Router::new()
-        .route("/", get(index_handler))
-        .route("/search", get(search_handler))
-        .with_state(repo)
-}
-
-async fn index_handler() -> Result<Html<String>, axum::http::StatusCode> {
-    let template = SearchTemplate {
-        query: None,
-        results: vec![],
-    };
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 // TODO: Move this to a separate file
@@ -102,7 +84,8 @@ fn clean_preview(content: String) -> String {
     preview.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-async fn search_handler(
+/// Handler for searching the posts
+pub(crate) async fn search(
     Query(params): Query<SearchParams>,
     axum::extract::State(repo): axum::extract::State<Arc<Repository>>,
 ) -> Result<Html<String>, axum::http::StatusCode> {

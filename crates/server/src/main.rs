@@ -8,8 +8,9 @@
 
 use anyhow::Result;
 
-mod routes;
+mod handlers;
 
+use axum::{routing::get, Router};
 use storage::Repository;
 pub use types::Entry;
 use types::SQLITE_DB_PATH;
@@ -23,7 +24,10 @@ async fn main() -> Result<()> {
 
     let repo = Arc::new(Repository::new(SQLITE_DB_PATH).await?);
 
-    let app = routes::routes(repo);
+    let app = Router::new()
+        .route("/", get(handlers::index))
+        .route("/search", get(handlers::search))
+        .with_state(repo);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("Listening on http://localhost:3000");
