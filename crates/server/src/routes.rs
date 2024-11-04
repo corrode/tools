@@ -64,7 +64,7 @@ fn clean_preview(content: String) -> String {
                 } else if text == "]" {
                     in_brackets = false;
                     // Exclude the `42` in references like `[foo][42]`
-                    if !link_text.chars().all(|c| c.is_digit(10)) {
+                    if !link_text.chars().all(|c| c.is_ascii_digit()) {
                         preview.push_str(&link_text);
                         preview.push(' ');
                     }

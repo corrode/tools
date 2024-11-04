@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_crate_level_docs)]
+
 //! Module for crawling and indexing This Week in Rust content.
 //! Handles fetching articles, parsing content, and storing entries in the database.
 

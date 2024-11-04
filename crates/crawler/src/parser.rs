@@ -164,6 +164,12 @@ impl TwirParser {
     }
 }
 
+impl Default for TwirParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

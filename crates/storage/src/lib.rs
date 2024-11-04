@@ -1,3 +1,14 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_crate_level_docs)]
+
+//! # Rust Search Storage
+//!
+//! This crate provides a repository for storing and retrieving TWiR entries.
+//! It uses SQLite as the underlying storage engine.
+//!
+//! Articles can be searched through a full-text search index based on the FTS5
+//! extension provided by SQLite.
+
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;

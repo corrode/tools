@@ -1,3 +1,11 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_crate_level_docs)]
+
+//! # Rust Search Server
+//!
+//! This is the server for the Rust Search project. It provides a web interface
+//! for searching through articles from 'This Week in Rust'.
+
 use anyhow::Result;
 
 mod routes;

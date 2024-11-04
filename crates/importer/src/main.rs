@@ -1,5 +1,12 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_crate_level_docs)]
+
+//! # Rust Search Importer
+//!
+//! Reads JSON files from the `content/index` directory and inserts them into
+//! the database.
+
 use anyhow::{Context, Result};
-use pretty_env_logger;
 use std::fs;
 use storage::Repository;
 use types::{Entry, SQLITE_DB_PATH};
