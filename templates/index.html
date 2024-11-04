@@ -348,12 +348,94 @@
         background-color: rgba(249, 194, 46, 0.2);
         cursor: pointer;
       }
-      .powered-by {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        font-size: 0.8rem;
+
+      footer {
+        margin-top: 40px;
+        padding: 40px 20px;
+        border-top: 1px solid var(--color-border);
+      }
+
+      .footer-container {
+        max-width: 940px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        font-size: 0.9rem;
         color: var(--color-text-muted);
+      }
+
+      .footer-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 45ch;
+      }
+
+      .footer-section p {
+        font-size: 0.85rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .footer-links {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        justify-content: flex-start;
+        align-items: flex-end;
+      }
+
+      .footer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--color-primary-muted);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-link:hover {
+        color: var(--color-primary);
+      }
+
+      .icon {
+        width: 16px;
+        height: 16px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      .icon-github {
+        /* Encode the SVG with the CSS variable for color */
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 92 92' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M61.896,52.548c-3.59,0-6.502,4.026-6.502,8.996c0,4.971,2.912,8.999,6.502,8.999c3.588,0,6.498-4.028,6.498-8.999C68.395,56.574,65.484,52.548,61.896,52.548z M84.527,29.132c0.74-1.826,0.777-12.201-3.17-22.132c0,0-9.057,0.993-22.76,10.396c-2.872-0.793-7.736-1.19-12.597-1.19s-9.723,0.396-12.598,1.189C19.699,7.993,10.645,7,10.645,7c-3.948,9.931-3.913,20.306-3.172,22.132C2.834,34.169,0,40.218,0,48.483c0,35.932,29.809,36.508,37.334,36.508c1.703,0,5.088,0.004,8.666,0.009c3.578-0.005,6.965-0.009,8.666-0.009C62.191,84.991,92,84.415,92,48.483C92,40.218,89.166,34.169,84.527,29.132z M46.141,80.574H45.86c-18.859,0-33.545-2.252-33.545-20.58c0-4.389,1.549-8.465,5.229-11.847c6.141-5.636,16.527-2.651,28.316-2.651c0.045,0,0.093-0.001,0.141-0.003c0.049,0.002,0.096,0.003,0.141,0.003c11.789,0,22.178-2.984,28.316,2.651c3.68,3.382,5.229,7.458,5.229,11.847C79.686,78.322,65,80.574,46.141,80.574z M30.104,52.548c-3.588,0-6.498,4.026-6.498,8.996c0,4.971,2.91,8.999,6.498,8.999c3.592,0,6.502-4.028,6.502-8.999C36.605,56.574,33.695,52.548,30.104,52.548z'/%3E%3C/svg%3E");
+      }
+
+      html[data-theme^="light"] .icon-github {
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 92 92' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23000000' d='M61.896,52.548c-3.59,0-6.502,4.026-6.502,8.996c0,4.971,2.912,8.999,6.502,8.999c3.588,0,6.498-4.028,6.498-8.999C68.395,56.574,65.484,52.548,61.896,52.548z M84.527,29.132c0.74-1.826,0.777-12.201-3.17-22.132c0,0-9.057,0.993-22.76,10.396c-2.872-0.793-7.736-1.19-12.597-1.19s-9.723,0.396-12.598,1.189C19.699,7.993,10.645,7,10.645,7c-3.948,9.931-3.913,20.306-3.172,22.132C2.834,34.169,0,40.218,0,48.483c0,35.932,29.809,36.508,37.334,36.508c1.703,0,5.088,0.004,8.666,0.009c3.578-0.005,6.965-0.009,8.666-0.009C62.191,84.991,92,84.415,92,48.483C92,40.218,89.166,34.169,84.527,29.132z M46.141,80.574H45.86c-18.859,0-33.545-2.252-33.545-20.58c0-4.389,1.549-8.465,5.229-11.847c6.141-5.636,16.527-2.651,28.316-2.651c0.045,0,0.093-0.001,0.141-0.003c0.049,0.002,0.096,0.003,0.141,0.003c11.789,0,22.178-2.984,28.316,2.651c3.68,3.382,5.229,7.458,5.229,11.847C79.686,78.322,65,80.574,46.141,80.574z M30.104,52.548c-3.588,0-6.498,4.026-6.498,8.996c0,4.971,2.91,8.999,6.498,8.999c3.592,0,6.502-4.028,6.502-8.999C36.605,56.574,33.695,52.548,30.104,52.548z'/%3E%3C/svg%3E");
+      }
+
+      @media (max-width: 768px) {
+        .footer-container {
+          grid-template-columns: 1fr;
+          text-align: center;
+          gap: 24px;
+        }
+
+        .footer-section {
+          max-width: 65ch;
+          margin: 0 auto;
+        }
+
+        .footer-section,
+        .footer-links {
+          align-items: center;
+        }
+
+        .footer-link {
+          justify-content: center;
+        }
       }
       .powered-by a {
         color: var(--color-primary);
@@ -555,9 +637,33 @@
       </div>
     </div>
 
-    <div class="powered-by">
-      Powered by <a href="https://corrode.dev">corrode</a>
-    </div>
+    <footer>
+      <div class="footer-container">
+        <div class="footer-section">
+          <p>
+            This Week in Rust Search helps you discover content from the popular
+            Rust programming newsletter. Browse through years of curated Rust
+            articles, news, and resources.
+          </p>
+        </div>
+
+        <div class="footer-links">
+          <a href="https://github.com/corrode/twir/issues" class="footer-link">
+            <span class="icon icon-github"></span>
+            Report an issue
+          </a>
+          <a
+            href="https://corrode.dev/blog/idiomatic-rust-resources/"
+            class="footer-link"
+          >
+            Learning Material for Idiomatic Rust
+          </a>
+          <a href="https://corrode.dev" class="footer-link">
+            Powered by corrode
+          </a>
+        </div>
+      </div>
+    </footer>
 
     <script>
       // Remove preload class after page is fully loaded to prevent flicker
