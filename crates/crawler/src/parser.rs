@@ -8,7 +8,7 @@ use types::EntryId;
 // GitHub repository configuration
 const GITHUB_OWNER: &str = "rust-lang";
 const GITHUB_REPO: &str = "this-week-in-rust";
-const GITHUB_BRANCH: &str = "master";
+const GITHUB_BRANCH: &str = "main";
 
 /// Parser for TWiR content
 pub struct TwirParser {

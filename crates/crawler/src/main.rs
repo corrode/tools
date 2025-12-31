@@ -5,6 +5,7 @@
 //! Handles fetching articles, parsing content, and storing entries in the database.
 
 mod browser;
+mod cookies;
 mod parser;
 mod youtube;
 
@@ -22,6 +23,8 @@ const TWIR_OUT_PATH: &str = "./content/twir";
 const INDEX_OUT_PATH: &str = "./content/index";
 const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
+const DB_PATH: &str = "content/db/twir.db";
+const DB_DIR_PATH: &str = "./content/db";
 
 /// Main indexing function that processes and stores TWiR content
 #[tokio::main]
@@ -30,7 +33,7 @@ pub async fn main() -> Result<()> {
 
     let browser = Browser::new()?;
     let parser = TwirParser::new();
-    let repo = Repository::new("content/db/twir.db").await?;
+    let repo = Repository::new(DB_PATH).await?;
 
     let entries = parser.fetch_twir_entries().await?;
 
@@ -84,6 +87,7 @@ fn create_output_directories() -> Result<()> {
     fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
     fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
+    fs::create_dir_all(DB_DIR_PATH)?;
     Ok(())
 }
 

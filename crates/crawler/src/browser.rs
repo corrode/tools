@@ -1,5 +1,6 @@
 //! Browser automation for crawling web pages
 
+use super::cookies::COOKIE_BANNER_SELECTORS;
 use super::SCREENSHOT_OUT_PATH;
 use types::EntryId;
 
@@ -88,24 +89,7 @@ impl Browser {
 
     /// Removes cookie consent banners from a webpage
     fn remove_cookie_banner(&self, tab: &Tab) -> Result<()> {
-        let selectors = [
-            "#lightbox",
-            "#cookie-banner",
-            ".cookie-banner",
-            "#cookieConsent",
-            ".cookie-consent",
-            "[class*='cookie-consent']",
-            "[id*='cookie-consent']",
-            "[class*='cookie-notice']",
-            "[id*='cookie-notice']",
-            "[class*='cookie-policy']",
-            "[id*='cookie-policy']",
-            "#onetrust-consent-sdk",
-            ".CookieConsent",
-            "#pz-gdpr",
-        ];
-
-        let all_selectors = selectors.join(", ");
+        let all_selectors = COOKIE_BANNER_SELECTORS.join(", ");
         let js = format!(
             r#"document.querySelectorAll('{}').forEach(el => el.remove());"#,
             all_selectors
