@@ -7,6 +7,7 @@
 mod browser;
 mod cookies;
 mod parser;
+mod sanitizer;
 mod youtube;
 
 pub use browser::Browser;

@@ -1,6 +1,7 @@
 //! Browser automation for crawling web pages
 
 use super::cookies::COOKIE_BANNER_SELECTORS;
+use super::sanitizer::Sanitizer;
 use super::{RAW_OUT_PATH, SCREENSHOT_OUT_PATH};
 use types::EntryId;
 
@@ -121,9 +122,11 @@ impl Browser {
                     self.save_raw_html(&html, entry_id)?;
                 }
 
-                let cleaned = html2text::from_read(html.as_bytes(), 500);
-                log::debug!("Cleaned: {cleaned}");
-                Some(cleaned)
+                // Sanitize HTML and extract plain text content
+                // dom_smoothie handles both cleaning and text extraction
+                let text = Sanitizer::sanitize(&html)?;
+                log::debug!("Extracted text: {} chars", text.len());
+                Some(text)
             }
             Err(e) => {
                 return Err(e);
