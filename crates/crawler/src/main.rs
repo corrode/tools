@@ -32,10 +32,8 @@ struct Args {
 
 // Output paths configuration
 const TWIR_OUT_PATH: &str = "./content/twir";
-const INDEX_OUT_PATH: &str = "./content/index";
 const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
-const DB_PATH: &str = "content/db/twir.db";
 const DB_DIR_PATH: &str = "./content/db";
 
 /// Main indexing function that processes and stores TWiR content
@@ -48,7 +46,7 @@ pub async fn main() -> Result<()> {
 
     let browser = Browser::new(args.save_raw_html)?;
     let parser = TwirParser::new();
-    let repo = Repository::new(DB_PATH).await?;
+    let repo = Repository::new(SQLITE_DB_PATH).await?;
 
     let entries = parser.fetch_twir_entries().await?;
 
@@ -71,10 +69,12 @@ pub async fn main() -> Result<()> {
         for id in parser.parse_file(&content) {
             // Skip if URL shouldn't be processed
             if !should_process_url(&id.url) {
+                log::info!("Skipping URL based on criteria: {}", id.url);
                 continue;
             }
 
             // Crawl and store content
+            log::info!("Crawling URL: {}", id.url);
             if let Ok(text) = browser.crawl(&id).await {
                 let entry = Entry { id, text };
 
@@ -84,10 +84,7 @@ pub async fn main() -> Result<()> {
                     continue;
                 }
 
-                let entry_path = format!("{INDEX_OUT_PATH}/{}.json", entry.id);
-                if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
-                    info!("Failed to save JSON for {}: {}", entry.id.url, e);
-                }
+                info!("Successfully stored entry: {}", entry.id.url);
             }
         }
     }
@@ -99,7 +96,6 @@ pub async fn main() -> Result<()> {
 /// Creates necessary output directories
 fn create_output_directories() -> Result<()> {
     fs::create_dir_all(TWIR_OUT_PATH)?;
-    fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
     fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
     fs::create_dir_all(DB_DIR_PATH)?;

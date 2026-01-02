@@ -1,6 +1,7 @@
 /target
 twir.jsonl
 content
+content_old
 .env
 twir_dump.sql
 TODO.md

@@ -12,7 +12,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
 use types::{Entry, EntryId, SearchResult};
 
@@ -119,6 +119,7 @@ impl Repository {
 
     /// Inserts a new entry
     pub async fn insert_entry(&self, entry: &Entry) -> Result<()> {
+        log::debug!("Inserting entry: {}", entry.id.url);
         let mut tx = self.pool.begin().await?;
 
         let date_str = entry.id.date.format("%Y-%m-%d").to_string();
