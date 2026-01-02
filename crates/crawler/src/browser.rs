@@ -5,10 +5,10 @@ use super::sanitizer::Sanitizer;
 use super::{RAW_OUT_PATH, SCREENSHOT_OUT_PATH};
 use types::EntryId;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use headless_chrome::{
-    protocol::cdp::Page::CaptureScreenshotFormatOption, Browser as ChromeBrowser,
-    LaunchOptionsBuilder, Tab,
+    Browser as ChromeBrowser, LaunchOptionsBuilder, Tab,
+    protocol::cdp::Page::CaptureScreenshotFormatOption,
 };
 use regex::Regex;
 use std::sync::LazyLock;
@@ -73,9 +73,8 @@ impl Browser {
         };
 
         // Rewrite to thumbnail URL if we got a video ID
-        video_id.and_then(|id| {
-            url::Url::parse(&format!("https://img.youtube.com/vi/{id}/0.jpg")).ok()
-        })
+        video_id
+            .and_then(|id| url::Url::parse(&format!("https://img.youtube.com/vi/{id}/0.jpg")).ok())
     }
 
     /// Crawls a webpage and returns its text content
@@ -83,7 +82,8 @@ impl Browser {
         log::info!("Crawling {}", entry_id.url);
 
         // Rewrite YouTube URLs to thumbnail URLs to avoid cookie banners
-        let target_url = Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| entry_id.url.clone());
+        let target_url =
+            Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| entry_id.url.clone());
 
         if target_url != entry_id.url {
             log::info!("Rewritten YouTube URL to thumbnail: {}", target_url);
@@ -93,6 +93,11 @@ impl Browser {
         let response = reqwest::get(target_url.as_str()).await?;
         if response.status() == 403 || response.status() == 404 || response.status() == 410 {
             bail!("404: Not Found or moved {}", entry_id.url);
+        }
+
+        // Exclude server errors (5xx)
+        if response.status().is_server_error() {
+            bail!("5xx: Server error {}", entry_id.url);
         }
 
         // For YouTube thumbnails, we can skip browser rendering

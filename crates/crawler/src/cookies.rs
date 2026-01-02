@@ -176,4 +176,16 @@ pub static COOKIE_BANNER_SELECTORS: &[&str] = &[
     ".mandatory-consent-v2-kickin",
     // X.com / Twitter specific
     "[data-testid=\"BottomBar\"]",
+    // Medium specific
+    ".branch-journeys-top",
+    "#branch-banner-iframe",
+    "#branch-banner",
+    "[data-testid=\"meter-overlay\"]",
+    "[data-testid=\"mobile-signup-footer\"]",
+    "[data-testid=\"paywall\"]",
+    ".meteredContent",
+    ".js-postMeterUpgrade",
+    "div[data-layer-container=\"true\"]",
+    ".overlay",
+    ".overlayFooter",
 ];

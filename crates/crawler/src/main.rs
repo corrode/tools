@@ -123,19 +123,25 @@ fn should_process_url(url: &url::Url) -> bool {
         "reddit.com",
         "meetup.com",
         "twitter.com",
+        "https://t.me", // Explicitly using full URL to avoid matching other domains
+        "x.com",
         "vimeo.com",
         "bsky.app",
         "mastodon.social",
+        "irc.mozilla.org",
+        "mibbit.com",
         // TWiR infrastructure (appears in every issue template)
         "this-week-in-rust.org",
         "this-week-in-rust.us11.list-manage.com", // Newsletter signup
-        "users.rust-lang.org",                     // Rust user forum
+        "users.rust-lang.org",                    // Rust user forum
         // Rust project infrastructure
         "rust-lang.org",
         "forge.rust-lang.org",
         "foundation.rust-lang.org",
         // Other
-        "irc.mozilla.org",
+        "eventbrite.com",
+        "smartrecruiters.com",
+        "bamboohr.com",
         "google.com/calendar",
     ];
 
