@@ -36,20 +36,27 @@ fn load_fixture(name: &str) -> String {
 /// Helper to check if text contains HTML tags
 fn contains_html_tags(text: &str) -> bool {
     // Check for common HTML tag patterns
-    text.contains("<div") || text.contains("<p>") || text.contains("<span") ||
-    text.contains("<nav") || text.contains("<header") || text.contains("<footer")
+    text.contains("<div")
+        || text.contains("<p>")
+        || text.contains("<span")
+        || text.contains("<nav")
+        || text.contains("<header")
+        || text.contains("<footer")
 }
 
 /// Helper to check for JavaScript content
 fn contains_javascript(text: &str) -> bool {
-    text.contains("console.log") || text.contains("window.addEventListener") ||
-    text.contains("function()")
+    text.contains("console.log")
+        || text.contains("window.addEventListener")
+        || text.contains("function()")
 }
 
 /// Helper to check for CSS
 fn contains_css(text: &str) -> bool {
-    text.contains("font-family:") || text.contains("background:") ||
-    text.contains("padding:") || text.contains("margin:")
+    text.contains("font-family:")
+        || text.contains("background:")
+        || text.contains("padding:")
+        || text.contains("margin:")
 }
 
 #[test]
@@ -58,7 +65,10 @@ fn test_blog_post_sanitization() -> Result<()> {
     let sanitized = sanitizer::sanitize(&html)?;
 
     // Should not be empty
-    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+    assert!(
+        !sanitized.is_empty(),
+        "Sanitized output should not be empty"
+    );
 
     // Should contain the main article content
     // Note: H1 titles may be stripped by readability algorithm
@@ -85,16 +95,10 @@ fn test_blog_post_sanitization() -> Result<()> {
     );
 
     // Should not contain JavaScript
-    assert!(
-        !contains_javascript(&sanitized),
-        "Should remove JavaScript"
-    );
+    assert!(!contains_javascript(&sanitized), "Should remove JavaScript");
 
     // Should not contain CSS
-    assert!(
-        !contains_css(&sanitized),
-        "Should remove CSS"
-    );
+    assert!(!contains_css(&sanitized), "Should remove CSS");
 
     // Should not contain HTML tags (plain text output)
     assert!(
@@ -102,7 +106,10 @@ fn test_blog_post_sanitization() -> Result<()> {
         "Should not contain HTML tags in plain text output"
     );
 
-    println!("Blog post sanitization succeeded. Output length: {} chars", sanitized.len());
+    println!(
+        "Blog post sanitization succeeded. Output length: {} chars",
+        sanitized.len()
+    );
 
     Ok(())
 }
@@ -113,7 +120,10 @@ fn test_news_article_sanitization() -> Result<()> {
     let sanitized = sanitizer::sanitize(&html)?;
 
     // Should not be empty
-    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+    assert!(
+        !sanitized.is_empty(),
+        "Sanitized output should not be empty"
+    );
 
     // Should contain the main article content
     // Note: H1 titles in headers may be stripped by readability algorithm
@@ -144,24 +154,18 @@ fn test_news_article_sanitization() -> Result<()> {
 
     // Should not contain breadcrumbs
     let has_breadcrumbs = sanitized.contains("Home &gt;") && sanitized.contains("Programming &gt;");
-    assert!(
-        !has_breadcrumbs,
-        "Should remove breadcrumbs navigation"
-    );
+    assert!(!has_breadcrumbs, "Should remove breadcrumbs navigation");
 
     // Should not contain JavaScript
-    assert!(
-        !contains_javascript(&sanitized),
-        "Should remove JavaScript"
-    );
+    assert!(!contains_javascript(&sanitized), "Should remove JavaScript");
 
     // Should not contain CSS
-    assert!(
-        !contains_css(&sanitized),
-        "Should remove CSS"
-    );
+    assert!(!contains_css(&sanitized), "Should remove CSS");
 
-    println!("News article sanitization succeeded. Output length: {} chars", sanitized.len());
+    println!(
+        "News article sanitization succeeded. Output length: {} chars",
+        sanitized.len()
+    );
 
     Ok(())
 }
@@ -172,7 +176,10 @@ fn test_simple_doc_sanitization() -> Result<()> {
     let sanitized = sanitizer::sanitize(&html)?;
 
     // Should not be empty
-    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+    assert!(
+        !sanitized.is_empty(),
+        "Sanitized output should not be empty"
+    );
 
     // Should contain the main documentation content
     assert!(
@@ -204,7 +211,10 @@ fn test_simple_doc_sanitization() -> Result<()> {
         "Should remove sidebar navigation"
     );
 
-    println!("Simple doc sanitization succeeded. Output length: {} chars", sanitized.len());
+    println!(
+        "Simple doc sanitization succeeded. Output length: {} chars",
+        sanitized.len()
+    );
 
     Ok(())
 }
@@ -215,6 +225,7 @@ fn test_all_fixtures_produce_reasonable_output() -> Result<()> {
         "blog_post_with_noise.html",
         "news_article.html",
         "simple_doc.html",
+        "hn.html",
     ];
 
     for fixture in fixtures {
@@ -315,6 +326,88 @@ fn test_sanitizer_removes_common_boilerplate() -> Result<()> {
             );
         }
     }
+
+    Ok(())
+}
+
+#[test]
+fn test_hackernews_sanitization() -> Result<()> {
+    let html = load_fixture("hn.html");
+    let sanitized = sanitizer::sanitize(&html)?;
+
+    // Should not be empty
+    assert!(
+        !sanitized.is_empty(),
+        "Sanitized output should not be empty"
+    );
+
+    // Should contain the main content about Rust Core Team announcement
+    // Note: HN extracts may have whitespace/formatting issues, so check for key terms
+    let lower = sanitized.to_lowercase();
+    assert!(
+        lower.contains("yehuda"),
+        "Should preserve main content mentioning Yehuda"
+    );
+    assert!(
+        lower.contains("steve"),
+        "Should preserve main content mentioning Steve"
+    );
+    assert!(
+        lower.contains("rust"),
+        "Should preserve Rust-related content"
+    );
+
+    // HN pages are notorious for excessive metadata
+    // The sanitized output should be much smaller than the original
+    let size_reduction_percent = ((html.len() - sanitized.len()) * 100) / html.len();
+    assert!(
+        size_reduction_percent > 50,
+        "Should reduce HN page size by at least 50% (actual: {}%)",
+        size_reduction_percent
+    );
+
+    // Should not contain HN-specific technical UI elements
+    // Note: Words like "points", "ago", "reply" can appear in natural language,
+    // so we check for more specific HN patterns instead
+    let hn_specific_patterns = ["votearrow", "upvote", "hnname", "comhead", "subtext"];
+
+    let mut found_hn_patterns = Vec::new();
+    for pattern in &hn_specific_patterns {
+        if sanitized.to_lowercase().contains(pattern) {
+            found_hn_patterns.push(*pattern);
+        }
+    }
+
+    assert!(
+        found_hn_patterns.is_empty(),
+        "Should remove HN-specific UI patterns, but found: {:?}",
+        found_hn_patterns
+    );
+
+    // Should not contain navigation menu
+    assert!(
+        !sanitized.contains("Hacker News"),
+        "Should remove HN header/navigation"
+    );
+
+    // Should not contain HTML tags (plain text output)
+    assert!(
+        !contains_html_tags(&sanitized),
+        "Should not contain HTML tags in plain text output"
+    );
+
+    // Should not contain JavaScript or CSS
+    assert!(!contains_javascript(&sanitized), "Should remove JavaScript");
+    assert!(!contains_css(&sanitized), "Should remove CSS");
+
+    println!(
+        "HN sanitization succeeded. Original: {} bytes, Sanitized: {} bytes ({}% reduction)",
+        html.len(),
+        sanitized.len(),
+        size_reduction_percent
+    );
+    println!("Sanitized content preview (first 500 chars):");
+    println!("{}", &sanitized.chars().take(500).collect::<String>());
 
     Ok(())
 }

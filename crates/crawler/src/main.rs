@@ -118,23 +118,29 @@ fn should_process_url(url: &url::Url) -> bool {
     }
 
     let ignored_urls = [
+        // Social media and forums
         "github.com",
         "reddit.com",
         "meetup.com",
         "twitter.com",
         "vimeo.com",
+        "bsky.app",
+        "mastodon.social",
+        // TWiR infrastructure (appears in every issue template)
+        "this-week-in-rust.org",
+        "this-week-in-rust.us11.list-manage.com", // Newsletter signup
+        "users.rust-lang.org",                     // Rust user forum
+        // Rust project infrastructure
+        "rust-lang.org",
+        "forge.rust-lang.org",
+        "foundation.rust-lang.org",
+        // Other
         "irc.mozilla.org",
+        "google.com/calendar",
     ];
 
     if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
         log::info!("Skipping ignored URL: {}", url);
-        return false;
-    }
-
-    // Skip specific URLs
-    let exact_matches = ["http://rust-lang.org/"];
-    if exact_matches.iter().any(|u| url.to_string() == *u) {
-        log::info!("Skipping exact match URL: {}", url);
         return false;
     }
 
