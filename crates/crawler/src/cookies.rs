@@ -168,4 +168,12 @@ pub static COOKIE_BANNER_SELECTORS: &[&str] = &[
     "[data-testid=\"dl-cookieBanner\"]",
     "[data-tracking-opt-in-overlay=\"true\"]",
     "[data-consent-main]",
+    // YouTube specific
+    ".consent-bump-v2-lightbox",
+    "ytm-consent-bump-v2-renderer",
+    ".eom-dialog-container",
+    ".eom-dialog",
+    ".mandatory-consent-v2-kickin",
+    // X.com / Twitter specific
+    "[data-testid=\"BottomBar\"]",
 ];

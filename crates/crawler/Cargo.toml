@@ -9,6 +9,7 @@ storage = { path = "../storage" }
 
 anyhow = "1.0.86"
 chrono = { version = "0.4", features = ["serde"] }
+env_logger = "0.11"
 headless_chrome = "1.0.14"
 html2text = "0.12.5"
 log = "0.4.22"

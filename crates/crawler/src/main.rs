@@ -29,6 +29,7 @@ const DB_DIR_PATH: &str = "./content/db";
 /// Main indexing function that processes and stores TWiR content
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    env_logger::init();
     create_output_directories()?;
 
     let browser = Browser::new()?;
