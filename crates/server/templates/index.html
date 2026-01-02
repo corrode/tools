@@ -121,16 +121,18 @@
       html[data-theme="light-hacker-news"] header {
         background-color: #ff6600;
         margin: -8px -8px 10px -8px;
-        padding: 2px;
+        padding: 4px;
         text-align: left;
       }
 
       html[data-theme="light-hacker-news"] header h1 {
         color: #000000;
         font-weight: bold;
-        padding: 2px 4px;
+        padding: 4px 6px;
         margin: 0;
         display: inline-block;
+        background-color: #f6f6ef;
+        border: 1px solid #000000;
       }
 
       html[data-theme="light-hacker-news"] .subtitle {
@@ -140,16 +142,28 @@
       html[data-theme="light-hacker-news"] #search {
         border: 1px solid #828282;
         border-radius: 0;
-        padding: 4px;
+        padding: 3px 4px;
         font-size: 10pt;
         font-family: Verdana, Geneva, sans-serif;
+        height: auto;
+        line-height: normal;
+      }
+
+      html[data-theme="light-hacker-news"] #search:focus {
+        box-shadow: none;
       }
 
       html[data-theme="light-hacker-news"] .filter-button {
         border: 1px solid #828282;
         border-radius: 0;
-        padding: 4px 8px;
+        padding: 3px 8px;
         font-size: 10pt;
+        height: auto;
+        background-color: #f6f6ef;
+      }
+
+      html[data-theme="light-hacker-news"] .filter-button:hover {
+        background-color: #ffffff;
       }
 
       html[data-theme="light-hacker-news"] .results {
@@ -223,6 +237,30 @@
       html[data-theme="light-hacker-news"] a:hover {
         text-decoration: underline;
         opacity: 1;
+      }
+
+      html[data-theme="light-hacker-news"] #filter-panel {
+        background-color: #f6f6ef;
+        border: 1px solid #828282;
+        border-radius: 0;
+        padding: 8px;
+        margin-bottom: 10px;
+      }
+
+      html[data-theme="light-hacker-news"] .filter-label {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      html[data-theme="light-hacker-news"] .filter-select {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+        border: 1px solid #828282;
+        border-radius: 0;
+        padding: 2px;
+        background-color: #ffffff;
       }
 
       html[data-theme="light-hacker-news"] footer {
