@@ -21,7 +21,7 @@ impl Sanitizer {
     /// Based on Mozilla's readability algorithm with DomSmoothie's
     /// alternative candidate selection for better content capture.
     ///
-    /// Returns plain text content, not HTML.
+    /// Returns plain text content with normalized whitespace.
     pub fn sanitize(html: &str) -> Result<String> {
         // Configure readability with DomSmoothie mode for better content capture
         // This mode may be less "clean" but captures more meaningful content
@@ -35,8 +35,54 @@ impl Sanitizer {
         let mut readability = Readability::new(html, None, Some(cfg))?;
         let article = readability.parse()?;
 
-        // Return plain text content (not HTML)
-        Ok(article.text_content.to_string())
+        // Get plain text and normalize whitespace
+        let text = article.text_content.to_string();
+        Ok(Self::normalize_whitespace(&text))
+    }
+
+    /// Normalizes whitespace in text content
+    ///
+    /// - Trims leading/trailing whitespace
+    /// - Collapses multiple spaces into single spaces
+    /// - Collapses more than 2 consecutive newlines into 2 (preserves paragraph breaks)
+    fn normalize_whitespace(text: &str) -> String {
+        // First, collapse multiple spaces into single spaces on each line
+        let mut result = String::with_capacity(text.len());
+        let mut prev_was_space = false;
+
+        for c in text.chars() {
+            if c == ' ' || c == '\t' {
+                if !prev_was_space {
+                    result.push(' ');
+                    prev_was_space = true;
+                }
+            } else {
+                result.push(c);
+                prev_was_space = false;
+            }
+        }
+
+        // Collapse multiple newlines into at most 2
+        let lines: Vec<&str> = result.lines().collect();
+        let mut normalized_lines = Vec::new();
+        let mut blank_count = 0;
+
+        for line in lines {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                blank_count += 1;
+                // Keep at most one blank line (two newlines total)
+                if blank_count == 1 {
+                    normalized_lines.push("");
+                }
+            } else {
+                blank_count = 0;
+                normalized_lines.push(trimmed);
+            }
+        }
+
+        // Join lines and trim the final result
+        normalized_lines.join("\n").trim().to_string()
     }
 
     /// Alternative sanitization using manual selector-based approach

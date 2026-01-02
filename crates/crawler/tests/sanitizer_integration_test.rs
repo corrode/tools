@@ -22,8 +22,50 @@ mod sanitizer {
 
         let mut readability = Readability::new(html, None, Some(cfg))?;
         let article = readability.parse()?;
-        // Return plain text content (not HTML)
-        Ok(article.text_content.to_string())
+
+        // Get plain text and normalize whitespace
+        let text = article.text_content.to_string();
+        Ok(normalize_whitespace(&text))
+    }
+
+    fn normalize_whitespace(text: &str) -> String {
+        // First, collapse multiple spaces into single spaces on each line
+        let mut result = String::with_capacity(text.len());
+        let mut prev_was_space = false;
+
+        for c in text.chars() {
+            if c == ' ' || c == '\t' {
+                if !prev_was_space {
+                    result.push(' ');
+                    prev_was_space = true;
+                }
+            } else {
+                result.push(c);
+                prev_was_space = false;
+            }
+        }
+
+        // Collapse multiple newlines into at most 2
+        let lines: Vec<&str> = result.lines().collect();
+        let mut normalized_lines = Vec::new();
+        let mut blank_count = 0;
+
+        for line in lines {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                blank_count += 1;
+                // Keep at most one blank line (two newlines total)
+                if blank_count == 1 {
+                    normalized_lines.push("");
+                }
+            } else {
+                blank_count = 0;
+                normalized_lines.push(trimmed);
+            }
+        }
+
+        // Join lines and trim the final result
+        normalized_lines.join("\n").trim().to_string()
     }
 }
 
