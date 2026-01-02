@@ -21,7 +21,6 @@ use std::sync::Arc;
 #[tokio::main]
 async fn main() -> Result<()> {
     pretty_env_logger::init();
-    dotenvy::dotenv()?;
 
     let repo = Arc::new(Repository::new(SQLITE_DB_PATH).await?);
 

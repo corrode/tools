@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 /// Path to the SQLite database file
-pub const SQLITE_DB_PATH: &str = "content/db/twir.db";
+pub const SQLITE_DB_PATH: &str = "twir.db";
 
 /// Entry identifier with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

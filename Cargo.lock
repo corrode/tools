@@ -1611,26 +1611,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "importer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "log",
- "pretty_env_logger",
- "regex",
- "serde",
- "serde_json",
- "sqlx",
- "storage",
- "tempfile",
- "tokio",
- "types",
- "url",
- "urlencoding",
-]
-
-[[package]]
 name = "indexmap"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2756,7 +2736,6 @@ dependencies = [
  "askama_axum",
  "axum",
  "chrono",
- "dotenvy",
  "log",
  "pretty_env_logger",
  "pulldown-cmark",

@@ -32,9 +32,9 @@ struct Args {
 
 // Output paths configuration
 const TWIR_OUT_PATH: &str = "./content/twir";
+const INDEX_OUT_PATH: &str = "./content/index";
 const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
-const DB_DIR_PATH: &str = "./content/db";
 
 /// Main indexing function that processes and stores TWiR content
 #[tokio::main]
@@ -85,6 +85,12 @@ pub async fn main() -> Result<()> {
                 }
 
                 info!("Successfully stored entry: {}", entry.id.url);
+
+                // Write JSON file for troubleshooting
+                let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
+                if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
+                    info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                }
             }
         }
     }
@@ -96,9 +102,9 @@ pub async fn main() -> Result<()> {
 /// Creates necessary output directories
 fn create_output_directories() -> Result<()> {
     fs::create_dir_all(TWIR_OUT_PATH)?;
+    fs::create_dir_all(INDEX_OUT_PATH)?;
     fs::create_dir_all(RAW_OUT_PATH)?;
     fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
-    fs::create_dir_all(DB_DIR_PATH)?;
     Ok(())
 }
 
