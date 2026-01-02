@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Rust Lifetimes - Blog Post</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .nav { background: #333; color: white; }
+        .sidebar { float: right; width: 200px; }
+        .footer { background: #eee; padding: 20px; }
+    </style>
+    <script>
+        function trackAnalytics() {
+            console.log("Analytics tracking");
+        }
+    </script>
+</head>
+<body>
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+    </nav>
+
+    <div class="cookie-banner">
+        <p>We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies.</p>
+        <button>Accept</button>
+    </div>
+
+    <aside class="sidebar">
+        <h3>Popular Posts</h3>
+        <ul>
+            <li>Post 1</li>
+            <li>Post 2</li>
+            <li>Post 3</li>
+        </ul>
+        <div class="advertisement">
+            <img src="/ad.png" alt="Ad">
+        </div>
+    </aside>
+
+    <main>
+        <article>
+            <h1>Understanding Rust Lifetimes</h1>
+            <p class="meta">Published on January 1, 2025 by Jane Developer</p>
+
+            <p>Rust's lifetime system is one of its most distinctive features. Lifetimes ensure that references are always valid and prevent dangling pointers.</p>
+
+            <h2>What are Lifetimes?</h2>
+            <p>Lifetimes are Rust's way of ensuring that references are valid for the duration they are used. The compiler uses lifetime annotations to verify that references don't outlive the data they point to.</p>
+
+            <h2>Lifetime Syntax</h2>
+            <p>Lifetime parameters are denoted with an apostrophe followed by a name, like 'a or 'static. They appear in function signatures and struct definitions.</p>
+
+            <pre><code>
+fn longest&lt;'a&gt;(x: &amp;'a str, y: &amp;'a str) -&gt; &amp;'a str {
+    if x.len() &gt; y.len() { x } else { y }
+}
+            </code></pre>
+
+            <h2>Conclusion</h2>
+            <p>Understanding lifetimes is crucial for writing safe Rust code. While they can seem complex at first, they provide powerful guarantees about memory safety.</p>
+        </article>
+    </main>
+
+    <footer class="footer">
+        <div class="social-share">
+            <a href="#" class="share-twitter">Share on Twitter</a>
+            <a href="#" class="share-facebook">Share on Facebook</a>
+        </div>
+        <p>&copy; 2025 Rust Blog. All rights reserved.</p>
+        <nav>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </nav>
+    </footer>
+</body>
+</html>

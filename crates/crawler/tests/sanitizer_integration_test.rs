@@ -1,0 +1,320 @@
+//! Integration tests for HTML sanitization
+//!
+//! These tests use realistic HTML fixtures to verify that the sanitizer
+//! effectively removes boilerplate while preserving meaningful content.
+
+use anyhow::Result;
+
+// We need to access the sanitizer module from the main binary
+// Since this is an integration test, we'll need to make sanitizer public
+// For now, we'll copy the essential logic or use a different approach
+
+mod sanitizer {
+    use anyhow::Result;
+    use dom_smoothie::{CandidateSelectMode, Config, Readability};
+
+    pub fn sanitize(html: &str) -> Result<String> {
+        let cfg = Config {
+            max_elements_to_parse: 10000,
+            candidate_select_mode: CandidateSelectMode::DomSmoothie,
+            ..Default::default()
+        };
+
+        let mut readability = Readability::new(html, None, Some(cfg))?;
+        let article = readability.parse()?;
+        // Return plain text content (not HTML)
+        Ok(article.text_content.to_string())
+    }
+}
+
+/// Helper function to load HTML fixtures
+fn load_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!("tests/fixtures/{}", name))
+        .expect("Failed to read fixture file")
+}
+
+/// Helper to check if text contains HTML tags
+fn contains_html_tags(text: &str) -> bool {
+    // Check for common HTML tag patterns
+    text.contains("<div") || text.contains("<p>") || text.contains("<span") ||
+    text.contains("<nav") || text.contains("<header") || text.contains("<footer")
+}
+
+/// Helper to check for JavaScript content
+fn contains_javascript(text: &str) -> bool {
+    text.contains("console.log") || text.contains("window.addEventListener") ||
+    text.contains("function()")
+}
+
+/// Helper to check for CSS
+fn contains_css(text: &str) -> bool {
+    text.contains("font-family:") || text.contains("background:") ||
+    text.contains("padding:") || text.contains("margin:")
+}
+
+#[test]
+fn test_blog_post_sanitization() -> Result<()> {
+    let html = load_fixture("blog_post_with_noise.html");
+    let sanitized = sanitizer::sanitize(&html)?;
+
+    // Should not be empty
+    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+
+    // Should contain the main article content
+    // Note: H1 titles may be stripped by readability algorithm
+    // but the actual content should be preserved
+    assert!(
+        sanitized.contains("Rust's lifetime system") || sanitized.contains("Lifetimes ensure"),
+        "Should preserve article content: {}",
+        &sanitized[..sanitized.len().min(200)]
+    );
+    assert!(
+        sanitized.contains("Lifetime parameters are denoted with an apostrophe"),
+        "Should preserve article content"
+    );
+    assert!(
+        sanitized.contains("longest"),
+        "Should preserve code examples"
+    );
+
+    // Should not contain navigation menu text
+    assert!(
+        !sanitized.contains("Home") || !sanitized.contains("Blog") || !sanitized.contains("About"),
+        "Should remove navigation menu - found: {}",
+        &sanitized[..sanitized.len().min(200)]
+    );
+
+    // Should not contain JavaScript
+    assert!(
+        !contains_javascript(&sanitized),
+        "Should remove JavaScript"
+    );
+
+    // Should not contain CSS
+    assert!(
+        !contains_css(&sanitized),
+        "Should remove CSS"
+    );
+
+    // Should not contain HTML tags (plain text output)
+    assert!(
+        !contains_html_tags(&sanitized),
+        "Should not contain HTML tags in plain text output"
+    );
+
+    println!("Blog post sanitization succeeded. Output length: {} chars", sanitized.len());
+
+    Ok(())
+}
+
+#[test]
+fn test_news_article_sanitization() -> Result<()> {
+    let html = load_fixture("news_article.html");
+    let sanitized = sanitizer::sanitize(&html)?;
+
+    // Should not be empty
+    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+
+    // Should contain the main article content
+    // Note: H1 titles in headers may be stripped by readability algorithm
+    assert!(
+        sanitized.contains("Rust 1.75") || sanitized.contains("Rust team has announced"),
+        "Should preserve article content"
+    );
+    assert!(
+        sanitized.contains("async runtime capabilities"),
+        "Should preserve article content"
+    );
+    assert!(
+        sanitized.contains("Compiler Performance"),
+        "Should preserve section headings"
+    );
+
+    // Should not contain sidebar content
+    assert!(
+        !sanitized.contains("Subscribe to our Newsletter"),
+        "Should remove newsletter signup"
+    );
+
+    // Should not contain footer social links
+    assert!(
+        !sanitized.contains("Follow Us"),
+        "Should remove footer content"
+    );
+
+    // Should not contain breadcrumbs
+    let has_breadcrumbs = sanitized.contains("Home &gt;") && sanitized.contains("Programming &gt;");
+    assert!(
+        !has_breadcrumbs,
+        "Should remove breadcrumbs navigation"
+    );
+
+    // Should not contain JavaScript
+    assert!(
+        !contains_javascript(&sanitized),
+        "Should remove JavaScript"
+    );
+
+    // Should not contain CSS
+    assert!(
+        !contains_css(&sanitized),
+        "Should remove CSS"
+    );
+
+    println!("News article sanitization succeeded. Output length: {} chars", sanitized.len());
+
+    Ok(())
+}
+
+#[test]
+fn test_simple_doc_sanitization() -> Result<()> {
+    let html = load_fixture("simple_doc.html");
+    let sanitized = sanitizer::sanitize(&html)?;
+
+    // Should not be empty
+    assert!(!sanitized.is_empty(), "Sanitized output should not be empty");
+
+    // Should contain the main documentation content
+    assert!(
+        sanitized.contains("Module std::vec"),
+        "Should preserve module title"
+    );
+    assert!(
+        sanitized.contains("contiguous growable array type"),
+        "Should preserve description"
+    );
+    assert!(
+        sanitized.contains("Vec::new"),
+        "Should preserve code examples"
+    );
+    assert!(
+        sanitized.contains("Capacity and Reallocation"),
+        "Should preserve section headings"
+    );
+
+    // Should not contain search bar
+    assert!(
+        !sanitized.contains("Search documentation"),
+        "Should remove search bar"
+    );
+
+    // Should not contain sidebar navigation
+    assert!(
+        !sanitized.contains("std::collections"),
+        "Should remove sidebar navigation"
+    );
+
+    println!("Simple doc sanitization succeeded. Output length: {} chars", sanitized.len());
+
+    Ok(())
+}
+
+#[test]
+fn test_all_fixtures_produce_reasonable_output() -> Result<()> {
+    let fixtures = vec![
+        "blog_post_with_noise.html",
+        "news_article.html",
+        "simple_doc.html",
+    ];
+
+    for fixture in fixtures {
+        let html = load_fixture(fixture);
+        let sanitized = sanitizer::sanitize(&html)?;
+
+        // Basic sanity checks for all fixtures
+        assert!(
+            !sanitized.is_empty(),
+            "Fixture {} produced empty output",
+            fixture
+        );
+
+        assert!(
+            sanitized.len() > 100,
+            "Fixture {} produced suspiciously short output: {} chars",
+            fixture,
+            sanitized.len()
+        );
+
+        assert!(
+            sanitized.len() < html.len(),
+            "Fixture {} did not reduce size (original: {}, sanitized: {})",
+            fixture,
+            html.len(),
+            sanitized.len()
+        );
+
+        // Should not contain HTML tags (plain text output)
+        assert!(
+            !contains_html_tags(&sanitized),
+            "Fixture {} still contains HTML tags",
+            fixture
+        );
+
+        // Should not contain JavaScript
+        assert!(
+            !contains_javascript(&sanitized),
+            "Fixture {} still contains JavaScript",
+            fixture
+        );
+
+        // Should not contain CSS
+        assert!(
+            !contains_css(&sanitized),
+            "Fixture {} still contains CSS",
+            fixture
+        );
+
+        println!(
+            "✓ {} - Original: {} bytes, Sanitized: {} bytes ({}% reduction)",
+            fixture,
+            html.len(),
+            sanitized.len(),
+            (100 - (sanitized.len() * 100 / html.len()))
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_sanitizer_preserves_code_blocks() -> Result<()> {
+    let html = load_fixture("blog_post_with_noise.html");
+    let sanitized = sanitizer::sanitize(&html)?;
+
+    // Should preserve code examples
+    assert!(
+        sanitized.contains("fn longest"),
+        "Should preserve function names in code blocks"
+    );
+    assert!(
+        sanitized.contains("&amp;'a str") || sanitized.contains("&'a str"),
+        "Should preserve code with lifetime annotations"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_sanitizer_removes_common_boilerplate() -> Result<()> {
+    let fixtures = vec![
+        ("blog_post_with_noise.html", vec!["Popular Posts", "Accept"]),
+        ("news_article.html", vec!["Related Articles", "Follow Us"]),
+        ("simple_doc.html", vec!["Search documentation"]),
+    ];
+
+    for (fixture, boilerplate_phrases) in fixtures {
+        let html = load_fixture(fixture);
+        let sanitized = sanitizer::sanitize(&html)?;
+
+        for phrase in boilerplate_phrases {
+            assert!(
+                !sanitized.contains(phrase),
+                "Fixture {} should not contain boilerplate phrase: '{}'",
+                fixture,
+                phrase
+            );
+        }
+    }
+
+    Ok(())
+}
