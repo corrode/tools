@@ -411,6 +411,9 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         position: relative;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
       }
 
       /* Hero pattern section */
@@ -447,6 +450,7 @@
         padding: 60px 20px;
         position: relative;
         z-index: 1;
+        flex: 1;
       }
       header {
         text-align: center;
@@ -716,7 +720,7 @@
       }
 
       footer {
-        margin-top: 40px;
+        margin-top: auto;
         padding: 40px 20px;
         border-top: 1px solid var(--color-border);
       }
