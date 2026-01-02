@@ -18,10 +18,10 @@ struct SearchTemplate {
 #[derive(Debug, Deserialize)]
 pub struct SearchParams {
     q: Option<String>,
-    // We can add more parameters later:
-    // sort: Option<String>,
-    // date_range: Option<String>,
-    // content_type: Option<Vec<String>>,
+    #[serde(rename = "date-range")]
+    date_range: Option<String>,
+    #[serde(rename = "sort-by")]
+    sort_by: Option<String>,
 }
 
 // TODO: Move this to a separate file
@@ -90,9 +90,13 @@ pub(crate) async fn search(
     axum::extract::State(repo): axum::extract::State<Arc<Repository>>,
 ) -> Result<Html<String>, axum::http::StatusCode> {
     let results = if let Some(query) = &params.q {
-        repo.search(query)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+        repo.search(
+            query,
+            params.date_range.as_deref(),
+            params.sort_by.as_deref(),
+        )
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
     } else {
         vec![]
     };

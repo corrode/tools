@@ -149,8 +149,31 @@ impl Repository {
     }
 
     /// Performs a full-text search on entries
-    pub async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
-        let rows = sqlx::query(
+    pub async fn search(
+        &self,
+        query: &str,
+        date_range: Option<&str>,
+        sort_by: Option<&str>,
+    ) -> Result<Vec<SearchResult>> {
+        // Build WHERE clause for date filtering
+        let date_filter = match date_range {
+            Some(year) if year.parse::<i32>().is_ok() => {
+                // Year-based filtering (e.g., "2024")
+                format!(
+                    "AND m.date >= '{year}-01-01' AND m.date <= '{year}-12-31'"
+                )
+            }
+            _ => String::new(), // "all-time" or None
+        };
+
+        // Build ORDER BY clause
+        let order_by = match sort_by {
+            Some("date-desc") => "ORDER BY m.date DESC",
+            Some("date-asc") => "ORDER BY m.date ASC",
+            _ => "ORDER BY rank", // "relevance" or None
+        };
+
+        let sql = format!(
             r#"
             SELECT
                 m.title, m.url, m.category, m.date, m.text,
@@ -159,13 +182,13 @@ impl Repository {
             FROM entries_fts
             JOIN entries_meta m ON entries_fts.rowid = m.id
             WHERE entries_fts MATCH ?
-            ORDER BY rank
+            {date_filter}
+            {order_by}
             LIMIT 20
-            "#,
-        )
-        .bind(query)
-        .fetch_all(&self.pool)
-        .await?;
+            "#
+        );
+
+        let rows = sqlx::query(&sql).bind(query).fetch_all(&self.pool).await?;
 
         let results = rows
             .into_iter()
