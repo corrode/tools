@@ -12,7 +12,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, QueryBuilder, Row, Sqlite};
 use std::path::Path;
 use types::{Entry, EntryId, SearchResult};
 
@@ -175,7 +175,9 @@ impl Repository {
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
 
-        // Escape query for FTS5 - wrap in quotes and escape internal quotes
+        // Escape query for FTS5 using the "verbatim string" method:
+        // Replace " with "" and wrap in quotes to prevent syntax errors from special characters
+        // Reference: https://sqlite.org/fts5.html (see "FTS5 Strings" section)
         let escaped_query = if search_terms.is_empty() {
             // If only site: operator, match everything
             String::from("*")
@@ -183,32 +185,8 @@ impl Repository {
             format!("\"{}\"", search_terms.replace('"', "\"\""))
         };
 
-        // Build WHERE clause for site filtering
-        let site_where = if let Some(site) = site_filter {
-            format!("AND m.url LIKE '%{}%'", site.replace('\'', "''"))
-        } else {
-            String::new()
-        };
-
-        // Build WHERE clause for date filtering
-        let date_filter = match date_range {
-            Some(year) if year.parse::<i32>().is_ok() => {
-                // Year-based filtering (e.g., "2024")
-                format!(
-                    "AND m.date >= '{year}-01-01' AND m.date <= '{year}-12-31'"
-                )
-            }
-            _ => String::new(), // "all-time" or None
-        };
-
-        // Build ORDER BY clause
-        let order_by = match sort_by {
-            Some("date-desc") => "ORDER BY m.date DESC",
-            Some("date-asc") => "ORDER BY m.date ASC",
-            _ => "ORDER BY rank", // "relevance" or None
-        };
-
-        let sql = format!(
+        // Build query using QueryBuilder for safe SQL construction
+        let mut query = QueryBuilder::new(
             r#"
             SELECT
                 m.title, m.url, m.category, m.date, m.text,
@@ -216,18 +194,37 @@ impl Repository {
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
             JOIN entries_meta m ON entries_fts.rowid = m.id
-            WHERE entries_fts MATCH ?
-            {site_where}
-            {date_filter}
-            {order_by}
-            LIMIT 20
-            "#
+            WHERE entries_fts MATCH "#,
         );
 
-        let rows = sqlx::query(&sql)
-            .bind(&escaped_query)
-            .fetch_all(&self.pool)
-            .await?;
+        query.push_bind(&escaped_query);
+
+        // Add site filter if present
+        if let Some(site) = site_filter {
+            query.push(" AND m.url LIKE ");
+            query.push_bind(format!("%{}%", site));
+        }
+
+        // Add date filter if present
+        if let Some(year) = date_range {
+            if year.parse::<i32>().is_ok() {
+                query.push(" AND m.date >= ");
+                query.push_bind(format!("{year}-01-01"));
+                query.push(" AND m.date <= ");
+                query.push_bind(format!("{year}-12-31"));
+            }
+        }
+
+        // Add ORDER BY clause
+        match sort_by {
+            Some("date-desc") => query.push(" ORDER BY m.date DESC"),
+            Some("date-asc") => query.push(" ORDER BY m.date ASC"),
+            _ => query.push(" ORDER BY rank"),
+        };
+
+        query.push(" LIMIT 20");
+
+        let rows = query.build().fetch_all(&self.pool).await?;
 
         let results = rows
             .into_iter()
