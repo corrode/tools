@@ -12,6 +12,7 @@ mod handlers;
 
 use axum::{routing::get, Router};
 use storage::Repository;
+use tower_http::services::ServeDir;
 pub use types::Entry;
 use types::SQLITE_DB_PATH;
 
@@ -27,6 +28,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(handlers::index))
         .route("/search", get(handlers::search))
+        .nest_service("/assets", ServeDir::new("assets"))
         .with_state(repo);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

@@ -145,6 +145,14 @@
         font-family: "Bebas Neue", sans-serif;
         color: var(--color-primary);
       }
+      .header-link {
+        color: inherit;
+        text-decoration: none;
+      }
+      .header-link:hover {
+        color: var(--color-primary);
+        opacity: 0.8;
+      }
       a {
         color: var(--color-primary);
       }
@@ -369,9 +377,16 @@
 
       .footer-section {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
         max-width: 45ch;
+      }
+
+      .footer-ferris {
+        width: 64px;
+        height: auto;
+        flex-shrink: 0;
       }
 
       .footer-section p {
@@ -525,7 +540,7 @@
     </div>
     <div class="container">
       <header>
-        <h1>Rust Search</h1>
+        <h1><a href="/" class="header-link">Rust Search</a></h1>
         <div class="subtitle">
           Discover the latest Rust news, tutorials, and discussions
         </div>
@@ -637,6 +652,7 @@
     <footer>
       <div class="footer-container">
         <div class="footer-section">
+          <img src="/assets/ferris.png" alt="Ferris the Crab" class="footer-ferris" />
           <p>
             This Week in Rust Search helps you discover content from the popular
             Rust programming newsletter. Browse through years of curated Rust

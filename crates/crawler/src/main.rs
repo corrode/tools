@@ -15,8 +15,19 @@ pub use storage::Repository;
 pub use types::*;
 
 use anyhow::Result;
+use clap::Parser;
 use log::info;
 use std::fs;
+
+/// Command line arguments for the crawler
+#[derive(Parser, Debug)]
+#[command(name = "twir-crawler")]
+#[command(about = "Crawls and indexes This Week in Rust content", long_about = None)]
+struct Args {
+    /// Save raw HTML to disk for future analysis
+    #[arg(long, default_value_t = false)]
+    save_raw_html: bool,
+}
 
 // Output paths configuration
 const TWIR_OUT_PATH: &str = "./content/twir";
@@ -30,9 +41,11 @@ const DB_DIR_PATH: &str = "./content/db";
 #[tokio::main]
 pub async fn main() -> Result<()> {
     env_logger::init();
+    let args = Args::parse();
+
     create_output_directories()?;
 
-    let browser = Browser::new()?;
+    let browser = Browser::new(args.save_raw_html)?;
     let parser = TwirParser::new();
     let repo = Repository::new(DB_PATH).await?;
 

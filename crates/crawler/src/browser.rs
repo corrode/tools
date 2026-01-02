@@ -1,7 +1,7 @@
 //! Browser automation for crawling web pages
 
 use super::cookies::COOKIE_BANNER_SELECTORS;
-use super::SCREENSHOT_OUT_PATH;
+use super::{RAW_OUT_PATH, SCREENSHOT_OUT_PATH};
 use types::EntryId;
 
 use anyhow::{bail, Result};
@@ -25,11 +25,15 @@ static YOUTUBE_SHORT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Wrapper around headless Chrome for crawling web pages
 pub struct Browser {
     inner: ChromeBrowser,
+    save_raw_html: bool,
 }
 
 impl Browser {
     /// Creates a new browser instance
-    pub fn new() -> Result<Self> {
+    ///
+    /// # Arguments
+    /// * `save_raw_html` - If true, saves raw HTML to disk for future analysis
+    pub fn new(save_raw_html: bool) -> Result<Self> {
         let opt = LaunchOptionsBuilder::default()
             .headless(true)
             .window_size(Some((1920, 1080)))
@@ -38,6 +42,7 @@ impl Browser {
 
         Ok(Self {
             inner: ChromeBrowser::new(opt)?,
+            save_raw_html,
         })
     }
 
@@ -110,6 +115,12 @@ impl Browser {
         let text = match tab.get_content() {
             Ok(html) => {
                 log::trace!("HTML: {html}");
+
+                // Save raw HTML if flag is enabled
+                if self.save_raw_html {
+                    self.save_raw_html(&html, entry_id)?;
+                }
+
                 let cleaned = html2text::from_read(html.as_bytes(), 500);
                 log::debug!("Cleaned: {cleaned}");
                 Some(cleaned)
@@ -140,6 +151,15 @@ impl Browser {
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
         fs::write(screenshot_path, &screenshot)?;
         log::info!("Done creating screenshot");
+        Ok(())
+    }
+
+    /// Saves raw HTML to disk for future analysis
+    fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
+        let html_path = format!("{RAW_OUT_PATH}/{}.html", entry_id);
+        log::info!("Saving raw HTML to {html_path}");
+        fs::write(html_path, html)?;
+        log::debug!("Raw HTML saved successfully");
         Ok(())
     }
 
