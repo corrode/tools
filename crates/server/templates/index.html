@@ -14,15 +14,64 @@
     />
 
     <style>
+      /* Font declarations */
+      @font-face {
+        font-family: 'Martian Mono';
+        src: url('/assets/martian-mono/MartianMono-CnRg.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Martian Mono';
+        src: url('/assets/martian-mono/MartianMono-CnMd.woff2') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Martian Mono';
+        src: url('/assets/martian-mono/MartianMono-CnBd.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Univers';
+        src: url('/assets/univers/UniversRegular.ttf') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Univers';
+        src: url('/assets/univers/UniversLight.ttf') format('truetype');
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Univers';
+        src: url('/assets/univers/UniversBold.ttf') format('truetype');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
       :root {
-        /* Default theme (twir dark) */
-        --color-background: #2a2a2a;
-        --color-surface: #353535;
-        --color-primary: #d2991d;
-        --color-primary-muted: #9a7015;
+        /* Default theme (oxide dark) */
+        --color-background: #0a0e11;
+        --color-surface: #111418;
+        --color-primary: #48d597;
+        --color-primary-muted: #3ab87e;
         --color-text: #f0f0f0;
-        --color-text-muted: #aeaeae;
-        --color-border: #353535;
+        --color-text-muted: #8a8f98;
+        --color-border: #1f2327;
       }
 
       /* Light themes */
@@ -96,6 +145,16 @@
         --color-border: #333333;
       }
 
+      html[data-theme="dark-oxide"] {
+        --color-background: #0a0e11;
+        --color-surface: #111418;
+        --color-primary: #48d597;
+        --color-primary-muted: #3ab87e;
+        --color-text: #f0f0f0;
+        --color-text-muted: #8a8f98;
+        --color-border: #1f2327;
+      }
+
       /* Prevent transitions during load */
       .preload * {
         transition: none !important;
@@ -120,7 +179,7 @@
         padding: 0;
       }
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        font-family: "Univers", -apple-system, BlinkMacSystemFont, "Segoe UI",
           Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
         background-color: var(--color-background);
         color: var(--color-text);
@@ -139,11 +198,12 @@
       }
       h1,
       h2 {
-        font-size: 3.5rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        letter-spacing: -0.5px;
-        font-family: "Bebas Neue", sans-serif;
-        color: var(--color-primary);
+        letter-spacing: 0.1em;
+        font-family: "Martian Mono", monospace;
+        color: var(--color-text);
+        text-transform: uppercase;
       }
       .header-link {
         color: inherit;
@@ -155,20 +215,34 @@
       }
       a {
         color: var(--color-primary);
+        text-decoration: none;
+        transition: color 0.2s ease;
       }
       a:visited {
         color: var(--color-primary-muted);
       }
+      a:hover {
+        color: var(--color-primary);
+        opacity: 0.8;
+      }
       mark {
-        background: var(--color-primary);
+        background: rgba(72, 213, 151, 0.3);
+        color: var(--color-text);
+        padding: 2px 4px;
+        border-radius: 3px;
       }
       .discussion-link {
         color: var(--color-text-muted);
+        transition: color 0.2s ease;
+      }
+      .discussion-link:hover {
+        color: var(--color-primary);
       }
       .subtitle {
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--color-text-muted);
-        font-weight: 500;
+        font-weight: 400;
+        letter-spacing: 0.02em;
       }
 
       .search-container {
@@ -185,19 +259,21 @@
 
       #search {
         width: 100%;
-        padding: 16px 24px;
+        padding: 14px 20px;
         padding-right: 40px;
-        font-size: 1rem;
+        font-size: 0.95rem;
+        font-family: "Univers", sans-serif;
         background-color: var(--color-surface);
         color: var(--color-text);
-        border: 2px solid var(--color-border);
-        border-radius: 8px;
-        transition: border-color 0.3s ease;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        transition: all 0.2s ease;
       }
 
       #search:focus {
         outline: none;
         border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(72, 213, 151, 0.1);
       }
       #search::placeholder {
         color: var(--color-text-muted);
@@ -216,14 +292,15 @@
 
       .filter-button {
         background-color: var(--color-surface);
-        border: 2px solid var(--color-border);
-        border-radius: 8px;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
         padding: 0 16px;
         cursor: pointer;
-        transition: border-color 0.3s ease;
+        transition: all 0.2s ease;
       }
       .filter-button:hover {
         border-color: var(--color-primary);
+        background-color: rgba(72, 213, 151, 0.05);
       }
       .filter-button svg {
         width: 24px;
@@ -278,26 +355,36 @@
         border-color: var(--color-primary);
       }
       .results {
-        border: 2px solid var(--color-border);
-        border-radius: 8px;
-        padding: 24px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        padding: 0;
+        background-color: var(--color-surface);
       }
       .result-item {
-        margin-bottom: 24px;
-        padding-bottom: 24px;
+        padding: 24px;
         border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.15s ease;
+      }
+      .result-item:hover {
+        background-color: rgba(72, 213, 151, 0.03);
       }
       .result-item:last-child {
         border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
       }
       .result-title {
-        color: var(--color-primary);
-        font-size: 1.2rem;
+        color: var(--color-text);
+        font-size: 1.1rem;
         font-weight: 600;
         margin-bottom: 8px;
+        font-family: "Univers", sans-serif;
+      }
+      .result-title a {
+        color: var(--color-text);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      .result-title a:hover {
+        color: var(--color-primary);
       }
       .result-snippet {
         color: var(--color-text);
@@ -315,13 +402,21 @@
       .result-meta {
         display: flex;
         align-items: center;
-        font-size: 0.85rem;
+        gap: 12px;
+        font-size: 0.8rem;
         color: var(--color-text-muted);
         margin-top: 12px;
+        font-family: "Martian Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
       .result-meta .domain {
         margin-left: auto;
-        font-weight: 500;
+        font-weight: 400;
+        background-color: rgba(72, 213, 151, 0.1);
+        padding: 4px 10px;
+        border-radius: 4px;
+        color: var(--color-primary);
       }
       .content-type-icon {
         width: 18px;
@@ -347,15 +442,20 @@
         margin-top: 12px;
       }
       .tag {
-        background-color: rgba(249, 194, 46, 0.1);
+        background-color: rgba(72, 213, 151, 0.1);
         color: var(--color-primary);
-        padding: 4px 8px;
+        padding: 6px 12px;
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 500;
+        font-family: "Martian Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid rgba(72, 213, 151, 0.2);
       }
       .tag:hover {
-        background-color: rgba(249, 194, 46, 0.2);
+        background-color: rgba(72, 213, 151, 0.15);
+        border-color: rgba(72, 213, 151, 0.3);
         cursor: pointer;
       }
 
@@ -531,6 +631,7 @@
           <option value="light-rails">Ruby on Rails</option>
         </optgroup>
         <optgroup label="Dark Themes">
+          <option value="dark-oxide">Oxide (Default)</option>
           <option value="dark-twir">This Week in Rust</option>
           <option value="dark-nord">Nord</option>
           <option value="dark-solarized">Solarized Dark</option>
@@ -693,7 +794,7 @@
 
       // Initialize theme
       document.addEventListener("DOMContentLoaded", () => {
-        const savedTheme = localStorage.getItem("theme") || "dark-twir";
+        const savedTheme = localStorage.getItem("theme") || "dark-oxide";
         setTheme(savedTheme);
         document.getElementById("theme-select").value = savedTheme;
 
