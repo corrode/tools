@@ -148,6 +148,23 @@ impl Repository {
         Ok(())
     }
 
+    /// Parses search query to extract operators like site:
+    /// Returns (search_terms, site_filter)
+    fn parse_query(query: &str) -> (String, Option<String>) {
+        let mut search_terms = Vec::new();
+        let mut site_filter = None;
+
+        for word in query.split_whitespace() {
+            if let Some(site) = word.strip_prefix("site:") {
+                site_filter = Some(site.to_string());
+            } else {
+                search_terms.push(word);
+            }
+        }
+
+        (search_terms.join(" "), site_filter)
+    }
+
     /// Performs a full-text search on entries
     pub async fn search(
         &self,
@@ -155,6 +172,24 @@ impl Repository {
         date_range: Option<&str>,
         sort_by: Option<&str>,
     ) -> Result<Vec<SearchResult>> {
+        // Parse query for site: operator
+        let (search_terms, site_filter) = Self::parse_query(query);
+
+        // Escape query for FTS5 - wrap in quotes and escape internal quotes
+        let escaped_query = if search_terms.is_empty() {
+            // If only site: operator, match everything
+            String::from("*")
+        } else {
+            format!("\"{}\"", search_terms.replace('"', "\"\""))
+        };
+
+        // Build WHERE clause for site filtering
+        let site_where = if let Some(site) = site_filter {
+            format!("AND m.url LIKE '%{}%'", site.replace('\'', "''"))
+        } else {
+            String::new()
+        };
+
         // Build WHERE clause for date filtering
         let date_filter = match date_range {
             Some(year) if year.parse::<i32>().is_ok() => {
@@ -182,13 +217,17 @@ impl Repository {
             FROM entries_fts
             JOIN entries_meta m ON entries_fts.rowid = m.id
             WHERE entries_fts MATCH ?
+            {site_where}
             {date_filter}
             {order_by}
             LIMIT 20
             "#
         );
 
-        let rows = sqlx::query(&sql).bind(query).fetch_all(&self.pool).await?;
+        let rows = sqlx::query(&sql)
+            .bind(&escaped_query)
+            .fetch_all(&self.pool)
+            .await?;
 
         let results = rows
             .into_iter()
@@ -257,5 +296,38 @@ impl Repository {
             .collect();
 
         Ok(entries)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_query_with_site() {
+        let (terms, site) = Repository::parse_query("linux site:corrode.dev");
+        assert_eq!(terms, "linux");
+        assert_eq!(site, Some("corrode.dev".to_string()));
+    }
+
+    #[test]
+    fn test_parse_query_site_only() {
+        let (terms, site) = Repository::parse_query("site:example.com");
+        assert_eq!(terms, "");
+        assert_eq!(site, Some("example.com".to_string()));
+    }
+
+    #[test]
+    fn test_parse_query_no_site() {
+        let (terms, site) = Repository::parse_query("rust async await");
+        assert_eq!(terms, "rust async await");
+        assert_eq!(site, None);
+    }
+
+    #[test]
+    fn test_parse_query_multiple_terms_with_site() {
+        let (terms, site) = Repository::parse_query("embedded systems site:rust-lang.org");
+        assert_eq!(terms, "embedded systems");
+        assert_eq!(site, Some("rust-lang.org".to_string()));
     }
 }
