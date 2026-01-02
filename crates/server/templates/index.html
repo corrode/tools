@@ -72,6 +72,9 @@
         --color-text: #f0f0f0;
         --color-text-muted: #8a8f98;
         --color-border: #1f2327;
+        --hero-pattern: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.05'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
+        --hero-gradient: linear-gradient(to bottom, rgba(10, 14, 17, 0) 0%, rgba(10, 14, 17, 0.3) 50%, rgba(10, 14, 17, 1) 100%),
+                         linear-gradient(to right, rgba(10, 14, 17, 0.7) 0%, rgba(10, 14, 17, 0) 20%, rgba(10, 14, 17, 0) 80%, rgba(10, 14, 17, 0.7) 100%);
       }
 
       /* Light themes */
@@ -83,16 +86,151 @@
         --color-text: #000000;
         --color-text-muted: #505050;
         --color-border: #e0e0e0;
+        /* No hero pattern for this theme */
       }
 
       html[data-theme="light-hacker-news"] {
         --color-background: #f6f6ef;
-        --color-surface: #ffffff;
-        --color-primary: #ff6600;
-        --color-primary-muted: #cc5200;
-        --color-text: #333333;
+        --color-surface: #f6f6ef;
+        --color-primary: #000000;
+        --color-primary-muted: #828282;
+        --color-text: #000000;
         --color-text-muted: #828282;
-        --color-border: #e0e0e0;
+        --color-border: #ff6600;
+        /* No hero pattern for this theme */
+      }
+
+      /* Hacker News specific overrides */
+      html[data-theme="light-hacker-news"] body {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+      }
+
+      html[data-theme="light-hacker-news"] h1,
+      html[data-theme="light-hacker-news"] h2 {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+        font-weight: bold;
+        text-transform: none;
+        letter-spacing: normal;
+        color: #ff6600;
+      }
+
+      html[data-theme="light-hacker-news"] .container {
+        max-width: 1200px;
+        padding: 8px;
+      }
+
+      html[data-theme="light-hacker-news"] header {
+        background-color: #ff6600;
+        margin: -8px -8px 10px -8px;
+        padding: 2px;
+        text-align: left;
+      }
+
+      html[data-theme="light-hacker-news"] header h1 {
+        color: #000000;
+        font-weight: bold;
+        padding: 2px 4px;
+        margin: 0;
+        display: inline-block;
+      }
+
+      html[data-theme="light-hacker-news"] .subtitle {
+        display: none;
+      }
+
+      html[data-theme="light-hacker-news"] #search {
+        border: 1px solid #828282;
+        border-radius: 0;
+        padding: 4px;
+        font-size: 10pt;
+        font-family: Verdana, Geneva, sans-serif;
+      }
+
+      html[data-theme="light-hacker-news"] .filter-button {
+        border: 1px solid #828282;
+        border-radius: 0;
+        padding: 4px 8px;
+        font-size: 10pt;
+      }
+
+      html[data-theme="light-hacker-news"] .results {
+        background-color: #f6f6ef;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+      }
+
+      html[data-theme="light-hacker-news"] .result-item {
+        padding: 4px 0;
+        border-bottom: none;
+        background-color: transparent;
+      }
+
+      html[data-theme="light-hacker-news"] .result-item:hover {
+        background-color: transparent;
+      }
+
+      html[data-theme="light-hacker-news"] .result-title {
+        font-size: 10pt;
+        font-weight: normal;
+        margin-bottom: 2px;
+        font-family: Verdana, Geneva, sans-serif;
+      }
+
+      html[data-theme="light-hacker-news"] .result-title a {
+        color: #000000;
+        text-decoration: none;
+      }
+
+      html[data-theme="light-hacker-news"] .result-title a:visited {
+        color: #828282;
+      }
+
+      html[data-theme="light-hacker-news"] .result-meta {
+        font-size: 8pt;
+        gap: 4px;
+        font-family: Verdana, Geneva, sans-serif;
+        text-transform: none;
+        letter-spacing: normal;
+      }
+
+      html[data-theme="light-hacker-news"] .result-meta .domain {
+        background-color: transparent;
+        padding: 0;
+        border-radius: 0;
+        color: #828282;
+        margin-left: 4px;
+        font-weight: normal;
+      }
+
+      html[data-theme="light-hacker-news"] .discussion-link {
+        color: #828282;
+      }
+
+      html[data-theme="light-hacker-news"] .tag {
+        background-color: transparent;
+        border: 1px solid #ff6600;
+        color: #ff6600;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-size: 8pt;
+        font-family: Verdana, Geneva, sans-serif;
+      }
+
+      html[data-theme="light-hacker-news"] a {
+        color: #828282;
+      }
+
+      html[data-theme="light-hacker-news"] a:hover {
+        text-decoration: underline;
+        opacity: 1;
+      }
+
+      html[data-theme="light-hacker-news"] footer {
+        border-top: 2px solid #ff6600;
+        background-color: #f6f6ef;
       }
 
       html[data-theme="light-rails"] {
@@ -103,6 +241,7 @@
         --color-text: #000000;
         --color-text-muted: #666666;
         --color-border: #cccccc;
+        /* No hero pattern for this theme */
       }
 
       html[data-theme="dark-twir"] {
@@ -113,6 +252,60 @@
         --color-text: #f0f0f0;
         --color-text-muted: #aeaeae;
         --color-border: #353535;
+        /* No hero pattern for this theme */
+      }
+
+      /* This Week in Rust classic design */
+      html[data-theme="dark-twir"] h1,
+      html[data-theme="dark-twir"] h2 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #d2991d;
+        text-transform: none;
+      }
+
+      html[data-theme="dark-twir"] body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      }
+
+      html[data-theme="dark-twir"] .result-title {
+        color: #d2991d;
+        font-family: "Inter", sans-serif;
+      }
+
+      html[data-theme="dark-twir"] .result-title a {
+        color: #d2991d;
+      }
+
+      html[data-theme="dark-twir"] .result-title a:hover {
+        color: #d2991d;
+      }
+
+      html[data-theme="dark-twir"] .result-meta {
+        font-family: "Inter", sans-serif;
+        text-transform: none;
+        letter-spacing: normal;
+      }
+
+      html[data-theme="dark-twir"] .result-meta .domain {
+        background-color: rgba(210, 153, 29, 0.1);
+        color: #d2991d;
+      }
+
+      html[data-theme="dark-twir"] .tag {
+        background-color: rgba(210, 153, 29, 0.1);
+        color: #d2991d;
+        border: 1px solid rgba(210, 153, 29, 0.2);
+        font-family: "Inter", sans-serif;
+        text-transform: none;
+        letter-spacing: normal;
+      }
+
+      html[data-theme="dark-twir"] mark {
+        background: #d2991d;
       }
 
       html[data-theme="dark-nord"] {
@@ -123,16 +316,8 @@
         --color-text: #eceff4;
         --color-text-muted: #d8dee9;
         --color-border: #4c566a;
-      }
-
-      html[data-theme="dark-solarized"] {
-        --color-background: #002b36;
-        --color-surface: #073642;
-        --color-primary: #b58900;
-        --color-primary-muted: #839496;
-        --color-text: #839496;
-        --color-text-muted: #586e75;
-        --color-border: #073642;
+        --hero-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2388c0d0' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        --hero-gradient: linear-gradient(to bottom, rgba(46, 52, 64, 0) 0%, rgba(46, 52, 64, 1) 100%);
       }
 
       html[data-theme="dark-hacker"] {
@@ -143,6 +328,7 @@
         --color-text: #ffffff;
         --color-text-muted: #666666;
         --color-border: #333333;
+        /* No hero pattern for this theme */
       }
 
       html[data-theme="dark-oxide"] {
@@ -153,6 +339,9 @@
         --color-text: #f0f0f0;
         --color-text-muted: #8a8f98;
         --color-border: #1f2327;
+        --hero-pattern: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.05'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
+        --hero-gradient: linear-gradient(to bottom, rgba(10, 14, 17, 0) 0%, rgba(10, 14, 17, 0.3) 50%, rgba(10, 14, 17, 1) 100%),
+                         linear-gradient(to right, rgba(10, 14, 17, 0.7) 0%, rgba(10, 14, 17, 0) 20%, rgba(10, 14, 17, 0) 80%, rgba(10, 14, 17, 0.7) 100%);
       }
 
       /* Prevent transitions during load */
@@ -186,11 +375,34 @@
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        position: relative;
+      }
+
+      /* Hero pattern section */
+      .hero-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 400px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .hero-pattern::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
       }
       .container {
         max-width: 1024px;
         margin: 0 auto;
         padding: 60px 20px;
+        position: relative;
+        z-index: 1;
       }
       header {
         text-align: center;
@@ -565,7 +777,7 @@
         position: fixed;
         top: 20px;
         right: 20px;
-        z-index: 1000;
+        z-index: 1001;
         background-color: var(--color-surface);
         border: 1px solid var(--color-border);
         border-radius: 8px;
@@ -623,6 +835,9 @@
     </style>
   </head>
   <body class="preload">
+    <!-- Hero pattern background -->
+    <div class="hero-pattern"></div>
+
     <!-- Theme switcher -->
     <div class="theme-switcher">
       <select id="theme-select" onchange="setTheme(this.value)">
@@ -634,7 +849,6 @@
           <option value="dark-oxide">Oxide (Default)</option>
           <option value="dark-twir">This Week in Rust</option>
           <option value="dark-nord">Nord</option>
-          <option value="dark-solarized">Solarized Dark</option>
           <option value="dark-hacker">Hacker</option>
         </optgroup>
       </select>
