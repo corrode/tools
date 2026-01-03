@@ -142,6 +142,7 @@ fn should_process_url(url: &url::Url) -> bool {
         "foundation.rust-lang.org",
         // Other
         "eventbrite.com",
+        "calagator.org",
         "smartrecruiters.com",
         "bamboohr.com",
         "google.com/calendar",

@@ -77,13 +77,43 @@
       /* Light themes */
       html[data-theme="light-docs-rs"] {
         --color-background: #ffffff;
-        --color-surface: #f5f5f5;
-        --color-primary: #000000;
-        --color-primary-muted: #333333;
+        --color-surface: #ffffff;
+        --color-primary: #0d7bff;
+        --color-primary-muted: #0969da;
         --color-text: #000000;
-        --color-text-muted: #505050;
-        --color-border: #e0e0e0;
+        --color-text-muted: #57606a;
+        --color-border: #d0d7de;
         /* No hero pattern for this theme */
+      }
+
+      html[data-theme="light-docs-rs"] h1,
+      html[data-theme="light-docs-rs"] h2 {
+        color: #000000;
+      }
+
+      html[data-theme="light-docs-rs"] .result-title a {
+        color: var(--color-primary);
+      }
+
+      html[data-theme="light-docs-rs"] .result-title a:hover {
+        text-decoration: underline;
+      }
+
+      html[data-theme="light-docs-rs"] .results {
+        background-color: #ffffff;
+        border: 1px solid var(--color-border);
+      }
+
+      html[data-theme="light-docs-rs"] .result-item {
+        border-bottom: 1px solid #f6f8fa;
+      }
+
+      html[data-theme="light-docs-rs"] .result-item:hover {
+        background-color: #f6f8fa;
+      }
+
+      html[data-theme="light-docs-rs"] .logo {
+        filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(4592%) hue-rotate(208deg) brightness(102%) contrast(101%);
       }
 
       html[data-theme="light-hacker-news"] {
@@ -248,6 +278,13 @@
         opacity: 1;
       }
 
+      html[data-theme="light-hacker-news"] .logo {
+        filter: brightness(0) saturate(100%) invert(100%);
+        border: 2px solid #ff6600;
+        padding: 4px;
+        border-radius: 2px;
+      }
+
       html[data-theme="light-hacker-news"] #filter-panel {
         background-color: #f6f6ef;
         border: 1px solid #828282;
@@ -277,16 +314,6 @@
         background-color: #f6f6ef;
       }
 
-      html[data-theme="light-rails"] {
-        --color-background: #ebe0e4;
-        --color-surface: #f6f6ef;
-        --color-primary: #cc0000;
-        --color-primary-muted: #990000;
-        --color-text: #000000;
-        --color-text-muted: #666666;
-        --color-border: #cccccc;
-        /* No hero pattern for this theme */
-      }
 
       html[data-theme="dark-twir"] {
         --color-background: #2a2a2a;
@@ -308,6 +335,7 @@
         letter-spacing: -0.5px;
         color: #d2991d;
         text-transform: none;
+        align-items: center;
       }
 
       html[data-theme="dark-twir"] body {
@@ -337,8 +365,9 @@
       html[data-theme="dark-twir"] .result-meta .domain {
         background-color: rgba(210, 153, 29, 0.1);
         color: #d2991d;
+        border: 1px solid rgba(210, 153, 29, 0.2);
       }
-
+      
       html[data-theme="dark-twir"] .tag {
         background-color: rgba(210, 153, 29, 0.1);
         color: #d2991d;
@@ -352,14 +381,14 @@
         background: #d2991d;
       }
 
-      html[data-theme="dark-nord"] {
-        --color-background: #2e3440;
-        --color-surface: #3b4252;
-        --color-primary: #88c0d0;
-        --color-primary-muted: #81a1c1;
-        --color-text: #eceff4;
-        --color-text-muted: #d8dee9;
-        --color-border: #4c566a;
+      html[data-theme="dark-twir"] .logo {
+        filter: brightness(0) saturate(100%) invert(64%) sepia(59%) saturate(449%) hue-rotate(358deg) brightness(95%) contrast(92%);
+        width: 42px;
+        height: 42px;
+      }
+
+      html[data-theme="dark-twir"] .header-link {
+        align-items: baseline;
       }
 
       html[data-theme="dark-oxide"] {
@@ -370,6 +399,54 @@
         --color-text: #f0f0f0;
         --color-text-muted: #8a8f98;
         --color-border: #1f2327;
+      }
+
+      html[data-theme="dark-oxide"] .result-meta .domain {
+        border: 1px solid var(--color-primary);
+      }
+
+      html[data-theme="dark-oxide"] .logo {
+        filter: brightness(0) saturate(100%) invert(77%) sepia(18%) saturate(1366%) hue-rotate(100deg) brightness(95%) contrast(92%);
+      }
+
+      html[data-theme="dark-github"] {
+        --color-background: #0d1117;
+        --color-surface: #161b22;
+        --color-primary: #58a6ff;
+        --color-primary-muted: #1f6feb;
+        --color-text: #c9d1d9;
+        --color-text-muted: #8b949e;
+        --color-border: #30363d;
+      }
+
+      html[data-theme="dark-github"] h1,
+      html[data-theme="dark-github"] h2 {
+        color: #c9d1d9;
+      }
+
+      html[data-theme="dark-github"] .result-title a {
+        color: #c9d1d9;
+      }
+
+      html[data-theme="dark-github"] .result-title a:hover {
+        color: var(--color-primary);
+      }
+
+      html[data-theme="dark-github"] mark {
+        background: rgba(88, 166, 255, 0.3);
+      }
+
+      /* GitHub grid pattern */
+      html[data-theme="dark-github"] .hero-pattern {
+        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.015'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
+      }
+
+      html[data-theme="dark-github"] .hero-pattern::after {
+        background: linear-gradient(to bottom, transparent 0%, var(--color-background) 100%);
+      }
+
+      html[data-theme="dark-github"] .logo {
+        filter: brightness(0) saturate(100%) invert(61%) sepia(76%) saturate(2579%) hue-rotate(192deg) brightness(101%) contrast(101%);
       }
 
       /* Prevent transitions during load */
@@ -431,36 +508,47 @@
 
       /* Oxide grid pattern */
       html[data-theme="dark-oxide"] .hero-pattern {
-        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.05'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.02'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
       }
 
       html[data-theme="dark-oxide"] .hero-pattern::after {
         background: linear-gradient(to bottom, transparent 0%, var(--color-background) 100%);
       }
       .container {
-        max-width: 1400px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 60px 20px;
+        padding: 80px 40px;
         position: relative;
         z-index: 1;
         flex: 1;
       }
       header {
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 60px;
       }
       h1,
       h2 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        font-family: "Martian Mono", monospace;
+        font-size: 2.25rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         color: var(--color-text);
-        text-transform: uppercase;
+        text-transform: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 32px;
+        height: 32px;
+        filter: brightness(0) saturate(100%) invert(100%);
       }
       .header-link {
         color: inherit;
         text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
       }
       .header-link:hover {
         color: var(--color-primary);
@@ -495,14 +583,15 @@
         font-size: 1rem;
         color: var(--color-text-muted);
         font-weight: 400;
-        letter-spacing: 0.02em;
+        letter-spacing: normal;
+        margin-top: 12px;
       }
 
       .search-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 20px;
+        gap: 12px;
+        margin-bottom: 32px;
       }
 
       .search-input-wrapper {
@@ -552,8 +641,8 @@
         transition: all 0.2s ease;
       }
       .filter-button:hover {
-        border-color: var(--color-primary);
-        background-color: rgba(72, 213, 151, 0.05);
+        border-color: var(--color-text-muted);
+        background-color: rgba(255, 255, 255, 0.02);
       }
       .filter-button svg {
         width: 24px;
@@ -614,12 +703,12 @@
         background-color: var(--color-surface);
       }
       .result-item {
-        padding: 24px;
+        padding: 32px;
         border-bottom: 1px solid var(--color-border);
         transition: background-color 0.15s ease;
       }
       .result-item:hover {
-        background-color: rgba(72, 213, 151, 0.03);
+        background-color: rgba(72, 213, 151, 0.015);
       }
       .result-item:last-child {
         border-bottom: none;
@@ -666,10 +755,10 @@
       .result-meta .domain {
         margin-left: auto;
         font-weight: 400;
-        background-color: rgba(72, 213, 151, 0.1);
+        background-color: transparent;
         padding: 4px 10px;
         border-radius: 4px;
-        color: var(--color-primary);
+        color: var(--color-text-muted);
       }
       .content-type-icon {
         width: 18px;
@@ -695,7 +784,7 @@
         margin-top: 12px;
       }
       .tag {
-        background-color: rgba(72, 213, 151, 0.1);
+        background-color: transparent;
         color: var(--color-primary);
         padding: 6px 12px;
         border-radius: 4px;
@@ -704,11 +793,11 @@
         font-family: "Martian Mono", monospace;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        border: 1px solid rgba(72, 213, 151, 0.2);
+        border: 1px solid var(--color-border);
       }
       .tag:hover {
-        background-color: rgba(72, 213, 151, 0.15);
-        border-color: rgba(72, 213, 151, 0.3);
+        background-color: rgba(72, 213, 151, 0.05);
+        border-color: var(--color-primary);
         cursor: pointer;
       }
 
@@ -883,21 +972,26 @@
     <div class="theme-switcher">
       <select id="theme-select" onchange="setTheme(this.value)">
         <optgroup label="Light Themes">
+          <option value="light-docs-rs">docs.rs</option>
           <option value="light-hacker-news">Hacker News</option>
-          <option value="light-rails">Ruby on Rails</option>
         </optgroup>
         <optgroup label="Dark Themes">
           <option value="dark-oxide">Oxide (Default)</option>
+          <option value="dark-github">GitHub</option>
           <option value="dark-twir">This Week in Rust</option>
-          <option value="dark-nord">Nord</option>
         </optgroup>
       </select>
     </div>
     <div class="container">
       <header>
-        <h1><a href="/" class="header-link">Rust Search</a></h1>
+        <h1>
+          <a href="/" class="header-link">
+            <img src="/assets/logo.svg" alt="" class="logo" />
+            Rust Search
+          </a>
+        </h1>
         <div class="subtitle">
-          Discover the latest Rust news, tutorials, and discussions
+          Search Rust news, tutorials, and discussions
         </div>
       </header>
 
