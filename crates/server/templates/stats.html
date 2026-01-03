@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stats - Rust Search</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Font declarations */
+      @font-face {
+        font-family: 'Martian Mono';
+        src: url('/assets/martian-mono/MartianMono-CnRg.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Martian Mono';
+        src: url('/assets/martian-mono/MartianMono-CnMd.woff2') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'Univers';
+        src: url('/assets/univers/UniversRegular.ttf') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --color-background: #0a0e11;
+        --color-surface: #111418;
+        --color-primary: #48d597;
+        --color-primary-muted: #3ab87e;
+        --color-text: #f0f0f0;
+        --color-text-muted: #8a8f98;
+        --color-border: #1f2327;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Univers", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        background-color: var(--color-background);
+        color: var(--color-text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 80px 40px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 60px;
+      }
+
+      h1 {
+        font-size: 2.25rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-family: "Inter", sans-serif;
+        color: var(--color-text);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 32px;
+        height: 32px;
+        filter: brightness(0) saturate(100%) invert(100%);
+      }
+
+      .header-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .header-link:hover {
+        color: var(--color-primary);
+        opacity: 0.8;
+      }
+
+      .subtitle {
+        font-size: 1rem;
+        color: var(--color-text-muted);
+        font-weight: 400;
+        margin-top: 12px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+
+      .stat-card {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 24px;
+        transition: all 0.2s ease;
+      }
+
+      .stat-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+      }
+
+      .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        font-family: "Martian Mono", monospace;
+        margin-bottom: 8px;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-family: "Martian Mono", monospace;
+      }
+
+      .section {
+        margin-bottom: 48px;
+      }
+
+      .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 24px;
+        font-family: "Inter", sans-serif;
+      }
+
+      .category-list, .year-list {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 0;
+      }
+
+      .category-item, .year-item {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.15s ease;
+      }
+
+      .category-item:hover, .year-item:hover {
+        background-color: rgba(72, 213, 151, 0.02);
+      }
+
+      .category-item:last-child, .year-item:last-child {
+        border-bottom: none;
+      }
+
+      .category-name, .year-name {
+        font-weight: 500;
+        color: var(--color-text);
+      }
+
+      .category-count, .year-count {
+        font-family: "Martian Mono", monospace;
+        color: var(--color-primary);
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+
+      .progress-bar {
+        height: 6px;
+        background-color: var(--color-border);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-primary-muted), var(--color-primary));
+        transition: width 0.3s ease;
+      }
+
+      a {
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+
+      a:hover {
+        opacity: 0.8;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 32px;
+        font-weight: 500;
+      }
+
+      footer {
+        margin-top: 80px;
+        padding: 40px 0;
+        border-top: 1px solid var(--color-border);
+        text-align: center;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/" class="back-link">← Back to Search</a>
+
+      <header>
+        <h1>
+          <img src="/assets/logo.svg" alt="" class="logo" />
+          Statistics
+        </h1>
+        <div class="subtitle">
+          Insights from the Rust community's curated content
+        </div>
+      </header>
+
+      <!-- Overview Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.total_articles }}</div>
+          <div class="stat-label">Total Articles</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">
+            {% if stats.avg_article_size > 1000 %}
+              {{ stats.avg_article_size / 1000 }}K
+            {% else %}
+              {{ stats.avg_article_size }}
+            {% endif %}
+          </div>
+          <div class="stat-label">Avg Article Size (chars)</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">
+            {% if stats.total_characters > 1000000 %}
+              {{ stats.total_characters / 1000000 }}M
+            {% else %}
+              {{ stats.total_characters / 1000 }}K
+            {% endif %}
+          </div>
+          <div class="stat-label">Total Characters</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">
+            {% if let Some(earliest) = stats.earliest_date %}
+              {% if let Some(latest) = stats.latest_date %}
+                {{ earliest.format("%Y") }}-{{ latest.format("%Y") }}
+              {% endif %}
+            {% else %}
+              N/A
+            {% endif %}
+          </div>
+          <div class="stat-label">Years of Content</div>
+        </div>
+      </div>
+
+      <!-- Articles Per Year -->
+      <div class="section">
+        <h2 class="section-title">Articles Per Year</h2>
+        <div class="year-list">
+          {% for year_stat in stats.articles_per_year %}
+          <div class="year-item">
+            <span class="year-name">{{ year_stat.year }}</span>
+            <span class="year-count">{{ year_stat.count }}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ year_stat.percentage }}%"></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="section">
+        <h2 class="section-title">Categories</h2>
+        <div class="category-list">
+          {% for category in stats.categories %}
+          <div class="category-item">
+            <span class="category-name">{{ category.category }}</span>
+            <span class="category-count">{{ category.count }}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ category.percentage }}%"></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Powered by <a href="https://corrode.dev">corrode</a></p>
+    </footer>
+  </body>
+</html>
