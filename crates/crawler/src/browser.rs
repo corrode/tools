@@ -89,8 +89,13 @@ impl Browser {
             log::info!("Rewritten YouTube URL to thumbnail: {}", target_url);
         }
 
-        // Quick check for common error status codes
-        let response = reqwest::get(target_url.as_str()).await?;
+        // Quick check for common error status codes with timeout
+        let client = reqwest::Client::builder()
+            .connect_timeout(time::Duration::from_secs(10))
+            .timeout(time::Duration::from_secs(30))
+            .build()?;
+
+        let response = client.get(target_url.as_str()).send().await?;
         if response.status() == 403 || response.status() == 404 || response.status() == 410 {
             bail!("404: Not Found or moved {}", entry_id.url);
         }
@@ -109,12 +114,15 @@ impl Browser {
         let tab = self.inner.new_tab()?;
         tab.set_default_timeout(time::Duration::from_secs(30));
 
+        log::debug!("Navigating to URL: {}", entry_id.url);
         tab.navigate_to(entry_id.url.as_str())?;
 
+        log::debug!("Waiting for navigation to complete (30s timeout)...");
         if let Err(e) = tab.wait_until_navigated() {
-            log::error!("Failed to wait for navigation: {}", entry_id.url);
-            return Err(e);
+            log::error!("Navigation timeout or error for {}: {}", entry_id.url, e);
+            bail!("Navigation failed: {}", e);
         }
+        log::debug!("Navigation completed successfully");
 
         self.remove_cookie_banner(&tab)?;
 
