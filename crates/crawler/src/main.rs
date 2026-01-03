@@ -55,21 +55,28 @@ pub async fn main() -> Result<()> {
         let download_url = item["download_url"].as_str().unwrap();
         let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
 
-        // Skip if we've already downloaded this file
-        if fs::metadata(&download_file_path).is_ok() {
-            info!("Skipping downloaded file: {}", file_name);
-            continue;
-        }
-
-        // Download and save content
-        let content = parser.download_content(download_url).await?;
-        fs::write(&download_file_path, &content)?;
+        // Download file if we don't have it yet
+        let content = if fs::metadata(&download_file_path).is_ok() {
+            info!("Reading existing file: {}", file_name);
+            fs::read_to_string(&download_file_path)?
+        } else {
+            info!("Downloading new file: {}", file_name);
+            let content = parser.download_content(download_url).await?;
+            fs::write(&download_file_path, &content)?;
+            content
+        };
 
         // Parse and process entries
         for id in parser.parse_file(&content) {
             // Skip if URL shouldn't be processed
             if !should_process_url(&id.url) {
                 log::info!("Skipping URL based on criteria: {}", id.url);
+                continue;
+            }
+
+            // Skip if URL already exists in database
+            if repo.url_exists(&id.url).await? {
+                log::info!("Skipping already crawled URL: {}", id.url);
                 continue;
             }
 

@@ -149,6 +149,17 @@ impl Repository {
         Ok(())
     }
 
+    /// Checks if a URL already exists in the database
+    pub async fn url_exists(&self, url: &url::Url) -> Result<bool> {
+        let url_str = url.as_str();
+        let result = sqlx::query("SELECT 1 FROM entries_meta WHERE url = ? LIMIT 1")
+            .bind(url_str)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(result.is_some())
+    }
+
     /// Parses search query to extract operators like site:
     /// Returns (search_terms, site_filter)
     fn parse_query(query: &str) -> (String, Option<String>) {
