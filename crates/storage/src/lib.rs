@@ -160,6 +160,25 @@ impl Repository {
         Ok(result.is_some())
     }
 
+    /// Gets the latest entry date from the database
+    pub async fn get_latest_entry_date(&self) -> Result<Option<NaiveDate>> {
+        let result = sqlx::query("SELECT MAX(date) as latest_date FROM entries_meta")
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = result {
+            if let Some(date_str) = row.get::<Option<String>, _>("latest_date") {
+                NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+                    .map(Some)
+                    .context("Failed to parse latest date from database")
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Parses search query to extract operators like site:
     /// Returns (search_terms, site_filter)
     fn parse_query(query: &str) -> (String, Option<String>) {

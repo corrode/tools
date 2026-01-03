@@ -28,6 +28,14 @@ struct Args {
     /// Save raw HTML to disk for future analysis
     #[arg(long, default_value_t = false)]
     save_raw_html: bool,
+
+    /// Start from the beginning, ignoring checkpoint
+    #[arg(long, default_value_t = false)]
+    overwrite: bool,
+
+    /// Start from a specific date (format: YYYY-MM-DD), overrides checkpoint
+    #[arg(long)]
+    start_date: Option<String>,
 }
 
 // Output paths configuration
@@ -48,12 +56,73 @@ pub async fn main() -> Result<()> {
     let parser = TwirParser::new();
     let repo = Repository::new(SQLITE_DB_PATH).await?;
 
+    // Fetch all entries first
     let entries = parser.fetch_twir_entries().await?;
+
+    // Determine the start date
+    let start_date_str = if args.overwrite {
+        info!("Overwrite mode: starting from beginning");
+        None
+    } else if let Some(ref date) = args.start_date {
+        info!("Using specified start date: {}", date);
+        Some(date.clone())
+    } else {
+        // Use latest date from database as default
+        if let Some(latest_date) = repo.get_latest_entry_date().await? {
+            let date_str = latest_date.format("%Y-%m-%d").to_string();
+            info!("Resuming from latest database entry date: {}", date_str);
+            Some(date_str)
+        } else {
+            info!("No entries in database, starting from beginning");
+            None
+        }
+    };
+
+    // Find the checkpoint file based on start date
+    let checkpoint = if let Some(ref start_date) = start_date_str {
+        let matching_file = entries.iter().find(|item| {
+            if let Some(file_name) = item["name"].as_str() {
+                // File names are like "2013-06-29-this-week-in-rust.md"
+                // Extract date prefix (first 10 chars: "YYYY-MM-DD")
+                file_name.len() >= 10 && &file_name[0..10] >= start_date.as_str()
+            } else {
+                false
+            }
+        });
+
+        if let Some(file) = matching_file {
+            let file_name = file["name"].as_str().unwrap();
+            info!("Starting from file: {}", file_name);
+            Some(file_name.to_string())
+        } else {
+            info!("No file found for start date, starting from beginning");
+            None
+        }
+    } else {
+        None
+    };
+
+    let mut resume_crawling = checkpoint.is_none(); // If no checkpoint, start immediately
 
     for item in entries {
         let file_name = item["name"].as_str().unwrap();
         let download_url = item["download_url"].as_str().unwrap();
         let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
+
+        // Check if we should start processing from this file
+        if !resume_crawling {
+            if Some(file_name.to_string()) == checkpoint {
+                // We've reached the checkpoint file, start processing from here
+                info!("Reached checkpoint file: {}, resuming crawling", file_name);
+                resume_crawling = true;
+            } else {
+                // Skip files before the checkpoint
+                info!("Skipping file before checkpoint: {}", file_name);
+                continue;
+            }
+        }
+
+        info!("Processing file: {}", file_name);
 
         // Download file if we don't have it yet
         let content = if fs::metadata(&download_file_path).is_ok() {
@@ -70,7 +139,7 @@ pub async fn main() -> Result<()> {
         for id in parser.parse_file(&content) {
             // Skip if URL shouldn't be processed
             if !should_process_url(&id.url) {
-                log::info!("Skipping URL based on criteria: {}", id.url);
+                log::debug!("Skipping URL based on criteria: {}", id.url);
                 continue;
             }
 
@@ -156,7 +225,7 @@ fn should_process_url(url: &url::Url) -> bool {
     ];
 
     if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
-        log::info!("Skipping ignored URL: {}", url);
+        log::debug!("Skipping ignored URL: {}", url);
         return false;
     }
 
