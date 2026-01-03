@@ -66,3 +66,44 @@ impl SearchResult {
             .to_string()
     }
 }
+
+/// Statistics about the indexed content
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Stats {
+    /// Total number of indexed articles
+    pub total_articles: i64,
+    /// Average article size in characters
+    pub avg_article_size: i64,
+    /// Total characters across all articles
+    pub total_characters: i64,
+    /// Categories and their counts
+    pub categories: Vec<CategoryStats>,
+    /// Articles per year
+    pub articles_per_year: Vec<YearStats>,
+    /// Earliest indexed article date
+    pub earliest_date: Option<NaiveDate>,
+    /// Latest indexed article date
+    pub latest_date: Option<NaiveDate>,
+}
+
+/// Category statistics
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CategoryStats {
+    /// Category name
+    pub category: String,
+    /// Number of articles in this category
+    pub count: i64,
+    /// Percentage relative to max category (for progress bar)
+    pub percentage: i64,
+}
+
+/// Year statistics
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YearStats {
+    /// Year
+    pub year: i32,
+    /// Number of articles in this year
+    pub count: i64,
+    /// Percentage relative to max year (for progress bar)
+    pub percentage: i64,
+}

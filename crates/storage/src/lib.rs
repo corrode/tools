@@ -14,7 +14,7 @@ use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
-use types::{Entry, EntryId, SearchResult};
+use types::{CategoryStats, Entry, EntryId, SearchResult, Stats, YearStats};
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
@@ -177,6 +177,94 @@ impl Repository {
         } else {
             Ok(None)
         }
+    }
+
+    /// Gets comprehensive statistics about the indexed content
+    pub async fn get_stats(&self) -> Result<Stats> {
+        // Get total articles and total characters
+        let overview = sqlx::query(
+            "SELECT COUNT(*) as total, SUM(LENGTH(text)) as total_chars, AVG(LENGTH(text)) as avg_size FROM entries_meta"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let total_articles: i64 = overview.get("total");
+        let total_characters: i64 = overview.get::<Option<i64>, _>("total_chars").unwrap_or(0);
+        let avg_article_size: i64 = overview.get::<Option<f64>, _>("avg_size").unwrap_or(0.0) as i64;
+
+        // Get category stats
+        let category_rows = sqlx::query(
+            "SELECT category, COUNT(*) as count FROM entries_meta GROUP BY category ORDER BY count DESC"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut categories: Vec<CategoryStats> = category_rows
+            .into_iter()
+            .map(|row| CategoryStats {
+                category: row.get("category"),
+                count: row.get("count"),
+                percentage: 0, // Will calculate below
+            })
+            .collect();
+
+        // Calculate percentages for categories
+        let max_category_count = categories.iter().map(|c| c.count).max().unwrap_or(1);
+        for category in &mut categories {
+            category.percentage = (category.count * 100) / max_category_count;
+        }
+
+        // Get articles per year
+        let year_rows = sqlx::query(
+            r#"
+            SELECT
+                CAST(strftime('%Y', date) AS INTEGER) as year,
+                COUNT(*) as count
+            FROM entries_meta
+            GROUP BY year
+            ORDER BY year DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut articles_per_year: Vec<YearStats> = year_rows
+            .into_iter()
+            .map(|row| YearStats {
+                year: row.get("year"),
+                count: row.get("count"),
+                percentage: 0, // Will calculate below
+            })
+            .collect();
+
+        // Calculate percentages for years
+        let max_year_count = articles_per_year.iter().map(|y| y.count).max().unwrap_or(1);
+        for year in &mut articles_per_year {
+            year.percentage = (year.count * 100) / max_year_count;
+        }
+
+        // Get earliest and latest dates
+        let earliest_date = sqlx::query("SELECT MIN(date) as earliest FROM entries_meta")
+            .fetch_one(&self.pool)
+            .await?
+            .get::<Option<String>, _>("earliest")
+            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+
+        let latest_date = sqlx::query("SELECT MAX(date) as latest FROM entries_meta")
+            .fetch_one(&self.pool)
+            .await?
+            .get::<Option<String>, _>("latest")
+            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+
+        Ok(Stats {
+            total_articles,
+            avg_article_size,
+            total_characters,
+            categories,
+            articles_per_year,
+            earliest_date,
+            latest_date,
+        })
     }
 
     /// Parses search query to extract operators like site:

@@ -27,6 +27,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(handlers::index))
         .route("/search", get(handlers::search))
+        .route("/stats", get(handlers::stats))
         .nest_service("/assets", ServeDir::new("assets"))
         .with_state(repo);
 
