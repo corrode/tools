@@ -1362,12 +1362,7 @@
           <div class="result-meta">
             <span class="domain-icon">{{ result.icon_svg()|safe }}</span>
             TWiR #{{ result.twir_issue() }} | {{ result.entry.id.category }} | {{ result.entry.id.date }} |
-            {{ result.word_count() }} words | ~{{ result.reading_time_minutes() }} min read |&nbsp;
-            <a
-              href="https://discu.eu/?q={{ result.entry.id.url }}"
-              class="discussion-link"
-              >Discussions</a
-            >
+            {{ result.word_count() }} words | ~{{ result.reading_time_minutes() }} min read 
             <span class="domain">{{ result.domain() }}</span>
           </div>
         </div>
