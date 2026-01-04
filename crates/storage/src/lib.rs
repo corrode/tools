@@ -472,19 +472,50 @@ impl Repository {
 
     /// Parses search query to extract operators like site:
     /// Returns (search_terms, site_filter)
-    fn parse_query(query: &str) -> (String, Option<String>) {
+    /// Quoted phrases are kept as single terms
+    fn parse_query(query: &str) -> (Vec<String>, Option<String>) {
         let mut search_terms = Vec::new();
         let mut site_filter = None;
+        let mut in_quotes = false;
+        let mut current_word = String::new();
 
-        for word in query.split_whitespace() {
-            if let Some(site) = word.strip_prefix("site:") {
-                site_filter = Some(site.to_string());
-            } else {
-                search_terms.push(word);
+        for ch in query.chars() {
+            match ch {
+                '"' => {
+                    in_quotes = !in_quotes;
+                    if !in_quotes && !current_word.is_empty() {
+                        // End of quoted phrase
+                        search_terms.push(current_word.clone());
+                        current_word.clear();
+                    }
+                }
+                ' ' if !in_quotes => {
+                    if !current_word.is_empty() {
+                        // Check for site: operator
+                        if let Some(site) = current_word.strip_prefix("site:") {
+                            site_filter = Some(site.to_string());
+                        } else {
+                            search_terms.push(current_word.clone());
+                        }
+                        current_word.clear();
+                    }
+                }
+                _ => {
+                    current_word.push(ch);
+                }
             }
         }
 
-        (search_terms.join(" "), site_filter)
+        // Handle remaining word
+        if !current_word.is_empty() {
+            if let Some(site) = current_word.strip_prefix("site:") {
+                site_filter = Some(site.to_string());
+            } else {
+                search_terms.push(current_word);
+            }
+        }
+
+        (search_terms, site_filter)
     }
 
     /// Counts total matching results for a search query (without pagination)
@@ -501,10 +532,11 @@ impl Repository {
         let has_search_terms = !search_terms.is_empty();
 
         // Escape query for FTS5 (needs to be outside the if block for lifetime)
+        // Each term is already parsed (quoted phrases are single terms)
         let escaped_query = if has_search_terms {
             search_terms
-                .split_whitespace()
-                .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
+                .iter()
+                .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
                 .collect::<Vec<_>>()
                 .join(" AND ")
         } else {
@@ -569,13 +601,13 @@ impl Repository {
         let has_search_terms = !search_terms.is_empty();
 
         // Escape query for FTS5 (needs to be outside the if block for lifetime)
-        // Split into individual words and quote each to escape special characters
-        // Join with AND to match all words (in any order)
+        // Each term is already parsed (quoted phrases are single terms)
+        // Join with AND to match all terms
         // Reference: https://sqlite.org/fts5.html (see "FTS5 Strings" section)
         let escaped_query = if has_search_terms {
             search_terms
-                .split_whitespace()
-                .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
+                .iter()
+                .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
                 .collect::<Vec<_>>()
                 .join(" AND ")
         } else {
