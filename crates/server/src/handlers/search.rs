@@ -13,15 +13,20 @@ use types::SearchResult;
 struct SearchTemplate {
     query: Option<String>,
     results: Vec<SearchResult>,
+    current_page: u32,
+    has_more: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SearchParams {
     q: Option<String>,
-    #[serde(rename = "date-range")]
-    date_range: Option<String>,
+    #[serde(rename = "start-year")]
+    start_year: Option<i32>,
+    #[serde(rename = "end-year")]
+    end_year: Option<i32>,
     #[serde(rename = "sort-by")]
     sort_by: Option<String>,
+    page: Option<u32>,
 }
 
 // TODO: Move this to a separate file
@@ -92,8 +97,10 @@ pub(crate) async fn search(
     let results = if let Some(query) = &params.q {
         repo.search(
             query,
-            params.date_range.as_deref(),
+            params.start_year,
+            params.end_year,
             params.sort_by.as_deref(),
+            params.page,
         )
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
@@ -111,9 +118,14 @@ pub(crate) async fn search(
         })
         .collect();
 
+    let current_page = params.page.unwrap_or(1).max(1);
+    let has_more = results.len() == 20; // If we got 20 results, there might be more
+
     let template = SearchTemplate {
         query: params.q,
         results,
+        current_page,
+        has_more,
     };
 
     template

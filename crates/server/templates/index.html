@@ -723,11 +723,58 @@
         outline: none;
         border-color: var(--color-primary);
       }
+      .range-slider-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .range-values {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: "Martian Mono", monospace;
+        font-size: 0.9rem;
+        color: var(--color-text);
+      }
+      .range-slider {
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--color-border);
+        outline: none;
+        -webkit-appearance: none;
+      }
+      .range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        cursor: pointer;
+      }
+      .range-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        cursor: pointer;
+        border: none;
+      }
       .results {
         border: 1px solid var(--color-border);
         border-radius: 6px;
         padding: 0;
         background-color: var(--color-surface);
+      }
+      .result-count {
+        padding: 16px 32px;
+        border-bottom: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        font-family: "Martian Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
       .result-item {
         padding: 32px;
@@ -826,6 +873,69 @@
         background-color: rgba(72, 213, 151, 0.05);
         border-color: var(--color-primary);
         cursor: pointer;
+      }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 32px;
+        border-top: 1px solid var(--color-border);
+      }
+
+      .pagination-btn {
+        padding: 8px 16px;
+        background-color: transparent;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        color: var(--color-text);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-family: "Martian Mono", monospace;
+        transition: all 0.2s ease;
+      }
+
+      .pagination-btn:hover:not(.disabled) {
+        border-color: var(--color-primary);
+        background-color: rgba(72, 213, 151, 0.05);
+      }
+
+      .pagination-btn.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .pagination-info {
+        font-family: "Martian Mono", monospace;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+      }
+
+      .quote-easter-egg {
+        padding: 32px;
+        border-top: 1px solid var(--color-border);
+        background: linear-gradient(to bottom, transparent, rgba(72, 213, 151, 0.02));
+        text-align: center;
+      }
+
+      .quote-content {
+        font-size: 1.1rem;
+        font-style: italic;
+        color: var(--color-text);
+        margin-bottom: 12px;
+        line-height: 1.8;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .quote-attribution {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        font-family: "Martian Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
       }
 
       footer {
@@ -1056,23 +1166,16 @@
 
         <div id="filter-panel">
           <div class="filter-group">
-            <label class="filter-label" for="date-range">Year:</label>
-            <select id="date-range" name="date-range" class="filter-select" onchange="this.form.submit()">
-              <option value="all-time">All Time</option>
-              <option value="2025">2025</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-              <option value="2020">2020</option>
-              <option value="2019">2019</option>
-              <option value="2018">2018</option>
-              <option value="2017">2017</option>
-              <option value="2016">2016</option>
-              <option value="2015">2015</option>
-              <option value="2014">2014</option>
-              <option value="2013">2013</option>
-            </select>
+            <label class="filter-label">Date Range:</label>
+            <div class="range-slider-container">
+              <div class="range-values">
+                <span id="start-year-display">2013</span>
+                <span>—</span>
+                <span id="end-year-display">2025</span>
+              </div>
+              <input type="range" id="start-year" name="start-year" min="2013" max="2025" value="2013" class="range-slider">
+              <input type="range" id="end-year" name="end-year" min="2013" max="2025" value="2025" class="range-slider">
+            </div>
           </div>
           <div class="filter-group">
             <label class="filter-label" for="sort-by">Sort By:</label>
@@ -1086,7 +1189,15 @@
       </form>
 
       <div class="results" id="search-results">
-        {% if let Some(q) = query %} {% if results.is_empty() %}
+        {% if let Some(q) = query %}
+        <!-- Show result count -->
+        {% if !results.is_empty() %}
+        <div class="result-count">
+          Found {{ results.len() }} result{% if results.len() != 1 %}s{% endif %}
+        </div>
+        {% endif %}
+
+        {% if results.is_empty() %}
         <div class="result-item">
           <div class="result-title">No results found</div>
           <div class="result-snippet">
@@ -1096,14 +1207,15 @@
         {% else %} {% for result in results %}
         <div class="result-item">
           <div class="result-title">
-            <a href="{{ result.entry.id.url }}">{{ result.entry.id.title }}</a>
+            <a href="{{ result.entry.id.url }}" target="_blank" rel="noopener noreferrer">{{ result.entry.id.title }}</a>
           </div>
           {% if let Some(snippet) = result.snippet %}
           <div class="result-snippet">{{ snippet|safe }}</div>
           {% endif %}
           <div class="result-meta">
             <div class="content-type-icon icon-website"></div>
-            {{ result.entry.id.category }} | {{ result.entry.id.date }} |&nbsp;
+            TWiR #{{ result.twir_issue() }} | {{ result.entry.id.category }} | {{ result.entry.id.date }} |
+            {{ result.word_count() }} words | ~{{ result.reading_time_minutes() }} min read |&nbsp;
             <a
               href="https://discu.eu/?q={{ result.entry.id.url }}"
               class="discussion-link"
@@ -1112,7 +1224,40 @@
             <span class="domain">{{ result.domain() }}</span>
           </div>
         </div>
-        {% endfor %} {% endif %} {% else %}
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if current_page > 1 || has_more %}
+        <div class="pagination">
+          {% if current_page > 1 %}
+          <a href="#" onclick="changePage({{ current_page - 1 }}); return false;" class="pagination-btn">
+            ← Previous
+          </a>
+          {% else %}
+          <span class="pagination-btn disabled">← Previous</span>
+          {% endif %}
+
+          <span class="pagination-info">Page {{ current_page }}</span>
+
+          {% if has_more %}
+          <a href="#" onclick="changePage({{ current_page + 1 }}); return false;" class="pagination-btn">
+            Next →
+          </a>
+          {% else %}
+          <span class="pagination-btn disabled">Next →</span>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Quote of the Week Easter Egg -->
+        {% if !results.is_empty() %}
+        <div class="quote-easter-egg">
+          <div class="quote-content" id="random-quote"></div>
+          <div class="quote-attribution">— Quote of the Week</div>
+        </div>
+        {% endif %}
+
+        {% endif %} {% else %}
         <!-- Empty initial state -->
         <div class="result-item">
           <div class="result-title">Start searching</div>
@@ -1185,15 +1330,53 @@
         }
 
         // Restore filter selections
-        const dateRange = urlParams.get("date-range");
-        if (dateRange) {
-          document.getElementById("date-range").value = dateRange;
+        const startYear = urlParams.get("start-year");
+        const endYear = urlParams.get("end-year");
+        if (startYear) {
+          document.getElementById("start-year").value = startYear;
+          document.getElementById("start-year-display").textContent = startYear;
+        }
+        if (endYear) {
+          document.getElementById("end-year").value = endYear;
+          document.getElementById("end-year-display").textContent = endYear;
         }
 
         const sortBy = urlParams.get("sort-by");
         if (sortBy) {
           document.getElementById("sort-by").value = sortBy;
         }
+
+        // Setup range sliders
+        const startYearSlider = document.getElementById("start-year");
+        const endYearSlider = document.getElementById("end-year");
+        const startYearDisplay = document.getElementById("start-year-display");
+        const endYearDisplay = document.getElementById("end-year-display");
+
+        function updateRangeDisplay() {
+          let start = parseInt(startYearSlider.value);
+          let end = parseInt(endYearSlider.value);
+
+          // Ensure start <= end
+          if (start > end) {
+            [start, end] = [end, start];
+            startYearSlider.value = start;
+            endYearSlider.value = end;
+          }
+
+          startYearDisplay.textContent = start;
+          endYearDisplay.textContent = end;
+        }
+
+        startYearSlider.addEventListener("input", updateRangeDisplay);
+        endYearSlider.addEventListener("input", updateRangeDisplay);
+
+        // Submit on release
+        startYearSlider.addEventListener("change", () => {
+          document.querySelector("form").submit();
+        });
+        endYearSlider.addEventListener("change", () => {
+          document.querySelector("form").submit();
+        });
       });
 
       function toggleFilters() {
@@ -1201,6 +1384,51 @@
         filterPanel.style.display =
           filterPanel.style.display !== "block" ? "block" : "none";
       }
+
+      function changePage(page) {
+        const form = document.querySelector('form');
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'page';
+        input.value = page;
+        form.appendChild(input);
+        form.submit();
+      }
+
+      // Quote of the Week Easter Egg
+      const quotes = [
+        "Rust is a language empowering everyone to build reliable and efficient software.",
+        "If it compiles, it (probably) works!",
+        "Fearless concurrency: writing concurrent code without data races.",
+        "Ownership is Rust's most unique feature, and it enables Rust to make memory safety guarantees without needing a garbage collector.",
+        "The Rust community is one of the friendliest and most helpful communities I've been a part of.",
+        "Rust combines low-level control with high-level ergonomics.",
+        "Zero-cost abstractions: you don't pay for what you don't use.",
+        "Fighting with the borrow checker makes you a better programmer.",
+        "Rust's error messages are so good, they teach you the language.",
+        "Move fast and don't break things.",
+        "Compile time is runtime for Rust programmers.",
+        "In Rust, we trust (the compiler).",
+        "Unsafe Rust: with great power comes great responsibility.",
+        "Cargo is Rust's secret weapon for productivity.",
+        "Write once, run anywhere... and know it won't crash!",
+        "The Rust compiler: your strictest reviewer and best teacher.",
+        "Memory safety without garbage collection: the Rust promise.",
+        "Rust makes concurrent programming not just safe, but enjoyable.",
+        "Type systems are documentation that the compiler can verify.",
+        "Rust: performance and reliability as first-class citizens."
+      ];
+
+      function showRandomQuote() {
+        const quoteElement = document.getElementById('random-quote');
+        if (quoteElement) {
+          const randomIndex = Math.floor(Math.random() * quotes.length);
+          quoteElement.textContent = '"' + quotes[randomIndex] + '"';
+        }
+      }
+
+      // Show quote on load
+      document.addEventListener('DOMContentLoaded', showRandomQuote);
     </script>
   </body>
 </html>

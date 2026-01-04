@@ -65,6 +65,30 @@ impl SearchResult {
             .unwrap_or("unknown")
             .to_string()
     }
+
+    /// Returns the word count of the article
+    pub fn word_count(&self) -> usize {
+        self.entry
+            .text
+            .as_ref()
+            .map(|text| text.split_whitespace().count())
+            .unwrap_or(0)
+    }
+
+    /// Returns the estimated reading time in minutes (assuming 200 words per minute)
+    pub fn reading_time_minutes(&self) -> usize {
+        let words = self.word_count();
+        (words / 200).max(1) // At least 1 minute
+    }
+
+    /// Returns the TWIR issue number based on date
+    /// First issue was 2013-06-29, weekly cadence
+    pub fn twir_issue(&self) -> usize {
+        let first_issue_date = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
+        let days_diff = self.entry.id.date.signed_duration_since(first_issue_date).num_days();
+        // Approximate weekly issues (7 days each), starting from issue 1
+        ((days_diff / 7) as usize) + 1
+    }
 }
 
 /// Statistics about the indexed content

@@ -9,6 +9,8 @@ use types::SearchResult;
 struct SearchTemplate {
     query: Option<String>,
     results: Vec<SearchResult>,
+    current_page: u32,
+    has_more: bool,
 }
 
 /// Handler for the index page
@@ -16,6 +18,8 @@ pub(crate) async fn index() -> Result<Html<String>, axum::http::StatusCode> {
     let template = SearchTemplate {
         query: None,
         results: vec![],
+        current_page: 1,
+        has_more: false,
     };
     template
         .render()

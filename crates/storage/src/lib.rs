@@ -288,20 +288,29 @@ impl Repository {
     pub async fn search(
         &self,
         query: &str,
-        date_range: Option<&str>,
+        start_year: Option<i32>,
+        end_year: Option<i32>,
         sort_by: Option<&str>,
+        page: Option<u32>,
     ) -> Result<Vec<SearchResult>> {
+        const RESULTS_PER_PAGE: u32 = 20;
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
 
-        // Escape query for FTS5 using the "verbatim string" method:
-        // Replace " with "" and wrap in quotes to prevent syntax errors from special characters
+        // Escape query for FTS5:
+        // Split into individual words and quote each to escape special characters
+        // Join with AND to match all words (in any order)
         // Reference: https://sqlite.org/fts5.html (see "FTS5 Strings" section)
         let escaped_query = if search_terms.is_empty() {
             // If only site: operator, match everything
             String::from("*")
         } else {
-            format!("\"{}\"", search_terms.replace('"', "\"\""))
+            // Split words, quote each individually, and join with AND
+            search_terms
+                .split_whitespace()
+                .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
+                .collect::<Vec<_>>()
+                .join(" AND ")
         };
 
         // Build query using QueryBuilder for safe SQL construction
@@ -324,14 +333,14 @@ impl Repository {
             query.push_bind(format!("%{}%", site));
         }
 
-        // Add date filter if present
-        if let Some(year) = date_range {
-            if year.parse::<i32>().is_ok() {
-                query.push(" AND m.date >= ");
-                query.push_bind(format!("{year}-01-01"));
-                query.push(" AND m.date <= ");
-                query.push_bind(format!("{year}-12-31"));
-            }
+        // Add date range filter
+        if let Some(start) = start_year {
+            query.push(" AND m.date >= ");
+            query.push_bind(format!("{start}-01-01"));
+        }
+        if let Some(end) = end_year {
+            query.push(" AND m.date <= ");
+            query.push_bind(format!("{end}-12-31"));
         }
 
         // Add ORDER BY clause
@@ -341,7 +350,14 @@ impl Repository {
             _ => query.push(" ORDER BY rank"),
         };
 
-        query.push(" LIMIT 20");
+        // Add pagination
+        let page_num = page.unwrap_or(1).max(1);
+        let offset = (page_num - 1) * RESULTS_PER_PAGE;
+
+        query.push(" LIMIT ");
+        query.push_bind(RESULTS_PER_PAGE as i64);
+        query.push(" OFFSET ");
+        query.push_bind(offset as i64);
 
         let rows = query.build().fetch_all(&self.pool).await?;
 

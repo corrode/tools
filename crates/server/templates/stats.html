@@ -40,6 +40,7 @@
       }
 
       :root {
+        /* Default theme (oxide dark) */
         --color-background: #0a0e11;
         --color-surface: #111418;
         --color-primary: #48d597;
@@ -47,6 +48,101 @@
         --color-text: #f0f0f0;
         --color-text-muted: #8a8f98;
         --color-border: #1f2327;
+      }
+
+      /* Light themes */
+      html[data-theme="light-docs-rs"] {
+        --color-background: #ffffff;
+        --color-surface: #ffffff;
+        --color-primary: #0d7bff;
+        --color-primary-muted: #0969da;
+        --color-text: #000000;
+        --color-text-muted: #57606a;
+        --color-border: #d0d7de;
+      }
+
+      html[data-theme="light-hacker-news"] {
+        --color-background: #f6f6ef;
+        --color-surface: #f6f6ef;
+        --color-primary: #000000;
+        --color-primary-muted: #828282;
+        --color-text: #000000;
+        --color-text-muted: #828282;
+        --color-border: #ff6600;
+      }
+
+      html[data-theme="light-hacker-news"] body {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+      }
+
+      html[data-theme="light-hacker-news"] h1 {
+        font-family: Verdana, Geneva, sans-serif;
+        font-size: 10pt;
+        font-weight: bold;
+        text-transform: none;
+        letter-spacing: normal;
+        color: #ff6600;
+      }
+
+      html[data-theme="dark-twir"] {
+        --color-background: #2a2a2a;
+        --color-surface: #353535;
+        --color-primary: #d2991d;
+        --color-primary-muted: #9a7015;
+        --color-text: #f0f0f0;
+        --color-text-muted: #aeaeae;
+        --color-border: #353535;
+      }
+
+      html[data-theme="dark-twir"] h1 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #d2991d;
+        text-transform: none;
+      }
+
+      html[data-theme="dark-twir"] body {
+        font-family: "Inter", sans-serif;
+      }
+
+      html[data-theme="dark-oxide"] {
+        --color-background: #0a0e11;
+        --color-surface: #111418;
+        --color-primary: #48d597;
+        --color-primary-muted: #3ab87e;
+        --color-text: #f0f0f0;
+        --color-text-muted: #8a8f98;
+        --color-border: #1f2327;
+      }
+
+      html[data-theme="dark-github"] {
+        --color-background: #0d1117;
+        --color-surface: #161b22;
+        --color-primary: #58a6ff;
+        --color-primary-muted: #1f6feb;
+        --color-text: #c9d1d9;
+        --color-text-muted: #8b949e;
+        --color-border: #30363d;
+      }
+
+      html[data-theme="dark-github"] h1 {
+        color: #ffffff;
+        font-weight: 700;
+      }
+
+      /* Prevent transitions during load */
+      .preload * {
+        transition: none !important;
+        animation-duration: 0.001s !important;
+      }
+
+      /* Normal transitions after load */
+      * {
+        transition: background-color 0.1s ease, color 0.1s ease,
+          border-color 0.1s ease, box-shadow 0.1s ease;
       }
 
       * {
@@ -235,9 +331,66 @@
         color: var(--color-text-muted);
         font-size: 0.9rem;
       }
+
+      /* Theme switcher styles */
+      .theme-switcher {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 8px;
+      }
+
+      #theme-select {
+        border: none;
+      }
+
+      .theme-switcher select {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .theme-switcher select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+
+      .theme-switcher optgroup {
+        font-weight: bold;
+        color: var(--color-text-muted);
+      }
+
+      .theme-switcher option {
+        font-weight: normal;
+        color: var(--color-text);
+        padding: 4px;
+      }
     </style>
   </head>
-  <body>
+  <body class="preload">
+    <!-- Theme switcher -->
+    <div class="theme-switcher">
+      <select id="theme-select" onchange="setTheme(this.value)">
+        <optgroup label="Light Themes">
+          <option value="light-docs-rs">docs.rs</option>
+          <option value="light-hacker-news">Hacker News</option>
+        </optgroup>
+        <optgroup label="Dark Themes">
+          <option value="dark-oxide">Oxide (Default)</option>
+          <option value="dark-github">GitHub</option>
+          <option value="dark-twir">This Week in Rust</option>
+        </optgroup>
+      </select>
+    </div>
+
     <div class="container">
       <a href="/" class="back-link">← Back to Search</a>
 
@@ -330,5 +483,26 @@
     <footer>
       <p>Powered by <a href="https://corrode.dev">corrode</a></p>
     </footer>
+
+    <script>
+      // Remove preload class after page is fully loaded to prevent flicker
+      window.addEventListener("load", () => {
+        document.body.classList.remove("preload");
+      });
+
+      // Theme switching function
+      function setTheme(theme) {
+        console.log("Setting theme:", theme);
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      }
+
+      // Initialize theme
+      document.addEventListener("DOMContentLoaded", () => {
+        const savedTheme = localStorage.getItem("theme") || "dark-oxide";
+        setTheme(savedTheme);
+        document.getElementById("theme-select").value = savedTheme;
+      });
+    </script>
   </body>
 </html>
