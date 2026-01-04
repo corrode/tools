@@ -108,6 +108,14 @@ pub struct Stats {
     pub earliest_date: Option<NaiveDate>,
     /// Latest indexed article date
     pub latest_date: Option<NaiveDate>,
+    /// Top domains by year
+    pub top_domains_by_year: Vec<YearlyDomainStats>,
+    /// Top keywords by year
+    pub top_keywords_by_year: Vec<YearlyKeywordStats>,
+    /// Total unique domains
+    pub total_unique_domains: i64,
+    /// Most prolific domain overall
+    pub top_domain_overall: Option<DomainStats>,
 }
 
 /// Category statistics
@@ -130,4 +138,40 @@ pub struct YearStats {
     pub count: i64,
     /// Percentage relative to max year (for progress bar)
     pub percentage: i64,
+}
+
+/// Domain statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainStats {
+    /// Domain name
+    pub domain: String,
+    /// Number of articles from this domain
+    pub count: i64,
+}
+
+/// Top domains by year
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YearlyDomainStats {
+    /// Year
+    pub year: i32,
+    /// Top domains for this year
+    pub domains: Vec<DomainStats>,
+}
+
+/// Keyword statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeywordStats {
+    /// Keyword
+    pub keyword: String,
+    /// Frequency count
+    pub count: i64,
+}
+
+/// Top keywords by year
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YearlyKeywordStats {
+    /// Year
+    pub year: i32,
+    /// Top keywords for this year
+    pub keywords: Vec<KeywordStats>,
 }

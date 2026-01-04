@@ -308,6 +308,101 @@
         transition: width 0.3s ease;
       }
 
+      .year-section {
+        margin-bottom: 32px;
+      }
+
+      .year-subsection-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--color-primary);
+        margin-bottom: 16px;
+        font-family: "Martian Mono", monospace;
+      }
+
+      .domain-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      .domain-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background-color: rgba(72, 213, 151, 0.05);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+      }
+
+      .domain-item:hover {
+        background-color: rgba(72, 213, 151, 0.1);
+        transform: translateX(4px);
+      }
+
+      .domain-name {
+        font-weight: 500;
+        color: var(--color-text);
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .domain-count {
+        font-family: "Martian Mono", monospace;
+        color: var(--color-primary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-left: 12px;
+        flex-shrink: 0;
+      }
+
+      .keyword-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      .keyword-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        background-color: rgba(72, 213, 151, 0.1);
+        border: 1px solid var(--color-primary);
+        border-radius: 20px;
+        color: var(--color-text);
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .keyword-tag:hover {
+        background-color: rgba(72, 213, 151, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(72, 213, 151, 0.3);
+        border-color: var(--color-primary);
+        color: var(--color-text);
+      }
+
+      .keyword-count {
+        font-family: "Martian Mono", monospace;
+        color: var(--color-primary);
+        font-weight: 700;
+        margin-left: 6px;
+      }
+
       a {
         color: var(--color-primary);
         text-decoration: none;
@@ -445,6 +540,28 @@
           </div>
           <div class="stat-label">Years of Content</div>
         </div>
+
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.total_unique_domains }}</div>
+          <div class="stat-label">Unique Domains</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">
+            {% if let Some(top) = stats.top_domain_overall %}
+              {{ top.count }}
+            {% else %}
+              0
+            {% endif %}
+          </div>
+          <div class="stat-label">
+            {% if let Some(top) = stats.top_domain_overall %}
+              {{ top.domain }}
+            {% else %}
+              Top Domain
+            {% endif %}
+          </div>
+        </div>
       </div>
 
       <!-- Articles Per Year -->
@@ -477,6 +594,41 @@
           </div>
           {% endfor %}
         </div>
+      </div>
+
+      <!-- Top Domains by Year -->
+      <div class="section">
+        <h2 class="section-title">Top Domains by Year</h2>
+        {% for yearly_domains in stats.top_domains_by_year %}
+        <div class="year-section">
+          <h3 class="year-subsection-title">{{ yearly_domains.year }}</h3>
+          <div class="domain-list">
+            {% for domain in yearly_domains.domains %}
+            <div class="domain-item">
+              <span class="domain-name">{{ domain.domain }}</span>
+              <span class="domain-count">{{ domain.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Top Keywords by Year -->
+      <div class="section">
+        <h2 class="section-title">Top Keywords by Year</h2>
+        {% for yearly_keywords in stats.top_keywords_by_year %}
+        <div class="year-section">
+          <h3 class="year-subsection-title">{{ yearly_keywords.year }}</h3>
+          <div class="keyword-list">
+            {% for keyword in yearly_keywords.keywords %}
+            <a href="/search?q={{ keyword.keyword }}&start-year={{ yearly_keywords.year }}&end-year={{ yearly_keywords.year }}&sort-by=relevance" class="keyword-tag">
+              {{ keyword.keyword }} <span class="keyword-count">({{ keyword.count }})</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
       </div>
     </div>
 

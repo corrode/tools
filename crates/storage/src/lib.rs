@@ -256,6 +256,205 @@ impl Repository {
             .get::<Option<String>, _>("latest")
             .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
 
+        // Get top domains by year (top 5 per year)
+        let domain_rows = sqlx::query(
+            r#"
+            WITH domain_counts AS (
+                SELECT
+                    CAST(strftime('%Y', date) AS INTEGER) as year,
+                    CASE
+                        WHEN url LIKE 'http://%' THEN substr(url, 8, instr(substr(url, 8), '/') - 1)
+                        WHEN url LIKE 'https://%' THEN substr(url, 9, instr(substr(url, 9), '/') - 1)
+                        ELSE url
+                    END as domain,
+                    COUNT(*) as count
+                FROM entries_meta
+                GROUP BY year, domain
+            )
+            SELECT year, domain, count,
+                   ROW_NUMBER() OVER (PARTITION BY year ORDER BY count DESC) as rank
+            FROM domain_counts
+            WHERE domain != ''
+            ORDER BY year DESC, count DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut top_domains_by_year: Vec<types::YearlyDomainStats> = Vec::new();
+        let mut current_year: Option<i32> = None;
+        let mut current_domains: Vec<types::DomainStats> = Vec::new();
+
+        for row in domain_rows {
+            let year: i32 = row.get("year");
+            let rank: i64 = row.get("rank");
+
+            if rank > 5 {
+                continue; // Only top 5 per year
+            }
+
+            if current_year != Some(year) {
+                if let Some(y) = current_year {
+                    top_domains_by_year.push(types::YearlyDomainStats {
+                        year: y,
+                        domains: current_domains.clone(),
+                    });
+                    current_domains.clear();
+                }
+                current_year = Some(year);
+            }
+
+            current_domains.push(types::DomainStats {
+                domain: row.get("domain"),
+                count: row.get("count"),
+            });
+        }
+
+        if let Some(y) = current_year {
+            top_domains_by_year.push(types::YearlyDomainStats {
+                year: y,
+                domains: current_domains,
+            });
+        }
+
+        // Get top domain overall
+        let top_domain_overall = sqlx::query(
+            r#"
+            SELECT
+                CASE
+                    WHEN url LIKE 'http://%' THEN substr(url, 8, instr(substr(url, 8), '/') - 1)
+                    WHEN url LIKE 'https://%' THEN substr(url, 9, instr(substr(url, 9), '/') - 1)
+                    ELSE url
+                END as domain,
+                COUNT(*) as count
+            FROM entries_meta
+            GROUP BY domain
+            ORDER BY count DESC
+            LIMIT 1
+            "#
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .map(|row| types::DomainStats {
+            domain: row.get("domain"),
+            count: row.get("count"),
+        });
+
+        // Get total unique domains
+        let total_unique_domains = sqlx::query(
+            r#"
+            SELECT COUNT(DISTINCT
+                CASE
+                    WHEN url LIKE 'http://%' THEN substr(url, 8, instr(substr(url, 8), '/') - 1)
+                    WHEN url LIKE 'https://%' THEN substr(url, 9, instr(substr(url, 9), '/') - 1)
+                    ELSE url
+                END
+            ) as count
+            FROM entries_meta
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .get("count");
+
+        // Get top keywords by year (top 10 per year from titles and text)
+        // Clean all special characters that could break JSON parsing
+        let keyword_rows = sqlx::query(
+            r#"
+            WITH yearly_words AS (
+                SELECT
+                    CAST(strftime('%Y', date) AS INTEGER) as year,
+                    lower(
+                        replace(
+                            replace(
+                                replace(
+                                    replace(
+                                        replace(
+                                            replace(
+                                                replace(
+                                                    replace(
+                                                        replace(title, '"', ' '),
+                                                    "'", ' '),
+                                                '\', ' '),
+                                            '[', ' '),
+                                        ']', ' '),
+                                    '(', ' '),
+                                ',', ' '),
+                            '.', ' '),
+                        ':', ' ')
+                    ) as text
+                FROM entries_meta
+            ),
+            split_words AS (
+                SELECT year, value as word
+                FROM yearly_words, json_each('["' || replace(text, ' ', '","') || '"]')
+                WHERE length(value) >= 4
+                    -- Filter out common English stopwords
+                    AND value NOT IN ('rust', 'this', 'week', 'with', 'from', 'that', 'have', 'for', 'and', 'the', 'are', 'was', 'but', 'not', 'you', 'all', 'can', 'her', 'has', 'had', 'when', 'your', 'about', 'which', 'their', 'will', 'said', 'each', 'tell', 'does', 'these', 'been', 'what', 'some', 'than', 'them', 'would', 'into', 'time', 'could', 'other', 'more', 'very', 'also', 'only', 'well', 'just', 'where', 'most', 'after', 'back', 'good', 'much', 'work', 'over', 'such', 'even', 'take', 'make', 'know', 'here', 'there', 'being', 'because', 'should', 'through', 'before', 'between', 'under', 'while', 'those', 'both')
+                    -- Filter out years
+                    AND value NOT IN ('2013', '2014', '2015', '2016', 'rust2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026')
+                    -- Filter out generic programming/blog terms
+                    AND value NOT IN ('part', 'code', 'coding', 'build', 'building', 'using', 'engineer', 'software', 'programming', 'writing', 'release', 'released', 'announcing', 'month', 'weekly', 'episode', 'episodes', 'weeks', 'video', 'videos', 'meetup', 'meetups', 'docs', 'documentation', 'changelog', 'series', 'tutorial', 'guide', 'post', 'blog', 'article', 'notes', 'update', 'updates', 'introducing', 'announcement', 'first', 'second', 'third', 'rustacean', 'rustaceans', 'edition', 'version', 'report', 'status', 'call', 'call-for-participation', 'berlin', 'london', 'tokyo', 'year', 'years', 'simple', 'project', 'projects', 'session', 'sessions', 'learning', 'issue', 'issues', 'interview', 'interviews', 'handling', 'workshop', 'workshops', 'user', 'users', 'type', 'types', 'steps', 'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september', 'october', 'november', 'december')
+                    -- Filter out Rust-specific common terms and possessives
+                    AND value NOT IN ('rust)', 'rust-analyzer', 'rust-lang', 'rustc', 'cargo', 'crate', 'crates', 'rustconf')
+                    -- Filter out fragments with special characters
+                    AND word NOT LIKE '%?%'
+                    AND word NOT LIKE '%!%'
+                    AND word NOT LIKE '%/%'
+                    AND word NOT LIKE '%#%'
+                    -- Filter out common non-English words
+                    AND value NOT IN ('setmanal', 'sessió', 'codificació', 'diseño', 'código')
+            ),
+            word_counts AS (
+                SELECT year, word, COUNT(*) as count
+                FROM split_words
+                GROUP BY year, word
+            )
+            SELECT year, word, count,
+                   ROW_NUMBER() OVER (PARTITION BY year ORDER BY count DESC) as rank
+            FROM word_counts
+            ORDER BY year DESC, count DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut top_keywords_by_year: Vec<types::YearlyKeywordStats> = Vec::new();
+        let mut current_kw_year: Option<i32> = None;
+        let mut current_keywords: Vec<types::KeywordStats> = Vec::new();
+
+        for row in keyword_rows {
+            let year: i32 = row.get("year");
+            let rank: i64 = row.get("rank");
+
+            if rank > 10 {
+                continue; // Only top 10 per year
+            }
+
+            if current_kw_year != Some(year) {
+                if let Some(y) = current_kw_year {
+                    top_keywords_by_year.push(types::YearlyKeywordStats {
+                        year: y,
+                        keywords: current_keywords.clone(),
+                    });
+                    current_keywords.clear();
+                }
+                current_kw_year = Some(year);
+            }
+
+            current_keywords.push(types::KeywordStats {
+                keyword: row.get("word"),
+                count: row.get("count"),
+            });
+        }
+
+        if let Some(y) = current_kw_year {
+            top_keywords_by_year.push(types::YearlyKeywordStats {
+                year: y,
+                keywords: current_keywords,
+            });
+        }
+
         Ok(Stats {
             total_articles,
             avg_article_size,
@@ -264,6 +463,10 @@ impl Repository {
             articles_per_year,
             earliest_date,
             latest_date,
+            top_domains_by_year,
+            top_keywords_by_year,
+            total_unique_domains,
+            top_domain_overall,
         })
     }
 
