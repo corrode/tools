@@ -15,6 +15,7 @@ struct SearchTemplate {
     results: Vec<SearchResult>,
     current_page: u32,
     has_more: bool,
+    total_results: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,18 +95,33 @@ pub(crate) async fn search(
     Query(params): Query<SearchParams>,
     axum::extract::State(repo): axum::extract::State<Arc<Repository>>,
 ) -> Result<Html<String>, axum::http::StatusCode> {
-    let results = if let Some(query) = &params.q {
-        repo.search(
-            query,
-            params.start_year,
-            params.end_year,
-            params.sort_by.as_deref(),
-            params.page,
-        )
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    // Check if query is provided and not empty/whitespace-only
+    let (results, total_results) = if let Some(query) = &params.q {
+        if query.trim().is_empty() {
+            (vec![], 0)
+        } else {
+            let results = repo.search(
+                query,
+                params.start_year,
+                params.end_year,
+                params.sort_by.as_deref(),
+                params.page,
+            )
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let total = repo.count_search_results(
+                query,
+                params.start_year,
+                params.end_year,
+            )
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            (results, total)
+        }
     } else {
-        vec![]
+        (vec![], 0)
     };
 
     // Clean up result text. This needs to go elsewhere later
@@ -126,6 +142,7 @@ pub(crate) async fn search(
         results,
         current_page,
         has_more,
+        total_results,
     };
 
     template

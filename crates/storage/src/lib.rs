@@ -284,6 +284,58 @@ impl Repository {
         (search_terms.join(" "), site_filter)
     }
 
+    /// Counts total matching results for a search query (without pagination)
+    pub async fn count_search_results(
+        &self,
+        query: &str,
+        start_year: Option<i32>,
+        end_year: Option<i32>,
+    ) -> Result<i64> {
+        // Parse query for site: operator
+        let (search_terms, site_filter) = Self::parse_query(query);
+
+        // Escape query for FTS5
+        let escaped_query = if search_terms.is_empty() {
+            String::from("*")
+        } else {
+            search_terms
+                .split_whitespace()
+                .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
+                .collect::<Vec<_>>()
+                .join(" AND ")
+        };
+
+        // Build count query
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) as total
+            FROM entries_fts
+            JOIN entries_meta m ON entries_fts.rowid = m.id
+            WHERE entries_fts MATCH "#,
+        );
+
+        query.push_bind(&escaped_query);
+
+        // Add site filter if present
+        if let Some(site) = site_filter {
+            query.push(" AND m.url LIKE ");
+            query.push_bind(format!("%{}%", site));
+        }
+
+        // Add date range filter
+        if let Some(start) = start_year {
+            query.push(" AND m.date >= ");
+            query.push_bind(format!("{start}-01-01"));
+        }
+        if let Some(end) = end_year {
+            query.push(" AND m.date <= ");
+            query.push_bind(format!("{end}-12-31"));
+        }
+
+        let row = query.build().fetch_one(&self.pool).await?;
+        Ok(row.get("total"))
+    }
+
     /// Performs a full-text search on entries
     pub async fn search(
         &self,

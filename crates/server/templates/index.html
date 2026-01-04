@@ -878,10 +878,10 @@
       .pagination {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-end;
         gap: 16px;
         padding: 32px;
-        border-top: 1px solid var(--color-border);
+        margin-top: 20px;
       }
 
       .pagination-btn {
@@ -1128,7 +1128,7 @@
           </a>
         </h1>
         <div class="subtitle">
-          Search Rust news, tutorials, and discussions
+            Find the best content on Rust, curated by the community; a search engine for Rustaceans.
         </div>
       </header>
 
@@ -1191,9 +1191,9 @@
       <div class="results" id="search-results">
         {% if let Some(q) = query %}
         <!-- Show result count -->
-        {% if !results.is_empty() %}
+        {% if total_results > 0 %}
         <div class="result-count">
-          Found {{ results.len() }} result{% if results.len() != 1 %}s{% endif %}
+          Found {{ total_results }} result{% if total_results != 1 %}s{% endif %}
         </div>
         {% endif %}
 
@@ -1225,38 +1225,6 @@
           </div>
         </div>
         {% endfor %}
-
-        <!-- Pagination -->
-        {% if current_page > 1 || has_more %}
-        <div class="pagination">
-          {% if current_page > 1 %}
-          <a href="#" onclick="changePage({{ current_page - 1 }}); return false;" class="pagination-btn">
-            ← Previous
-          </a>
-          {% else %}
-          <span class="pagination-btn disabled">← Previous</span>
-          {% endif %}
-
-          <span class="pagination-info">Page {{ current_page }}</span>
-
-          {% if has_more %}
-          <a href="#" onclick="changePage({{ current_page + 1 }}); return false;" class="pagination-btn">
-            Next →
-          </a>
-          {% else %}
-          <span class="pagination-btn disabled">Next →</span>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Quote of the Week Easter Egg -->
-        {% if !results.is_empty() %}
-        <div class="quote-easter-egg">
-          <div class="quote-content" id="random-quote"></div>
-          <div class="quote-attribution">— Quote of the Week</div>
-        </div>
-        {% endif %}
-
         {% endif %} {% else %}
         <!-- Empty initial state -->
         <div class="result-item">
@@ -1268,6 +1236,39 @@
         </div>
         {% endif %}
       </div>
+
+      <!-- Pagination (outside results div, aligned right) -->
+      {% if let Some(q) = query %}
+      {% if current_page > 1 || has_more %}
+      <div class="pagination">
+        {% if current_page > 1 %}
+        <a href="#" onclick="changePage({{ current_page - 1 }}); return false;" class="pagination-btn">
+          ← Previous
+        </a>
+        {% else %}
+        <span class="pagination-btn disabled">← Previous</span>
+        {% endif %}
+
+        <span class="pagination-info">Page {{ current_page }}</span>
+
+        {% if has_more %}
+        <a href="#" onclick="changePage({{ current_page + 1 }}); return false;" class="pagination-btn">
+          Next →
+        </a>
+        {% else %}
+        <span class="pagination-btn disabled">Next →</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Quote of the Week Easter Egg (outside results div) -->
+      {% if !results.is_empty() %}
+      <div class="quote-easter-egg">
+        <div class="quote-content" id="random-quote"></div>
+        <div class="quote-attribution">— Quote of the Week</div>
+      </div>
+      {% endif %}
+      {% endif %}
     </div>
 
     <footer>
@@ -1397,33 +1398,32 @@
 
       // Quote of the Week Easter Egg
       const quotes = [
-        "Rust is a language empowering everyone to build reliable and efficient software.",
-        "If it compiles, it (probably) works!",
-        "Fearless concurrency: writing concurrent code without data races.",
-        "Ownership is Rust's most unique feature, and it enables Rust to make memory safety guarantees without needing a garbage collector.",
-        "The Rust community is one of the friendliest and most helpful communities I've been a part of.",
-        "Rust combines low-level control with high-level ergonomics.",
-        "Zero-cost abstractions: you don't pay for what you don't use.",
-        "Fighting with the borrow checker makes you a better programmer.",
-        "Rust's error messages are so good, they teach you the language.",
-        "Move fast and don't break things.",
-        "Compile time is runtime for Rust programmers.",
-        "In Rust, we trust (the compiler).",
-        "Unsafe Rust: with great power comes great responsibility.",
-        "Cargo is Rust's secret weapon for productivity.",
-        "Write once, run anywhere... and know it won't crash!",
-        "The Rust compiler: your strictest reviewer and best teacher.",
-        "Memory safety without garbage collection: the Rust promise.",
-        "Rust makes concurrent programming not just safe, but enjoyable.",
-        "Type systems are documentation that the compiler can verify.",
-        "Rust: performance and reliability as first-class citizens."
+        { text: "Rust is a language empowering everyone to build reliable and efficient software.", author: "Rust Lang" },
+        { text: "If it compiles, it (probably) works!", author: "Rust Community" },
+        { text: "Fearless concurrency: writing concurrent code without data races.", author: "Rust Book" },
+        { text: "Ownership is Rust's most unique feature, and it enables Rust to make memory safety guarantees without needing a garbage collector.", author: "Rust Book" },
+        { text: "Rust combines low-level control with high-level ergonomics.", author: "Rust Community" },
+        { text: "Zero-cost abstractions: you don't pay for what you don't use.", author: "Bjarne Stroustrup (C++ principle, adopted by Rust)" },
+        { text: "Fighting with the borrow checker makes you a better programmer.", author: "Rust Community" },
+        { text: "Rust's error messages are so good, they teach you the language.", author: "Rust Community" },
+        { text: "Move fast and don't break things.", author: "Rust Community" },
+        { text: "Compile time is runtime for Rust programmers.", author: "Rust Community" },
+        { text: "In Rust, we trust (the compiler).", author: "Rust Community" },
+        { text: "Unsafe Rust: with great power comes great responsibility.", author: "Rust Community" },
+        { text: "Cargo is Rust's secret weapon for productivity.", author: "Rust Community" },
+        { text: "The Rust compiler: your strictest reviewer and best teacher.", author: "Rust Community" },
+        { text: "Memory safety without garbage collection: the Rust promise.", author: "Rust Community" },
+        { text: "Rust makes concurrent programming not just safe, but enjoyable.", author: "Rust Community" },
+        { text: "Type systems are documentation that the compiler can verify.", author: "Rust Community" }
       ];
 
       function showRandomQuote() {
         const quoteElement = document.getElementById('random-quote');
-        if (quoteElement) {
-          const randomIndex = Math.floor(Math.random() * quotes.length);
-          quoteElement.textContent = '"' + quotes[randomIndex] + '"';
+        const attributionElement = document.querySelector('.quote-attribution');
+        if (quoteElement && attributionElement) {
+          const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+          quoteElement.textContent = '"' + randomQuote.text + '"';
+          attributionElement.textContent = '— ' + randomQuote.author;
         }
       }
 

@@ -11,6 +11,7 @@ struct SearchTemplate {
     results: Vec<SearchResult>,
     current_page: u32,
     has_more: bool,
+    total_results: i64,
 }
 
 /// Handler for the index page
@@ -20,6 +21,7 @@ pub(crate) async fn index() -> Result<Html<String>, axum::http::StatusCode> {
         results: vec![],
         current_page: 1,
         has_more: false,
+        total_results: 0,
     };
     template
         .render()

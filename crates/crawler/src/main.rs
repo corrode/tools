@@ -105,8 +105,15 @@ pub async fn main() -> Result<()> {
     let mut resume_crawling = checkpoint.is_none(); // If no checkpoint, start immediately
 
     for item in entries {
-        let file_name = item["name"].as_str().unwrap();
-        let download_url = item["download_url"].as_str().unwrap();
+        // Skip items that don't have the expected fields (e.g., directories)
+        let Some(file_name) = item["name"].as_str() else {
+            log::debug!("Skipping item without name field");
+            continue;
+        };
+        let Some(download_url) = item["download_url"].as_str() else {
+            log::debug!("Skipping item '{}' without download_url field", file_name);
+            continue;
+        };
         let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
 
         // Check if we should start processing from this file
