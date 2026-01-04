@@ -497,27 +497,39 @@ impl Repository {
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
 
-        // Escape query for FTS5
-        let escaped_query = if search_terms.is_empty() {
-            String::from("*")
-        } else {
+        // Handle the case where we have no search terms (only site: filter)
+        let has_search_terms = !search_terms.is_empty();
+
+        // Escape query for FTS5 (needs to be outside the if block for lifetime)
+        let escaped_query = if has_search_terms {
             search_terms
                 .split_whitespace()
                 .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
                 .collect::<Vec<_>>()
                 .join(" AND ")
+        } else {
+            String::new()
         };
 
-        // Build count query
-        let mut query = QueryBuilder::new(
-            r#"
+        let mut query = if has_search_terms {
+            let mut q = QueryBuilder::new(
+                r#"
             SELECT COUNT(*) as total
             FROM entries_fts
             JOIN entries_meta m ON entries_fts.rowid = m.id
             WHERE entries_fts MATCH "#,
-        );
-
-        query.push_bind(&escaped_query);
+            );
+            q.push_bind(&escaped_query);
+            q
+        } else {
+            // No search terms, just site filter - don't use FTS5 MATCH
+            QueryBuilder::new(
+                r#"
+            SELECT COUNT(*) as total
+            FROM entries_meta m
+            WHERE 1=1"#,
+            )
+        };
 
         // Add site filter if present
         if let Some(site) = site_filter {
@@ -552,25 +564,27 @@ impl Repository {
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
 
-        // Escape query for FTS5:
+        // Build query using QueryBuilder for safe SQL construction
+        // Handle the case where we have no search terms (only site: filter)
+        let has_search_terms = !search_terms.is_empty();
+
+        // Escape query for FTS5 (needs to be outside the if block for lifetime)
         // Split into individual words and quote each to escape special characters
         // Join with AND to match all words (in any order)
         // Reference: https://sqlite.org/fts5.html (see "FTS5 Strings" section)
-        let escaped_query = if search_terms.is_empty() {
-            // If only site: operator, match everything
-            String::from("*")
-        } else {
-            // Split words, quote each individually, and join with AND
+        let escaped_query = if has_search_terms {
             search_terms
                 .split_whitespace()
                 .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
                 .collect::<Vec<_>>()
                 .join(" AND ")
+        } else {
+            String::new()
         };
 
-        // Build query using QueryBuilder for safe SQL construction
-        let mut query = QueryBuilder::new(
-            r#"
+        let mut query = if has_search_terms {
+            let mut q = QueryBuilder::new(
+                r#"
             SELECT
                 m.title, m.url, m.category, m.date, m.text,
                 rank,
@@ -578,9 +592,21 @@ impl Repository {
             FROM entries_fts
             JOIN entries_meta m ON entries_fts.rowid = m.id
             WHERE entries_fts MATCH "#,
-        );
-
-        query.push_bind(&escaped_query);
+            );
+            q.push_bind(&escaped_query);
+            q
+        } else {
+            // No search terms, just site filter - don't use FTS5 MATCH
+            QueryBuilder::new(
+                r#"
+            SELECT
+                m.title, m.url, m.category, m.date, m.text,
+                0 as rank,
+                NULL as snippet
+            FROM entries_meta m
+            WHERE 1=1"#,
+            )
+        };
 
         // Add site filter if present
         if let Some(site) = site_filter {
