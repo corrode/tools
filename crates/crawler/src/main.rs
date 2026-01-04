@@ -36,6 +36,10 @@ struct Args {
     /// Start from a specific date (format: YYYY-MM-DD), overrides checkpoint
     #[arg(long)]
     start_date: Option<String>,
+
+    /// Dry run mode: parse TWiR files and show what would be crawled without actually crawling
+    #[arg(long, default_value_t = false)]
+    dry_run: bool,
 }
 
 // Output paths configuration
@@ -43,6 +47,16 @@ const TWIR_OUT_PATH: &str = "./content/twir";
 const INDEX_OUT_PATH: &str = "./content/index";
 const RAW_OUT_PATH: &str = "./content/raw";
 const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
+
+/// Statistics for dry-run mode
+#[derive(Default)]
+struct DryRunStats {
+    files_processed: usize,
+    urls_found: usize,
+    urls_skipped: usize,
+    urls_already_crawled: usize,
+    urls_would_crawl: usize,
+}
 
 /// Main indexing function that processes and stores TWiR content
 #[tokio::main]
@@ -103,6 +117,7 @@ pub async fn main() -> Result<()> {
     };
 
     let mut resume_crawling = checkpoint.is_none(); // If no checkpoint, start immediately
+    let mut dry_run_stats = DryRunStats::default();
 
     for item in entries {
         // Skip items that don't have the expected fields (e.g., directories)
@@ -130,6 +145,7 @@ pub async fn main() -> Result<()> {
         }
 
         info!("Processing file: {}", file_name);
+        dry_run_stats.files_processed += 1;
 
         // Download file if we don't have it yet
         let content = if fs::metadata(&download_file_path).is_ok() {
@@ -144,41 +160,64 @@ pub async fn main() -> Result<()> {
 
         // Parse and process entries
         for id in parser.parse_file(&content) {
+            dry_run_stats.urls_found += 1;
+
             // Skip if URL shouldn't be processed
             if !should_process_url(&id.url) {
                 log::debug!("Skipping URL based on criteria: {}", id.url);
+                dry_run_stats.urls_skipped += 1;
                 continue;
             }
 
             // Skip if URL already exists in database
             if repo.url_exists(&id.url).await? {
                 log::info!("Skipping already crawled URL: {}", id.url);
+                dry_run_stats.urls_already_crawled += 1;
                 continue;
             }
 
-            // Crawl and store content
-            log::info!("Crawling URL: {}", id.url);
-            if let Ok(text) = browser.crawl(&id).await {
-                let entry = Entry { id, text };
+            if args.dry_run {
+                // Dry run mode: just log what would be crawled
+                info!(
+                    "[DRY RUN] Would crawl: {} | {} | {} | {}",
+                    id.date, id.category, id.title, id.url
+                );
+                dry_run_stats.urls_would_crawl += 1;
+            } else {
+                // Crawl and store content
+                log::info!("Crawling URL: {}", id.url);
+                if let Ok(text) = browser.crawl(&id).await {
+                    let entry = Entry { id, text };
 
-                // Store in database
-                if let Err(e) = repo.insert_entry(&entry).await {
-                    info!("Failed to store entry {}: {}", entry.id.url, e);
-                    continue;
-                }
+                    // Store in database
+                    if let Err(e) = repo.insert_entry(&entry).await {
+                        info!("Failed to store entry {}: {}", entry.id.url, e);
+                        continue;
+                    }
 
-                info!("Successfully stored entry: {}", entry.id.url);
+                    info!("Successfully stored entry: {}", entry.id.url);
 
-                // Write JSON file for troubleshooting
-                let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
-                if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
-                    info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                    // Write JSON file for troubleshooting
+                    let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
+                    if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
+                        info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                    }
                 }
             }
         }
     }
 
-    info!("Successfully indexed all TWiR content");
+    if args.dry_run {
+        info!("=== DRY RUN SUMMARY ===");
+        info!("Files processed: {}", dry_run_stats.files_processed);
+        info!("URLs found: {}", dry_run_stats.urls_found);
+        info!("URLs skipped (filtered): {}", dry_run_stats.urls_skipped);
+        info!("URLs already crawled: {}", dry_run_stats.urls_already_crawled);
+        info!("URLs that would be crawled: {}", dry_run_stats.urls_would_crawl);
+        info!("======================");
+    } else {
+        info!("Successfully indexed all TWiR content");
+    }
     Ok(())
 }
 
