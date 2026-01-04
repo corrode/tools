@@ -205,6 +205,14 @@
         background-color: #ffffff;
       }
 
+      html[data-theme="light-hacker-news"] .filter-tag {
+        border-radius: 0;
+      }
+
+      html[data-theme="light-hacker-news"] .clear-filters {
+        border-radius: 0;
+      }
+
       html[data-theme="light-hacker-news"] .results {
         background-color: #f6f6ef;
         border: none;
@@ -753,7 +761,7 @@
         align-items: center;
         gap: 8px;
         padding: 6px 14px;
-        border: 2px solid var(--color-primary);
+        border: 1px solid var(--color-primary);
         border-radius: 4px;
         font-size: 0.85rem;
         line-height: 1.4;
@@ -786,7 +794,7 @@
       .clear-filters {
         padding: 6px 14px;
         background-color: transparent;
-        border: 2px solid var(--color-text-muted);
+        border: 1px solid var(--color-text-muted);
         border-radius: 4px;
         color: var(--color-text-muted);
         font-size: 0.85rem;
@@ -858,7 +866,6 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        border: 2px solid var(--color-primary);
         background: var(--color-primary);
         cursor: pointer;
         -webkit-appearance: none;
@@ -872,7 +879,6 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        border: 2px solid var(--color-primary);
         background: var(--color-primary);
         cursor: pointer;
       }
