@@ -86,6 +86,12 @@ impl SearchResult {
     pub fn twir_issue(&self) -> usize {
         let first_issue_date = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
         let days_diff = self.entry.id.date.signed_duration_since(first_issue_date).num_days();
+
+        // Handle dates before the first issue
+        if days_diff < 0 {
+            return 0;
+        }
+
         // Approximate weekly issues (7 days each), starting from issue 1
         ((days_diff / 7) as usize) + 1
     }

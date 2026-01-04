@@ -723,11 +723,78 @@
         outline: none;
         border-color: var(--color-primary);
       }
-      .range-slider-container {
+
+      /* Results header with count and filters */
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      /* Active filters display */
+      .active-filters {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .filter-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background-color: rgba(72, 213, 151, 0.1);
+        border: 1px solid var(--color-primary);
+        border-radius: 16px;
+        font-size: 0.85rem;
+        color: var(--color-text);
+        font-family: "Martian Mono", monospace;
+      }
+
+      .filter-tag-remove {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: rgba(72, 213, 151, 0.2);
+        transition: background-color 0.2s ease;
+      }
+
+      .filter-tag-remove:hover {
+        background-color: rgba(72, 213, 151, 0.4);
+      }
+
+      .clear-filters {
+        padding: 6px 12px;
+        background-color: transparent;
+        border: 1px solid var(--color-text-muted);
+        border-radius: 16px;
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: "Martian Mono", monospace;
+      }
+
+      .clear-filters:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+      }
+
+      /* Dual range slider */
+      .dual-range-container {
         display: flex;
         flex-direction: column;
         gap: 12px;
       }
+
       .range-values {
         display: flex;
         justify-content: space-between;
@@ -736,13 +803,61 @@
         font-size: 0.9rem;
         color: var(--color-text);
       }
-      .range-slider {
+
+      .dual-range-slider {
+        position: relative;
+        height: 4px;
+        margin: 12px 0;
+      }
+
+      .dual-range-track {
+        position: absolute;
         width: 100%;
         height: 4px;
-        border-radius: 2px;
         background: var(--color-border);
-        outline: none;
+        border-radius: 2px;
+      }
+
+      .dual-range-selected {
+        position: absolute;
+        height: 4px;
+        background: var(--color-primary);
+        border-radius: 2px;
+        z-index: 1;
+      }
+
+      .dual-range-input {
+        position: absolute;
+        width: 100%;
+        height: 4px;
+        background: transparent;
+        pointer-events: none;
         -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .dual-range-input::-webkit-slider-thumb {
+        pointer-events: all;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--color-primary);
+        background: var(--color-background);
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+        z-index: 2;
+        position: relative;
+      }
+
+      .dual-range-input::-moz-range-thumb {
+        pointer-events: all;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--color-primary);
+        background: var(--color-background);
+        cursor: pointer;
       }
       .range-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
@@ -1167,14 +1282,18 @@
         <div id="filter-panel">
           <div class="filter-group">
             <label class="filter-label">Date Range:</label>
-            <div class="range-slider-container">
+            <div class="dual-range-container">
               <div class="range-values">
                 <span id="start-year-display">2013</span>
                 <span>—</span>
                 <span id="end-year-display">2025</span>
               </div>
-              <input type="range" id="start-year" name="start-year" min="2013" max="2025" value="2013" class="range-slider">
-              <input type="range" id="end-year" name="end-year" min="2013" max="2025" value="2025" class="range-slider">
+              <div class="dual-range-slider">
+                <div class="dual-range-track"></div>
+                <div class="dual-range-selected" id="range-selected"></div>
+                <input type="range" id="start-year" name="start-year" min="2013" max="2025" value="2013" class="dual-range-input">
+                <input type="range" id="end-year" name="end-year" min="2013" max="2025" value="2025" class="dual-range-input">
+              </div>
             </div>
           </div>
           <div class="filter-group">
@@ -1190,10 +1309,15 @@
 
       <div class="results" id="search-results">
         {% if let Some(q) = query %}
-        <!-- Show result count -->
+        <!-- Show result count and active filters -->
         {% if total_results > 0 %}
-        <div class="result-count">
-          Found {{ total_results }} result{% if total_results != 1 %}s{% endif %}
+        <div class="results-header">
+          <div class="result-count">
+            Found {{ total_results }} result{% if total_results != 1 %}s{% endif %}
+          </div>
+          <div class="active-filters" id="active-filters">
+            <!-- Filter tags will be inserted here by JavaScript -->
+          </div>
         </div>
         {% endif %}
 
@@ -1347,11 +1471,12 @@
           document.getElementById("sort-by").value = sortBy;
         }
 
-        // Setup range sliders
+        // Setup dual range slider
         const startYearSlider = document.getElementById("start-year");
         const endYearSlider = document.getElementById("end-year");
         const startYearDisplay = document.getElementById("start-year-display");
         const endYearDisplay = document.getElementById("end-year-display");
+        const rangeSelected = document.getElementById("range-selected");
 
         function updateRangeDisplay() {
           let start = parseInt(startYearSlider.value);
@@ -1366,6 +1491,15 @@
 
           startYearDisplay.textContent = start;
           endYearDisplay.textContent = end;
+
+          // Update the visual range indicator
+          const min = parseInt(startYearSlider.min);
+          const max = parseInt(startYearSlider.max);
+          const startPercent = ((start - min) / (max - min)) * 100;
+          const endPercent = ((end - min) / (max - min)) * 100;
+
+          rangeSelected.style.left = startPercent + '%';
+          rangeSelected.style.width = (endPercent - startPercent) + '%';
         }
 
         startYearSlider.addEventListener("input", updateRangeDisplay);
@@ -1378,7 +1512,86 @@
         endYearSlider.addEventListener("change", () => {
           document.querySelector("form").submit();
         });
+
+        // Initialize range display
+        updateRangeDisplay();
+
+        // Display active filters as tags
+        const activeFiltersContainer = document.getElementById("active-filters");
+        if (activeFiltersContainer) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const startYear = urlParams.get('start-year');
+          const endYear = urlParams.get('end-year');
+          const sortBy = urlParams.get('sort-by');
+
+          let hasFilters = false;
+
+          // Year range filter tag
+          if ((startYear && startYear !== '2013') || (endYear && endYear !== '2025')) {
+            const yearTag = createFilterTag(
+              `${startYear || '2013'} - ${endYear || '2025'}`,
+              () => removeFilter(['start-year', 'end-year'])
+            );
+            activeFiltersContainer.appendChild(yearTag);
+            hasFilters = true;
+          }
+
+          // Sort filter tag
+          if (sortBy && sortBy !== 'relevance') {
+            const sortLabel = sortBy === 'date-desc' ? 'Newest First' : sortBy === 'date-asc' ? 'Oldest First' : sortBy;
+            const sortTag = createFilterTag(
+              `Sort: ${sortLabel}`,
+              () => removeFilter(['sort-by'])
+            );
+            activeFiltersContainer.appendChild(sortTag);
+            hasFilters = true;
+          }
+
+          // Clear all button
+          if (hasFilters) {
+            const clearButton = document.createElement('button');
+            clearButton.className = 'clear-filters';
+            clearButton.textContent = 'Clear all';
+            clearButton.onclick = clearAllFilters;
+            activeFiltersContainer.appendChild(clearButton);
+          }
+        }
       });
+
+      function createFilterTag(text, onRemove) {
+        const tag = document.createElement('div');
+        tag.className = 'filter-tag';
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = text;
+        tag.appendChild(textSpan);
+
+        const removeButton = document.createElement('span');
+        removeButton.className = 'filter-tag-remove';
+        removeButton.innerHTML = '×';
+        removeButton.onclick = onRemove;
+        tag.appendChild(removeButton);
+
+        return tag;
+      }
+
+      function removeFilter(paramNames) {
+        const url = new URL(window.location);
+        paramNames.forEach(param => {
+          url.searchParams.delete(param);
+        });
+        window.location.href = url.toString();
+      }
+
+      function clearAllFilters() {
+        const url = new URL(window.location);
+        const query = url.searchParams.get('q');
+        url.search = '';
+        if (query) {
+          url.searchParams.set('q', query);
+        }
+        window.location.href = url.toString();
+      }
 
       function toggleFilters() {
         const filterPanel = document.getElementById("filter-panel");
