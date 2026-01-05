@@ -105,7 +105,7 @@ impl SearchResult {
         match domain.as_str() {
             "news.ycombinator.com" => r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><path d="M12 6.5l-4 7.5h2v4h4v-4h2z"/></svg>"#,
             "reddit.com" | "www.reddit.com" => r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/><path d="M9 15c.5 1 1.5 2 3 2s2.5-1 3-2"/><path d="M7 11.5C7 10.7 6.5 10 6 10s-1 .7-1 1.5.5 1.5 1 1.5 1-.7 1-1.5z"/><path d="M19 11.5c0-.8-.5-1.5-1-1.5s-1 .7-1 1.5.5 1.5 1 1.5 1-.7 1-1.5z"/></svg>"#,
-            "youtube.com" | "www.youtube.com" => r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75,15.02 15.5,11.75 9.75,8.48"/></svg>"#,
+            "youtube.com" | "www.youtube.com" | "youtu.be" => r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75,15.02 15.5,11.75 9.75,8.48"/></svg>"#,
             "github.com" => r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>"#,
             _ => {
                 // Fall back to category icon
@@ -138,6 +138,8 @@ pub struct Stats {
     pub categories: Vec<CategoryStats>,
     /// Articles per year
     pub articles_per_year: Vec<YearStats>,
+    /// Articles per month
+    pub articles_per_month: Vec<MonthStats>,
     /// Earliest indexed article date
     pub earliest_date: Option<NaiveDate>,
     /// Latest indexed article date
@@ -153,7 +155,7 @@ pub struct Stats {
 }
 
 /// Category statistics
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryStats {
     /// Category name
     pub category: String,
@@ -171,6 +173,21 @@ pub struct YearStats {
     /// Number of articles in this year
     pub count: i64,
     /// Percentage relative to max year (for progress bar)
+    pub percentage: i64,
+}
+
+/// Month statistics (year-month breakdown)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MonthStats {
+    /// Year-month label (e.g., "2024-01")
+    pub year_month: String,
+    /// Year
+    pub year: i32,
+    /// Month
+    pub month: i32,
+    /// Number of articles in this month
+    pub count: i64,
+    /// Percentage relative to max month (for bar chart)
     pub percentage: i64,
 }
 

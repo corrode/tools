@@ -66,9 +66,10 @@ pub async fn main() -> Result<()> {
 
     create_output_directories()?;
 
-    let browser = Browser::new(args.save_raw_html)?;
+    let mut browser = Browser::new(args.save_raw_html)?;
     let parser = TwirParser::new();
     let repo = Repository::new(SQLITE_DB_PATH).await?;
+    let mut crawl_count = 0;
 
     // Fetch all entries first
     let entries = parser.fetch_twir_entries().await?;
@@ -184,23 +185,53 @@ pub async fn main() -> Result<()> {
                 );
                 dry_run_stats.urls_would_crawl += 1;
             } else {
+                // Recreate browser every 50 crawls to prevent memory leaks
+                crawl_count += 1;
+                if crawl_count % 50 == 0 {
+                    info!("Recreating browser after {} crawls to prevent memory issues", crawl_count);
+                    drop(browser);
+                    browser = Browser::new(args.save_raw_html)?;
+                }
+
                 // Crawl and store content
                 log::info!("Crawling URL: {}", id.url);
-                if let Ok(text) = browser.crawl(&id).await {
-                    let entry = Entry { id, text };
+                let crawl_result = browser.crawl(&id).await;
 
-                    // Store in database
-                    if let Err(e) = repo.insert_entry(&entry).await {
-                        info!("Failed to store entry {}: {}", entry.id.url, e);
-                        continue;
+                // If browser connection is closed, recreate it and retry once
+                let crawl_result = if let Err(ref e) = crawl_result {
+                    let err_msg = e.to_string();
+                    if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
+                        log::warn!("Browser connection closed, recreating browser and retrying...");
+                        drop(browser);
+                        browser = Browser::new(args.save_raw_html)?;
+                        browser.crawl(&id).await
+                    } else {
+                        crawl_result
                     }
+                } else {
+                    crawl_result
+                };
 
-                    info!("Successfully stored entry: {}", entry.id.url);
+                match crawl_result {
+                    Ok(text) => {
+                        let entry = Entry { id, text };
 
-                    // Write JSON file for troubleshooting
-                    let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
-                    if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
-                        info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                        // Store in database
+                        if let Err(e) = repo.insert_entry(&entry).await {
+                            info!("Failed to store entry {}: {}", entry.id.url, e);
+                            continue;
+                        }
+
+                        info!("Successfully stored entry: {}", entry.id.url);
+
+                        // Write JSON file for troubleshooting
+                        let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
+                        if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
+                            info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to crawl {}: {}", id.url, e);
                     }
                 }
             }
@@ -262,11 +293,15 @@ fn should_process_url(url: &url::Url) -> bool {
         "rust-lang.org",
         "forge.rust-lang.org",
         "foundation.rust-lang.org",
-        // Other
+        // Event platforms
+        "luma.com",
+        "lu.ma",
         "eventbrite.com",
         "calagator.org",
+        // Job/recruiting platforms
         "smartrecruiters.com",
         "bamboohr.com",
+        // Other
         "google.com/calendar",
     ];
 

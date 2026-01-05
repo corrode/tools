@@ -199,7 +199,7 @@ impl Repository {
         .fetch_all(&self.pool)
         .await?;
 
-        let mut categories: Vec<CategoryStats> = category_rows
+        let all_categories: Vec<CategoryStats> = category_rows
             .into_iter()
             .map(|row| CategoryStats {
                 category: row.get("category"),
@@ -207,6 +207,20 @@ impl Repository {
                 percentage: 0, // Will calculate below
             })
             .collect();
+
+        // Take top 5 categories, group rest as "Other"
+        let mut categories: Vec<CategoryStats> = all_categories.iter().take(5).cloned().collect();
+
+        if all_categories.len() > 5 {
+            let other_count: i64 = all_categories.iter().skip(5).map(|c| c.count).sum();
+            if other_count > 0 {
+                categories.push(CategoryStats {
+                    category: "Other".to_string(),
+                    count: other_count,
+                    percentage: 0,
+                });
+            }
+        }
 
         // Calculate percentages for categories
         let max_category_count = categories.iter().map(|c| c.count).max().unwrap_or(1);
@@ -241,6 +255,39 @@ impl Repository {
         let max_year_count = articles_per_year.iter().map(|y| y.count).max().unwrap_or(1);
         for year in &mut articles_per_year {
             year.percentage = (year.count * 100) / max_year_count;
+        }
+
+        // Get articles per month
+        let month_rows = sqlx::query(
+            r#"
+            SELECT
+                strftime('%Y-%m', date) as year_month,
+                CAST(strftime('%Y', date) AS INTEGER) as year,
+                CAST(strftime('%m', date) AS INTEGER) as month,
+                COUNT(*) as count
+            FROM entries_meta
+            GROUP BY year_month
+            ORDER BY year_month ASC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut articles_per_month: Vec<types::MonthStats> = month_rows
+            .into_iter()
+            .map(|row| types::MonthStats {
+                year_month: row.get("year_month"),
+                year: row.get("year"),
+                month: row.get("month"),
+                count: row.get("count"),
+                percentage: 0, // Will calculate below
+            })
+            .collect();
+
+        // Calculate percentages for months
+        let max_month_count = articles_per_month.iter().map(|m| m.count).max().unwrap_or(1);
+        for month in &mut articles_per_month {
+            month.percentage = (month.count * 100) / max_month_count;
         }
 
         // Get earliest and latest dates
@@ -289,8 +336,8 @@ impl Repository {
             let year: i32 = row.get("year");
             let rank: i64 = row.get("rank");
 
-            if rank > 5 {
-                continue; // Only top 5 per year
+            if rank > 10 {
+                continue; // Only top 10 per year
             }
 
             if current_year != Some(year) {
@@ -461,6 +508,7 @@ impl Repository {
             total_characters,
             categories,
             articles_per_year,
+            articles_per_month,
             earliest_date,
             latest_date,
             top_domains_by_year,
@@ -633,7 +681,7 @@ impl Repository {
                 r#"
             SELECT
                 m.title, m.url, m.category, m.date, m.text,
-                0 as rank,
+                0.0 as rank,
                 NULL as snippet
             FROM entries_meta m
             WHERE 1=1"#,
