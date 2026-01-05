@@ -687,7 +687,7 @@
           <h3 class="year-subsection-title">{{ yearly_domains.year }}</h3>
           <div class="domain-list">
             {% for domain in yearly_domains.domains %}
-            <a href="/search?site={{ domain.domain }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance" target="_blank" class="domain-item">
+            <a href="/search?q=site:{{ domain.domain }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance" target="_blank" class="domain-item">
               <span class="domain-name">
                 <span class="domain-icon" data-domain="{{ domain.domain }}"></span>
                 {{ domain.domain }}
