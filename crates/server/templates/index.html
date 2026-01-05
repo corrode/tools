@@ -1535,6 +1535,35 @@
         // Initialize range display
         updateRangeDisplay();
 
+        // Make the track clickable to set start/end dates
+        const rangeTrack = document.querySelector('.dual-range-track');
+        const rangeSlider = document.querySelector('.dual-range-slider');
+
+        rangeTrack.style.cursor = 'pointer';
+        rangeSlider.addEventListener('click', (e) => {
+          const rect = rangeSlider.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const percent = clickX / rect.width;
+
+          const min = parseInt(startYearSlider.min);
+          const max = parseInt(startYearSlider.max);
+          const clickedYear = Math.round(min + (max - min) * percent);
+
+          const currentStart = parseInt(startYearSlider.value);
+          const currentEnd = parseInt(endYearSlider.value);
+          const midPoint = (currentStart + currentEnd) / 2;
+
+          // If clicked value is less than midpoint, set as start, otherwise set as end
+          if (clickedYear < midPoint) {
+            startYearSlider.value = clickedYear;
+          } else {
+            endYearSlider.value = clickedYear;
+          }
+
+          updateRangeDisplay();
+          document.querySelector("form").submit();
+        });
+
         // Display active filters as tags
         const activeFiltersContainer = document.getElementById("active-filters");
         if (activeFiltersContainer) {

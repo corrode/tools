@@ -124,13 +124,25 @@ pub(crate) async fn search(
         (vec![], 0)
     };
 
-    // Clean up result text. This needs to go elsewhere later
+    // Clean up result text and add fallback snippets
     let results: Vec<SearchResult> = results
         .into_iter()
-        .map(|result| SearchResult {
-            entry: result.entry,
-            rank: result.rank,
-            snippet: result.snippet.map(clean_preview),
+        .map(|result| {
+            let snippet = if let Some(s) = result.snippet {
+                Some(clean_preview(s))
+            } else if let Some(ref text) = result.entry.text {
+                // Fallback: use first 200 chars of article text as preview
+                let preview: String = text.chars().take(200).collect();
+                Some(clean_preview(preview))
+            } else {
+                None
+            };
+
+            SearchResult {
+                entry: result.entry,
+                rank: result.rank,
+                snippet,
+            }
         })
         .collect();
 

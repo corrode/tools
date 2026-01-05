@@ -199,7 +199,7 @@ impl Repository {
         .fetch_all(&self.pool)
         .await?;
 
-        let all_categories: Vec<CategoryStats> = category_rows
+        let mut categories: Vec<CategoryStats> = category_rows
             .into_iter()
             .map(|row| CategoryStats {
                 category: row.get("category"),
@@ -207,20 +207,6 @@ impl Repository {
                 percentage: 0, // Will calculate below
             })
             .collect();
-
-        // Take top 5 categories, group rest as "Other"
-        let mut categories: Vec<CategoryStats> = all_categories.iter().take(5).cloned().collect();
-
-        if all_categories.len() > 5 {
-            let other_count: i64 = all_categories.iter().skip(5).map(|c| c.count).sum();
-            if other_count > 0 {
-                categories.push(CategoryStats {
-                    category: "Other".to_string(),
-                    count: other_count,
-                    percentage: 0,
-                });
-            }
-        }
 
         // Calculate percentages for categories
         let max_category_count = categories.iter().map(|c| c.count).max().unwrap_or(1);
