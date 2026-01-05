@@ -833,10 +833,14 @@
         position: relative;
         height: 4px;
         margin: 12px 0;
+        padding: 20px 0;
+        cursor: pointer;
       }
 
       .dual-range-track {
         position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
         width: 100%;
         height: 4px;
         background: var(--color-border);
@@ -845,6 +849,8 @@
 
       .dual-range-selected {
         position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
         height: 4px;
         background: var(--color-primary);
         border-radius: 2px;
@@ -853,6 +859,8 @@
 
       .dual-range-input {
         position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
         width: 100%;
         height: 4px;
         background: transparent;
