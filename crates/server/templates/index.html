@@ -1465,6 +1465,13 @@
         setTheme(savedTheme);
         document.getElementById("theme-select").value = savedTheme;
 
+        // Restore filter panel state
+        const filtersOpen = localStorage.getItem("filtersOpen") === "true";
+        const filterPanel = document.getElementById("filter-panel");
+        if (filtersOpen && filterPanel) {
+          filterPanel.style.display = "block";
+        }
+
         // Get and set search query and filters from URL
         const urlParams = new URLSearchParams(window.location.search);
         const searchQuery = urlParams.get("q");
@@ -1643,8 +1650,11 @@
 
       function toggleFilters() {
         const filterPanel = document.getElementById("filter-panel");
-        filterPanel.style.display =
-          filterPanel.style.display !== "block" ? "block" : "none";
+        const isOpen = filterPanel.style.display === "block";
+        filterPanel.style.display = !isOpen ? "block" : "none";
+
+        // Save filter state to localStorage
+        localStorage.setItem("filtersOpen", !isOpen ? "true" : "false");
       }
 
       function changePage(page) {

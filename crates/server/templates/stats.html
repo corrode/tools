@@ -751,13 +751,51 @@
         const chartDom = document.getElementById('articles-chart');
         if (chartDom && window.echarts) {
           const myChart = echarts.init(chartDom);
-          const option = {{ chart_json|safe }};
-          myChart.setOption(option);
+
+          // Function to get current theme colors from CSS variables
+          function getThemeColors() {
+            const style = getComputedStyle(document.documentElement);
+            return {
+              background: style.getPropertyValue('--color-background').trim(),
+              surface: style.getPropertyValue('--color-surface').trim(),
+              primary: style.getPropertyValue('--color-primary').trim(),
+              primaryMuted: style.getPropertyValue('--color-primary-muted').trim(),
+              text: style.getPropertyValue('--color-text').trim(),
+              textMuted: style.getPropertyValue('--color-text-muted').trim(),
+              border: style.getPropertyValue('--color-border').trim(),
+            };
+          }
+
+          // Function to update chart with theme colors
+          function updateChart() {
+            const colors = getThemeColors();
+            const baseOption = {{ chart_json|safe }};
+
+            // Override colors with theme colors
+            baseOption.title[0].textStyle.color = colors.text;
+            baseOption.xAxis[0].axisLabel = baseOption.xAxis[0].axisLabel || {};
+            baseOption.xAxis[0].axisLabel.color = colors.textMuted;
+            baseOption.yAxis[0].axisLabel = { color: colors.textMuted };
+            baseOption.series[0].itemStyle.color = colors.primary;
+            baseOption.series[0].label.color = colors.textMuted;
+
+            myChart.setOption(baseOption, true);
+          }
+
+          // Initial chart render
+          updateChart();
 
           // Resize chart when window is resized
           window.addEventListener('resize', () => {
             myChart.resize();
           });
+
+          // Update chart colors when theme changes
+          const originalSetTheme = window.setTheme;
+          window.setTheme = function(theme) {
+            originalSetTheme(theme);
+            setTimeout(() => updateChart(), 50); // Small delay to let CSS vars update
+          };
         }
       });
     </script>
