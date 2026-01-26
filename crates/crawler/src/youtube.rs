@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -31,8 +31,6 @@ pub struct YouTubeThumbnails {
 }
 
 impl YouTube {
-    const API_KEY: &'static str = "AIzaSyDHTKjtUchUxUOzCtYW4V_h1zzcyd0P6c0";
-
     /// Create a new YouTube instance from a URL
     pub async fn new(url: &str) -> Result<Self> {
         let video_id = Self::extract_video_id(url)?;
