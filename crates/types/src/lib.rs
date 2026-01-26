@@ -13,7 +13,15 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 /// Path to the SQLite database file
-pub const SQLITE_DB_PATH: &str = "index.db";
+pub const SEARCH_INDEX_PATH: &str = "data/index.db";
+/// Path to the output directory for TWiR markdown files
+pub const MARKDOWN_OUT_PATH: &str = "data/markdown";
+/// Path to the output directory for parsed entry JSON files
+pub const JSON_OUT_PATH: &str = "data/json";
+/// Path to the output directory for raw HTML files
+pub const HTML_OUT_PATH: &str = "data/html";
+/// Path to the output directory for screenshots
+pub const SCREENSHOT_OUT_PATH: &str = "data/screenshots";
 
 /// Entry identifier with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

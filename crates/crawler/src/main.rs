@@ -42,12 +42,6 @@ struct Args {
     dry_run: bool,
 }
 
-// Output paths configuration
-const TWIR_OUT_PATH: &str = "./content/twir";
-const INDEX_OUT_PATH: &str = "./content/index";
-const RAW_OUT_PATH: &str = "./content/raw";
-const SCREENSHOT_OUT_PATH: &str = "./content/screenshots";
-
 /// Statistics for dry-run mode
 #[derive(Default)]
 struct DryRunStats {
@@ -68,7 +62,7 @@ pub async fn main() -> Result<()> {
 
     let mut browser = Browser::new(args.save_raw_html)?;
     let parser = TwirParser::new();
-    let repo = Repository::new(SQLITE_DB_PATH).await?;
+    let repo = Repository::new(SEARCH_INDEX_PATH).await?;
     let mut crawl_count = 0;
 
     // Fetch all entries first
@@ -130,7 +124,7 @@ pub async fn main() -> Result<()> {
             log::debug!("Skipping item '{}' without download_url field", file_name);
             continue;
         };
-        let download_file_path = format!("{}/{}", TWIR_OUT_PATH, file_name);
+        let markdown_file_path = format!("{}/{}", MARKDOWN_OUT_PATH, file_name);
 
         // Check if we should start processing from this file
         if !resume_crawling {
@@ -149,13 +143,13 @@ pub async fn main() -> Result<()> {
         dry_run_stats.files_processed += 1;
 
         // Download file if we don't have it yet
-        let content = if fs::metadata(&download_file_path).is_ok() {
+        let content = if fs::metadata(&markdown_file_path).is_ok() {
             info!("Reading existing file: {}", file_name);
-            fs::read_to_string(&download_file_path)?
+            fs::read_to_string(&markdown_file_path)?
         } else {
             info!("Downloading new file: {}", file_name);
             let content = parser.download_content(download_url).await?;
-            fs::write(&download_file_path, &content)?;
+            fs::write(&markdown_file_path, &content)?;
             content
         };
 
@@ -188,7 +182,10 @@ pub async fn main() -> Result<()> {
                 // Recreate browser every 50 crawls to prevent memory leaks
                 crawl_count += 1;
                 if crawl_count % 50 == 0 {
-                    info!("Recreating browser after {} crawls to prevent memory issues", crawl_count);
+                    info!(
+                        "Recreating browser after {} crawls to prevent memory issues",
+                        crawl_count
+                    );
                     drop(browser);
                     browser = Browser::new(args.save_raw_html)?;
                 }
@@ -225,8 +222,10 @@ pub async fn main() -> Result<()> {
                         info!("Successfully stored entry: {}", entry.id.url);
 
                         // Write JSON file for troubleshooting
-                        let entry_path = format!("{}/{}.json", INDEX_OUT_PATH, entry.id);
-                        if let Err(e) = fs::write(&entry_path, serde_json::to_string_pretty(&entry)?) {
+                        let json_path = format!("{}/{}.json", JSON_OUT_PATH, entry.id);
+                        if let Err(e) =
+                            fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
+                        {
                             info!("Failed to save JSON for {}: {}", entry.id.url, e);
                         }
                     }
@@ -243,8 +242,14 @@ pub async fn main() -> Result<()> {
         info!("Files processed: {}", dry_run_stats.files_processed);
         info!("URLs found: {}", dry_run_stats.urls_found);
         info!("URLs skipped (filtered): {}", dry_run_stats.urls_skipped);
-        info!("URLs already crawled: {}", dry_run_stats.urls_already_crawled);
-        info!("URLs that would be crawled: {}", dry_run_stats.urls_would_crawl);
+        info!(
+            "URLs already crawled: {}",
+            dry_run_stats.urls_already_crawled
+        );
+        info!(
+            "URLs that would be crawled: {}",
+            dry_run_stats.urls_would_crawl
+        );
         info!("======================");
     } else {
         info!("Successfully indexed all TWiR content");
@@ -254,9 +259,9 @@ pub async fn main() -> Result<()> {
 
 /// Creates necessary output directories
 fn create_output_directories() -> Result<()> {
-    fs::create_dir_all(TWIR_OUT_PATH)?;
-    fs::create_dir_all(INDEX_OUT_PATH)?;
-    fs::create_dir_all(RAW_OUT_PATH)?;
+    fs::create_dir_all(MARKDOWN_OUT_PATH)?;
+    fs::create_dir_all(JSON_OUT_PATH)?;
+    fs::create_dir_all(HTML_OUT_PATH)?;
     fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
     Ok(())
 }

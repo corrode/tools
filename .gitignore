@@ -1,9 +1,4 @@
 /target
-twir.jsonl
-content
-content_old
 .env
-twir_dump.sql
 TODO.md
-index.db*
-twir_small.db*
+data/

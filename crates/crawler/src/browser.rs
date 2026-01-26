@@ -2,7 +2,7 @@
 
 use super::cookies::COOKIE_BANNER_SELECTORS;
 use super::sanitizer::Sanitizer;
-use super::{RAW_OUT_PATH, SCREENSHOT_OUT_PATH};
+use super::{HTML_OUT_PATH, SCREENSHOT_OUT_PATH};
 use types::EntryId;
 
 use anyhow::{Result, bail};
@@ -172,7 +172,7 @@ impl Browser {
 
     /// Saves raw HTML to disk for future analysis
     fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
-        let html_path = format!("{RAW_OUT_PATH}/{}.html", entry_id);
+        let html_path = format!("{HTML_OUT_PATH}/{}.html", entry_id);
         log::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
         log::debug!("Raw HTML saved successfully");
