@@ -5,5 +5,5 @@ content_old
 .env
 twir_dump.sql
 TODO.md
-twir.db*
+index.db*
 twir_small.db*
