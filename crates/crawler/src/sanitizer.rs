@@ -95,10 +95,27 @@ impl Sanitizer {
 
         // List of noise selectors to remove
         let noise_selectors = [
-            "nav", "header", "footer", "aside", "script", "style",
-            ".navigation", ".nav", ".menu", ".sidebar", ".footer",
-            "#navigation", "#nav", "#menu", "#sidebar", "#footer",
-            ".cookie", ".advertisement", ".ad", ".social", ".share",
+            "nav",
+            "header",
+            "footer",
+            "aside",
+            "script",
+            "style",
+            ".navigation",
+            ".nav",
+            ".menu",
+            ".sidebar",
+            ".footer",
+            "#navigation",
+            "#nav",
+            "#menu",
+            "#sidebar",
+            "#footer",
+            ".cookie",
+            ".advertisement",
+            ".ad",
+            ".social",
+            ".share",
         ];
 
         // Try to find main content area

@@ -1,6 +1,6 @@
 //! Parser for TWiR content files
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use types::EntryId;

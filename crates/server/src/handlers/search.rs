@@ -100,23 +100,21 @@ pub(crate) async fn search(
         if query.trim().is_empty() {
             (vec![], 0)
         } else {
-            let results = repo.search(
-                query,
-                params.start_year,
-                params.end_year,
-                params.sort_by.as_deref(),
-                params.page,
-            )
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+            let results = repo
+                .search(
+                    query,
+                    params.start_year,
+                    params.end_year,
+                    params.sort_by.as_deref(),
+                    params.page,
+                )
+                .await
+                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-            let total = repo.count_search_results(
-                query,
-                params.start_year,
-                params.end_year,
-            )
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+            let total = repo
+                .count_search_results(query, params.start_year, params.end_year)
+                .await
+                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
             (results, total)
         }

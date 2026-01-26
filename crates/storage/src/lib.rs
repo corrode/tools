@@ -190,7 +190,8 @@ impl Repository {
 
         let total_articles: i64 = overview.get("total");
         let total_characters: i64 = overview.get::<Option<i64>, _>("total_chars").unwrap_or(0);
-        let avg_article_size: i64 = overview.get::<Option<f64>, _>("avg_size").unwrap_or(0.0) as i64;
+        let avg_article_size: i64 =
+            overview.get::<Option<f64>, _>("avg_size").unwrap_or(0.0) as i64;
 
         // Get category stats
         let category_rows = sqlx::query(
@@ -223,7 +224,7 @@ impl Repository {
             FROM entries_meta
             GROUP BY year
             ORDER BY year DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -254,7 +255,7 @@ impl Repository {
             FROM entries_meta
             GROUP BY year_month
             ORDER BY year_month ASC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -271,7 +272,11 @@ impl Repository {
             .collect();
 
         // Calculate percentages for months
-        let max_month_count = articles_per_month.iter().map(|m| m.count).max().unwrap_or(1);
+        let max_month_count = articles_per_month
+            .iter()
+            .map(|m| m.count)
+            .max()
+            .unwrap_or(1);
         for month in &mut articles_per_month {
             month.percentage = (month.count * 100) / max_month_count;
         }
@@ -364,7 +369,7 @@ impl Repository {
             GROUP BY domain
             ORDER BY count DESC
             LIMIT 1
-            "#
+            "#,
         )
         .fetch_optional(&self.pool)
         .await?
@@ -384,7 +389,7 @@ impl Repository {
                 END
             ) as count
             FROM entries_meta
-            "#
+            "#,
         )
         .fetch_one(&self.pool)
         .await?
