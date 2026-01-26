@@ -14,7 +14,6 @@ use axum::{Router, routing::get};
 use storage::Repository;
 use tower_http::services::ServeDir;
 pub use types::Entry;
-use types::SEARCH_INDEX_PATH;
 
 use std::sync::Arc;
 
@@ -22,7 +21,7 @@ use std::sync::Arc;
 async fn main() -> Result<()> {
     pretty_env_logger::init();
 
-    let repo = Arc::new(Repository::new(SEARCH_INDEX_PATH).await?);
+    let repo = Arc::new(Repository::new(types::get_search_index_path()).await?);
 
     let app = Router::new()
         .route("/", get(handlers::index))

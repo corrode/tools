@@ -62,7 +62,7 @@ pub async fn main() -> Result<()> {
 
     let mut browser = Browser::new(args.save_raw_html)?;
     let parser = TwirParser::new();
-    let repo = Repository::new(SEARCH_INDEX_PATH).await?;
+    let repo = Repository::new(types::get_search_index_path()).await?;
     let mut crawl_count = 0;
 
     // Fetch all entries first
@@ -223,8 +223,7 @@ pub async fn main() -> Result<()> {
 
                         // Write JSON file for troubleshooting
                         let json_path = format!("{}/{}.json", JSON_OUT_PATH, entry.id);
-                        if let Err(e) =
-                            fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
+                        if let Err(e) = fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
                         {
                             info!("Failed to save JSON for {}: {}", entry.id.url, e);
                         }

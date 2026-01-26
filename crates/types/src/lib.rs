@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 /// Path to the SQLite database file
-pub const SEARCH_INDEX_PATH: &str = "data/index.db";
+pub fn get_search_index_path() -> String {
+    std::env::var("SEARCH_INDEX_PATH").unwrap_or_else(|_| "data/index.db".to_string())
+}
 /// Path to the output directory for TWiR markdown files
 pub const MARKDOWN_OUT_PATH: &str = "data/markdown";
 /// Path to the output directory for parsed entry JSON files
