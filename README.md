@@ -13,10 +13,10 @@ cargo run
 To index 'This Week in Rust' posts, run the crawler:
 
 ```sh
-cargo run --bin crawler
+RUST_LOG=crawler=debug cargo run -p crawler
 ```
 
-this will crawl new articles and create/update the `data/index.db` sqlite file.
+this will crawl new articles from 'This Week in Rust' and create/update the `data/index.db` sqlite file.
 
 After that, you can run your server with
 
