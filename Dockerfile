@@ -12,7 +12,7 @@ COPY . .
 RUN cargo build --release --workspace
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # Install runtime dependencies including Chromium
 RUN apt-get update && apt-get install -y \
