@@ -1,0 +1,158 @@
+<div id="results-container">
+    <div class="results" id="search-results">
+        {% if let Some(q) = query %}
+        <!-- Show result count and active filters -->
+        {% if total_results > 0 %}
+        <div class="results-header">
+            <div class="result-count">
+                Found {{ total_results }} result{% if total_results != 1 %}s{%
+                endif %}
+            </div>
+            <div class="active-filters" id="active-filters">
+                {% let start = start_year.unwrap_or(2013) %} {% let end =
+                end_year.unwrap_or(2025) %} {% if start != 2013 || end != 2025
+                %}
+                <span class="filter-tag">
+                    Date: {{ start }} - {{ end }}
+                    <span
+                        class="filter-tag-remove"
+                        onclick="
+                            document.getElementById('start-year').value = 2013;
+                            document.getElementById('end-year').value = 2025;
+                            document.getElementById('start-year-display').value = 2013;
+                            document.getElementById('end-year-display').value = 2025;
+                            var rangeSelected = document.getElementById('range-selected');
+                            if(rangeSelected) { rangeSelected.style.left = '0%'; rangeSelected.style.width = '100%'; }
+                        "
+                        hx-get="/search"
+                        hx-include=".search-container"
+                        hx-target="#results-container"
+                        hx-swap="outerHTML"
+                        >×</span
+                    >
+                </span>
+                {% endif %} {% let sort =
+                sort_by.as_deref().unwrap_or("relevance") %} {% if sort !=
+                "relevance" %}
+                <span class="filter-tag">
+                    Sort: {% if sort == "date-desc" %}Newest first{% else if
+                    sort == "date-asc" %}Oldest first{% else %}{{ sort }}{%
+                    endif %}
+                    <span
+                        class="filter-tag-remove"
+                        onclick="document.getElementById('sort-by').value = 'relevance';"
+                        hx-get="/search"
+                        hx-include=".search-container"
+                        hx-target="#results-container"
+                        hx-swap="outerHTML"
+                        >×</span
+                    >
+                </span>
+                {% endif %} {% if (start != 2013 || end != 2025) || sort !=
+                "relevance" %}
+                <button
+                    class="clear-filters"
+                    onclick="
+                        document.getElementById('start-year').value = 2013;
+                        document.getElementById('end-year').value = 2025;
+                        document.getElementById('start-year-display').value = 2013;
+                        document.getElementById('end-year-display').value = 2025;
+                        const rangeSelected = document.getElementById('range-selected');
+                        if(rangeSelected) { rangeSelected.style.left = '0%'; rangeSelected.style.width = '100%'; }
+                        document.getElementById('sort-by').value = 'relevance';
+                    "
+                    hx-get="/search"
+                    hx-include=".search-container"
+                    hx-target="#results-container"
+                    hx-swap="outerHTML"
+                >
+                    Clear all
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %} {% if results.is_empty() %}
+        <div class="result-item">
+            <div class="result-title">No results found</div>
+            <div class="result-snippet">
+                Try adjusting your search terms or filters.
+            </div>
+        </div>
+        {% else %} {% for result in results %}
+        <div class="result-item">
+            <div class="result-title">
+                <a
+                    href="{{ result.entry.id.url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ result.entry.id.title }}</a
+                >
+            </div>
+            {% if let Some(snippet) = result.snippet %}
+            <div class="result-snippet">{{ snippet|safe }}</div>
+            {% endif %}
+            <div class="result-meta">
+                <span class="domain-icon">{{ result.icon_svg()|safe }}</span>
+                TWiR #{{ result.twir_issue() }} | {{ result.entry.id.category }}
+                | {{ result.entry.id.date }} | {{ result.word_count() }} words |
+                ~{{ result.reading_time_minutes() }} min read
+                <span class="domain">{{ result.domain() }}</span>
+            </div>
+        </div>
+        {% endfor %} {% endif %} {% else %}
+        <!-- Empty initial state -->
+        <div class="result-item">
+            <div class="result-title">Start searching</div>
+            <div class="result-snippet">
+                Enter your search terms above to find Rust content from This
+                Week in Rust.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination (outside results div, aligned right) -->
+    {% if let Some(q) = query %} {% if current_page > 1 || has_more %}
+    <div class="pagination">
+        {% if let Some(prev) = prev_page_href %}
+        <a
+            href="{{ prev }}"
+            class="pagination-btn"
+            hx-get="{{ prev }}"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+        >
+            ← Previous
+        </a>
+        {% else %}
+        <span class="pagination-btn disabled">← Previous</span>
+        {% endif %}
+
+        <span class="pagination-info">Page {{ current_page }}</span>
+
+        {% if let Some(next) = next_page_href %}
+        <a
+            href="{{ next }}"
+            class="pagination-btn"
+            hx-get="{{ next }}"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+        >
+            Next →
+        </a>
+        {% else %}
+        <span class="pagination-btn disabled">Next →</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Quote of the Week Easter Egg (outside results div) -->
+    {% if !results.is_empty() %}
+    <div class="quote-easter-egg">
+        <div class="quote-content" id="random-quote"></div>
+        <div class="quote-attribution">— Quote of the Week</div>
+    </div>
+    {% endif %} {% endif %}
+</div>

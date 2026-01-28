@@ -7,6 +7,7 @@
 
         <link rel="stylesheet" href="/static/css/base.css" />
         <link rel="stylesheet" href="/static/css/index.css" />
+        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     </head>
     <body class="preload">
         <!-- Hero pattern background -->
@@ -40,14 +41,25 @@
                 </div>
             </header>
 
-            <form action="/search" method="GET" class="search-container">
+            <form
+                action="/search"
+                method="GET"
+                class="search-container"
+                hx-get="/search"
+                hx-target="#results-container"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                hx-indicator=".search-icon"
+            >
                 <div class="search-input-wrapper">
                     <input
                         type="text"
                         id="search"
                         name="q"
+                        value="{{ query.as_deref().unwrap_or("") }}"
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
+                        hx-trigger="input changed delay:500ms, search"
                     />
                     <svg
                         class="search-icon"
@@ -81,9 +93,13 @@
                         <label class="filter-label">Date Range:</label>
                         <div class="dual-range-container">
                             <div class="range-values">
-                                <span id="start-year-display">2013</span>
+                                <output id="start-year-display" for="start-year"
+                                    >{{ start_year.unwrap_or(2013) }}</output
+                                >
                                 <span>—</span>
-                                <span id="end-year-display">2025</span>
+                                <output id="end-year-display" for="end-year"
+                                    >{{ end_year.unwrap_or(2025) }}</output
+                                >
                             </div>
                             <div class="dual-range-slider">
                                 <div class="dual-range-track"></div>
@@ -97,8 +113,28 @@
                                     name="start-year"
                                     min="2013"
                                     max="2025"
-                                    value="2013"
+                                    value="{{ start_year.unwrap_or(2013) }}"
                                     class="dual-range-input"
+                                    oninput="
+                                        let v = parseInt(this.value);
+                                        let other = parseInt(document.getElementById('end-year').value);
+                                        if (v > other) { document.getElementById('end-year').value = v; document.getElementById('end-year-display').value = v; other = v; }
+                                        document.getElementById('start-year-display').value = v;
+                                        
+                                        // Update visuals
+                                        const min = 2013;
+                                        const max = 2025;
+                                        const startPercent = ((v - min) / (max - min)) * 100;
+                                        const endPercent = ((other - min) / (max - min)) * 100;
+                                        const rangeSelected = document.getElementById('range-selected');
+                                        rangeSelected.style.left = startPercent + '%';
+                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
+                                    "
+                                    hx-trigger="change"
+                                    hx-get="/search"
+                                    hx-target="#results-container"
+                                    hx-swap="outerHTML"
+                                    hx-include=".search-container"
                                 />
                                 <input
                                     type="range"
@@ -106,8 +142,28 @@
                                     name="end-year"
                                     min="2013"
                                     max="2025"
-                                    value="2025"
+                                    value="{{ end_year.unwrap_or(2025) }}"
                                     class="dual-range-input"
+                                    oninput="
+                                        let v = parseInt(this.value);
+                                        let other = parseInt(document.getElementById('start-year').value);
+                                        if (v < other) { document.getElementById('start-year').value = v; document.getElementById('start-year-display').value = v; other = v; }
+                                        document.getElementById('end-year-display').value = v;
+
+                                        // Update visuals
+                                        const min = 2013;
+                                        const max = 2025;
+                                        const startPercent = ((other - min) / (max - min)) * 100;
+                                        const endPercent = ((v - min) / (max - min)) * 100;
+                                        const rangeSelected = document.getElementById('range-selected');
+                                        rangeSelected.style.left = startPercent + '%';
+                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
+                                    "
+                                    hx-trigger="change"
+                                    hx-get="/search"
+                                    hx-target="#results-container"
+                                    hx-swap="outerHTML"
+                                    hx-include=".search-container"
                                 />
                             </div>
                         </div>
@@ -120,110 +176,21 @@
                             id="sort-by"
                             name="sort-by"
                             class="filter-select"
-                            onchange="this.form.submit()"
+                            hx-trigger="change"
+                            hx-get="/search"
+                            hx-target="#results-container"
+                            hx-swap="outerHTML"
+                            hx-include=".search-container"
                         >
-                            <option value="relevance">Relevance</option>
-                            <option value="date-desc">Newest First</option>
-                            <option value="date-asc">Oldest First</option>
+                            <option value="relevance" {% if sort_by.as_deref().unwrap_or("relevance") == "relevance" %}selected{% endif %}>Relevance</option>
+                            <option value="date-desc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-desc" %}selected{% endif %}>Newest First</option>
+                            <option value="date-asc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-asc" %}selected{% endif %}>Oldest First</option>
                         </select>
                     </div>
                 </div>
             </form>
 
-            <div class="results" id="search-results">
-                {% if let Some(q) = query %}
-                <!-- Show result count and active filters -->
-                {% if total_results > 0 %}
-                <div class="results-header">
-                    <div class="result-count">
-                        Found {{ total_results }} result{% if total_results != 1
-                        %}s{% endif %}
-                    </div>
-                    <div class="active-filters" id="active-filters">
-                        <!-- Filter tags will be inserted here by JavaScript -->
-                    </div>
-                </div>
-                {% endif %} {% if results.is_empty() %}
-                <div class="result-item">
-                    <div class="result-title">No results found</div>
-                    <div class="result-snippet">
-                        Try adjusting your search terms or filters.
-                    </div>
-                </div>
-                {% else %} {% for result in results %}
-                <div class="result-item">
-                    <div class="result-title">
-                        <a
-                            href="{{ result.entry.id.url }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            >{{ result.entry.id.title }}</a
-                        >
-                    </div>
-                    {% if let Some(snippet) = result.snippet %}
-                    <div class="result-snippet">{{ snippet|safe }}</div>
-                    {% endif %}
-                    <div class="result-meta">
-                        <span class="domain-icon"
-                            >{{ result.icon_svg()|safe }}</span
-                        >
-                        TWiR #{{ result.twir_issue() }} | {{
-                        result.entry.id.category }} | {{ result.entry.id.date }}
-                        | {{ result.word_count() }} words | ~{{
-                        result.reading_time_minutes() }} min read
-                        <span class="domain">{{ result.domain() }}</span>
-                    </div>
-                </div>
-                {% endfor %} {% endif %} {% else %}
-                <!-- Empty initial state -->
-                <div class="result-item">
-                    <div class="result-title">Start searching</div>
-                    <div class="result-snippet">
-                        Enter your search terms above to find Rust content from
-                        This Week in Rust.
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Pagination (outside results div, aligned right) -->
-            {% if let Some(q) = query %} {% if current_page > 1 || has_more %}
-            <div class="pagination">
-                {% if current_page > 1 %}
-                <a
-                    href="#"
-                    onclick="changePage({{ current_page - 1 }}); return false;"
-                    class="pagination-btn"
-                >
-                    ← Previous
-                </a>
-                {% else %}
-                <span class="pagination-btn disabled">← Previous</span>
-                {% endif %}
-
-                <span class="pagination-info">Page {{ current_page }}</span>
-
-                {% if has_more %}
-                <a
-                    href="#"
-                    onclick="changePage({{ current_page + 1 }}); return false;"
-                    class="pagination-btn"
-                >
-                    Next →
-                </a>
-                {% else %}
-                <span class="pagination-btn disabled">Next →</span>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Quote of the Week Easter Egg (outside results div) -->
-            {% if !results.is_empty() %}
-            <div class="quote-easter-egg">
-                <div class="quote-content" id="random-quote"></div>
-                <div class="quote-attribution">— Quote of the Week</div>
-            </div>
-            {% endif %} {% endif %}
+            {% include "results.html" %}
         </div>
 
         <footer>
@@ -314,196 +281,37 @@
                 }
 
                 // Get and set search query and filters from URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const searchQuery = urlParams.get("q");
-                if (searchQuery) {
-                    document.getElementById("search").value =
-                        decodeURIComponent(searchQuery);
-                }
 
-                // Restore filter selections
-                const startYear = urlParams.get("start-year");
-                const endYear = urlParams.get("end-year");
-                if (startYear) {
-                    document.getElementById("start-year").value = startYear;
-                    document.getElementById("start-year-display").textContent =
-                        startYear;
-                }
-                if (endYear) {
-                    document.getElementById("end-year").value = endYear;
-                    document.getElementById("end-year-display").textContent =
-                        endYear;
-                }
 
-                const sortBy = urlParams.get("sort-by");
-                if (sortBy) {
-                    document.getElementById("sort-by").value = sortBy;
-                }
+                // Initialize range display visual state on load
+                {
+                    const startInput = document.getElementById("start-year");
+                    const endInput = document.getElementById("end-year");
+                    if (startInput && endInput) {
+                        const min = 2013;
+                        const max = 2025;
+                        const v = parseInt(startInput.value);
+                        const other = parseInt(endInput.value);
+                        const startPercent = ((v - min) / (max - min)) * 100;
+                        const endPercent = ((other - min) / (max - min)) * 100;
+                        const rangeSelected =
+                            document.getElementById("range-selected");
+                        if (rangeSelected) {
+                            rangeSelected.style.left = startPercent + "%";
+                            rangeSelected.style.width =
+                                endPercent - startPercent + "%";
+                        }
 
-                // Setup dual range slider
-                const startYearSlider = document.getElementById("start-year");
-                const endYearSlider = document.getElementById("end-year");
-                const startYearDisplay =
-                    document.getElementById("start-year-display");
-                const endYearDisplay =
-                    document.getElementById("end-year-display");
-                const rangeSelected = document.getElementById("range-selected");
-
-                function updateRangeDisplay() {
-                    let start = parseInt(startYearSlider.value);
-                    let end = parseInt(endYearSlider.value);
-
-                    // Ensure start <= end
-                    if (start > end) {
-                        [start, end] = [end, start];
-                        startYearSlider.value = start;
-                        endYearSlider.value = end;
-                    }
-
-                    startYearDisplay.textContent = start;
-                    endYearDisplay.textContent = end;
-
-                    // Update the visual range indicator
-                    const min = parseInt(startYearSlider.min);
-                    const max = parseInt(startYearSlider.max);
-                    const startPercent = ((start - min) / (max - min)) * 100;
-                    const endPercent = ((end - min) / (max - min)) * 100;
-
-                    rangeSelected.style.left = startPercent + "%";
-                    rangeSelected.style.width = endPercent - startPercent + "%";
-                }
-
-                startYearSlider.addEventListener("input", updateRangeDisplay);
-                endYearSlider.addEventListener("input", updateRangeDisplay);
-
-                // Submit on release
-                startYearSlider.addEventListener("change", () => {
-                    document.querySelector("form").submit();
-                });
-                endYearSlider.addEventListener("change", () => {
-                    document.querySelector("form").submit();
-                });
-
-                // Initialize range display
-                updateRangeDisplay();
-
-                // Make the track clickable to set start/end dates
-                const rangeTrack = document.querySelector(".dual-range-track");
-                const rangeSlider =
-                    document.querySelector(".dual-range-slider");
-
-                rangeTrack.style.cursor = "pointer";
-                rangeSlider.addEventListener("click", (e) => {
-                    const rect = rangeSlider.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const percent = clickX / rect.width;
-
-                    const min = parseInt(startYearSlider.min);
-                    const max = parseInt(startYearSlider.max);
-                    const clickedYear = Math.round(min + (max - min) * percent);
-
-                    const currentStart = parseInt(startYearSlider.value);
-                    const currentEnd = parseInt(endYearSlider.value);
-                    const midPoint = (currentStart + currentEnd) / 2;
-
-                    // If clicked value is less than midpoint, set as start, otherwise set as end
-                    if (clickedYear < midPoint) {
-                        startYearSlider.value = clickedYear;
-                    } else {
-                        endYearSlider.value = clickedYear;
-                    }
-
-                    updateRangeDisplay();
-                    document.querySelector("form").submit();
-                });
-
-                // Display active filters as tags
-                const activeFiltersContainer =
-                    document.getElementById("active-filters");
-                if (activeFiltersContainer) {
-                    const urlParams = new URLSearchParams(
-                        window.location.search,
-                    );
-                    const startYear = urlParams.get("start-year");
-                    const endYear = urlParams.get("end-year");
-                    const sortBy = urlParams.get("sort-by");
-
-                    let hasFilters = false;
-
-                    // Year range filter tag
-                    if (
-                        (startYear && startYear !== "2013") ||
-                        (endYear && endYear !== "2025")
-                    ) {
-                        const yearTag = createFilterTag(
-                            `${startYear || "2013"} - ${endYear || "2025"}`,
-                            () => removeFilter(["start-year", "end-year"]),
-                        );
-                        activeFiltersContainer.appendChild(yearTag);
-                        hasFilters = true;
-                    }
-
-                    // Sort filter tag
-                    if (sortBy && sortBy !== "relevance") {
-                        const sortLabel =
-                            sortBy === "date-desc"
-                                ? "Newest First"
-                                : sortBy === "date-asc"
-                                  ? "Oldest First"
-                                  : sortBy;
-                        const sortTag = createFilterTag(
-                            `Sort: ${sortLabel}`,
-                            () => removeFilter(["sort-by"]),
-                        );
-                        activeFiltersContainer.appendChild(sortTag);
-                        hasFilters = true;
-                    }
-
-                    // Clear all button
-                    if (hasFilters) {
-                        const clearButton = document.createElement("button");
-                        clearButton.className = "clear-filters";
-                        clearButton.textContent = "Clear all";
-                        clearButton.onclick = clearAllFilters;
-                        activeFiltersContainer.appendChild(clearButton);
+                        const startDisplay =
+                            document.getElementById("start-year-display");
+                        const endDisplay =
+                            document.getElementById("end-year-display");
+                        if (startDisplay) startDisplay.value = v;
+                        if (endDisplay) endDisplay.value = other;
                     }
                 }
+
             });
-
-            function createFilterTag(text, onRemove) {
-                const tag = document.createElement("div");
-                tag.className = "filter-tag";
-
-                const textSpan = document.createElement("span");
-                textSpan.textContent = text;
-                tag.appendChild(textSpan);
-
-                const removeButton = document.createElement("span");
-                removeButton.className = "filter-tag-remove";
-                removeButton.innerHTML = "×";
-                removeButton.onclick = onRemove;
-                tag.appendChild(removeButton);
-
-                return tag;
-            }
-
-            function removeFilter(paramNames) {
-                const url = new URL(window.location);
-                paramNames.forEach((param) => {
-                    url.searchParams.delete(param);
-                });
-                window.location.href = url.toString();
-            }
-
-            function clearAllFilters() {
-                const url = new URL(window.location);
-                const query = url.searchParams.get("q");
-                url.search = "";
-                if (query) {
-                    url.searchParams.set("q", query);
-                }
-                window.location.href = url.toString();
-            }
 
             function toggleFilters() {
                 const filterPanel = document.getElementById("filter-panel");
@@ -512,16 +320,6 @@
 
                 // Save filter state to localStorage
                 localStorage.setItem("filtersOpen", !isOpen ? "true" : "false");
-            }
-
-            function changePage(page) {
-                const form = document.querySelector("form");
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = "page";
-                input.value = page;
-                form.appendChild(input);
-                form.submit();
             }
 
             // Quote of the Week Easter Egg

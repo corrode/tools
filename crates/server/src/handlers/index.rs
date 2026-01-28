@@ -12,6 +12,11 @@ struct SearchTemplate {
     current_page: u32,
     has_more: bool,
     total_results: i64,
+    start_year: Option<i32>,
+    end_year: Option<i32>,
+    sort_by: Option<String>,
+    prev_page_href: Option<String>,
+    next_page_href: Option<String>,
 }
 
 /// Handler for the index page
@@ -22,6 +27,11 @@ pub(crate) async fn index() -> Result<Html<String>, axum::http::StatusCode> {
         current_page: 1,
         has_more: false,
         total_results: 0,
+        start_year: None,
+        end_year: None,
+        sort_by: None,
+        prev_page_href: None,
+        next_page_href: None,
     };
     template
         .render()

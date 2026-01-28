@@ -1,6 +1,10 @@
 use anyhow::Result;
 use askama::Template;
-use axum::{extract::Query, response::Html};
+use axum::{
+    extract::{Query, State},
+    http::{HeaderMap, StatusCode},
+    response::Html,
+};
 use pulldown_cmark::TagEnd;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -16,6 +20,26 @@ struct SearchTemplate {
     current_page: u32,
     has_more: bool,
     total_results: i64,
+    start_year: Option<i32>,
+    end_year: Option<i32>,
+    sort_by: Option<String>,
+    prev_page_href: Option<String>,
+    next_page_href: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "results.html")]
+struct ResultsTemplate {
+    query: Option<String>,
+    results: Vec<SearchResult>,
+    current_page: u32,
+    has_more: bool,
+    total_results: i64,
+    start_year: Option<i32>,
+    end_year: Option<i32>,
+    sort_by: Option<String>,
+    prev_page_href: Option<String>,
+    next_page_href: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,11 +114,34 @@ fn clean_preview(content: String) -> String {
     preview.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn build_url(params: &SearchParams, page: u32) -> String {
+    let mut url = String::from("/search?");
+    let mut serializer = url::form_urlencoded::Serializer::new(&mut url);
+
+    if let Some(q) = &params.q {
+        serializer.append_pair("q", q);
+    }
+    if let Some(start_year) = params.start_year {
+        serializer.append_pair("start-year", &start_year.to_string());
+    }
+    if let Some(end_year) = params.end_year {
+        serializer.append_pair("end-year", &end_year.to_string());
+    }
+    if let Some(sort_by) = &params.sort_by {
+        serializer.append_pair("sort-by", sort_by);
+    }
+    serializer.append_pair("page", &page.to_string());
+
+    serializer.finish();
+    url
+}
+
 /// Handler for searching the posts
 pub(crate) async fn search(
+    headers: HeaderMap,
     Query(params): Query<SearchParams>,
-    axum::extract::State(repo): axum::extract::State<Arc<Repository>>,
-) -> Result<Html<String>, axum::http::StatusCode> {
+    State(repo): State<Arc<Repository>>,
+) -> Result<Html<String>, StatusCode> {
     // Check if query is provided and not empty/whitespace-only
     let (results, total_results) = if let Some(query) = &params.q {
         if query.trim().is_empty() {
@@ -109,12 +156,12 @@ pub(crate) async fn search(
                     params.page,
                 )
                 .await
-                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             let total = repo
                 .count_search_results(query, params.start_year, params.end_year)
                 .await
-                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             (results, total)
         }
@@ -147,16 +194,53 @@ pub(crate) async fn search(
     let current_page = params.page.unwrap_or(1).max(1);
     let has_more = results.len() == 20; // If we got 20 results, there might be more
 
-    let template = SearchTemplate {
-        query: params.q,
-        results,
-        current_page,
-        has_more,
-        total_results,
+    let prev_page_href = if current_page > 1 {
+        Some(build_url(&params, current_page - 1))
+    } else {
+        None
     };
 
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    let next_page_href = if has_more {
+        Some(build_url(&params, current_page + 1))
+    } else {
+        None
+    };
+
+    if headers.contains_key("hx-request") {
+        let template = ResultsTemplate {
+            query: params.q,
+            results,
+            current_page,
+            has_more,
+            total_results,
+            start_year: params.start_year,
+            end_year: params.end_year,
+            sort_by: params.sort_by,
+            prev_page_href,
+            next_page_href,
+        };
+
+        template
+            .render()
+            .map(Html)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    } else {
+        let template = SearchTemplate {
+            query: params.q,
+            results,
+            current_page,
+            has_more,
+            total_results,
+            start_year: params.start_year,
+            end_year: params.end_year,
+            sort_by: params.sort_by,
+            prev_page_href,
+            next_page_href,
+        };
+
+        template
+            .render()
+            .map(Html)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }
