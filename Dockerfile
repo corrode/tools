@@ -18,11 +18,29 @@ RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user
+RUN useradd -m -u 1000 -U -s /bin/bash appuser
+
 WORKDIR /app
 
-COPY --from=builder /app/target/release/server /app/bin/server
-COPY --from=builder /app/target/release/crawler /app/bin/crawler
-COPY assets /app/assets
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
+
+# Copy binaries and assets
+COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
+COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
+COPY --chown=appuser:appuser assets /app/assets
+
+# Set environment variables
+ENV PORT=3000
+ENV DATA_DIR=/app/data
+ENV CHROME_NO_SANDBOX=true
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port
+EXPOSE 3000
 
 # Set entrypoint
 CMD ["/app/bin/server"]

@@ -1,6 +1,8 @@
 # Rust Search
 
-This project crawls and analyzes "This Week in Rust" posts, storing the data in an sqlite database.
+An experimental search engine for Rust-related content.
+
+This project crawls sources like "This Week in Rust" posts, storing the data in an sqlite database.
 
 ## Starting the server
 
@@ -10,15 +12,13 @@ cargo run
 
 ## Indexing content
 
-To index 'This Week in Rust' posts, run the crawler:
+To index content, run the crawler:
 
 ```sh
 RUST_LOG=crawler=debug cargo run -p crawler
 ```
 
 this will crawl new articles from 'This Week in Rust' and create/update the `data/index.db` sqlite file.
-
-After that, you can run your server with
 
 Or use `cargo-watch` to automatically restart the application when files change:
 
