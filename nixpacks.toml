@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["chromium", "glib"]
+nixPkgs = ["chromium", "glib", "openssl", "ca-certificates", "sqlite", "file"]
 
 [staticAssets]
 assets = "./assets"
@@ -10,4 +10,9 @@ cmds = [
   'mkdir -p /app/bin',
   'cp target/release/server /app/bin/',
   'cp target/release/crawler /app/bin/',
+  'ls -la /app/bin',
+  'file /app/bin/server',
 ]
+
+[start]
+cmd = "/app/bin/server"
