@@ -1,10 +1,8 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::missing_crate_level_docs)]
-
 //! # Rust Search Server
 //!
-//! This is the server for the Rust Search project. It provides a web interface
-//! for searching through articles from 'This Week in Rust'.
+//! This is the server for the Rust Search project.
+//! It provides a web interface for searching through content, such as articles
+//! from 'This Week in Rust'.
 
 use anyhow::Result;
 
@@ -33,9 +31,9 @@ async fn main() -> Result<()> {
         .with_state(repo);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("Listening on http://{}", addr);
+    println!("Listening on http://{addr}");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

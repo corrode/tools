@@ -73,13 +73,13 @@ pub async fn main() -> Result<()> {
         info!("Overwrite mode: starting from beginning");
         None
     } else if let Some(ref date) = args.start_date {
-        info!("Using specified start date: {}", date);
+        info!("Using specified start date: {date}");
         Some(date.clone())
     } else {
         // Use latest date from database as default
         if let Some(latest_date) = repo.get_latest_entry_date().await? {
             let date_str = latest_date.format("%Y-%m-%d").to_string();
-            info!("Resuming from latest database entry date: {}", date_str);
+            info!("Resuming from latest database entry date: {date_str}");
             Some(date_str)
         } else {
             info!("No entries in database, starting from beginning");
@@ -101,7 +101,7 @@ pub async fn main() -> Result<()> {
 
         if let Some(file) = matching_file {
             let file_name = file["name"].as_str().unwrap();
-            info!("Starting from file: {}", file_name);
+            info!("Starting from file: {file_name}");
             Some(file_name.to_string())
         } else {
             info!("No file found for start date, starting from beginning");
@@ -121,33 +121,33 @@ pub async fn main() -> Result<()> {
             continue;
         };
         let Some(download_url) = item["download_url"].as_str() else {
-            log::debug!("Skipping item '{}' without download_url field", file_name);
+            log::debug!("Skipping item '{file_name}' without download_url field");
             continue;
         };
-        let markdown_file_path = format!("{}/{}", get_markdown_path(), file_name);
+        let markdown_file_path = format!("{}/{file_name}", get_markdown_path());
 
         // Check if we should start processing from this file
         if !resume_crawling {
             if Some(file_name.to_string()) == checkpoint {
                 // We've reached the checkpoint file, start processing from here
-                info!("Reached checkpoint file: {}, resuming crawling", file_name);
+                info!("Reached checkpoint file: {file_name}, resuming crawling");
                 resume_crawling = true;
             } else {
                 // Skip files before the checkpoint
-                info!("Skipping file before checkpoint: {}", file_name);
+                info!("Skipping file before checkpoint: {file_name}");
                 continue;
             }
         }
 
-        info!("Processing file: {}", file_name);
+        info!("Processing file: {file_name}");
         dry_run_stats.files_processed += 1;
 
         // Download file if we don't have it yet
         let content = if fs::metadata(&markdown_file_path).is_ok() {
-            info!("Reading existing file: {}", file_name);
+            info!("Reading existing file: {file_name}");
             fs::read_to_string(&markdown_file_path)?
         } else {
-            info!("Downloading new file: {}", file_name);
+            info!("Downloading new file: {file_name}");
             let content = parser.download_content(download_url).await?;
             if args.debug {
                 fs::write(&markdown_file_path, &content)?;
@@ -184,10 +184,7 @@ pub async fn main() -> Result<()> {
                 // Recreate browser every 50 crawls to prevent memory leaks
                 crawl_count += 1;
                 if crawl_count % 50 == 0 {
-                    info!(
-                        "Recreating browser after {} crawls to prevent memory issues",
-                        crawl_count
-                    );
+                    info!("Recreating browser after {crawl_count} crawls to prevent memory issues");
                     drop(browser);
                     browser = Browser::new(args.debug)?;
                 }
@@ -217,7 +214,7 @@ pub async fn main() -> Result<()> {
 
                         // Store in database
                         if let Err(e) = repo.insert_entry(&entry).await {
-                            info!("Failed to store entry {}: {}", entry.id.url, e);
+                            info!("Failed to store entry {}: {e}", entry.id.url);
                             continue;
                         }
 
@@ -229,12 +226,12 @@ pub async fn main() -> Result<()> {
                             if let Err(e) =
                                 fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
                             {
-                                info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                                info!("Failed to save JSON for {}: {e}", entry.id.url);
                             }
                         }
                     }
                     Err(e) => {
-                        log::warn!("Failed to crawl {}: {}", id.url, e);
+                        log::warn!("Failed to crawl {}: {e}", id.url);
                     }
                 }
             }
@@ -277,7 +274,7 @@ fn should_process_url(url: &url::Url) -> bool {
         .iter()
         .any(|protocol| url.scheme() == *protocol)
     {
-        log::info!("Skipping unsupported protocol: {}", url);
+        log::info!("Skipping unsupported protocol: {url}");
         return false;
     }
 
@@ -315,7 +312,7 @@ fn should_process_url(url: &url::Url) -> bool {
     ];
 
     if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
-        log::debug!("Skipping ignored URL: {}", url);
+        log::debug!("Skipping ignored URL: {url}");
         return false;
     }
 

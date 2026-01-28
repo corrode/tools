@@ -1,6 +1,3 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::missing_crate_level_docs)]
-
 //! # Rust Search Types
 //!
 //! This crate provides common types used across the Rust Search project. It
@@ -19,27 +16,28 @@ pub fn get_data_dir() -> String {
 
 /// Path to the SQLite database file
 pub fn get_search_index_path() -> String {
-    std::env::var("SEARCH_INDEX_PATH").unwrap_or_else(|_| format!("{}/index.db", get_data_dir()))
+    std::env::var("SEARCH_INDEX_PATH")
+        .unwrap_or_else(|_| format!("{dir}/index.db", dir = get_data_dir()))
 }
 
 /// Path to the output directory for TWiR markdown files
 pub fn get_markdown_path() -> String {
-    format!("{}/markdown", get_data_dir())
+    format!("{dir}/markdown", dir = get_data_dir())
 }
 
 /// Path to the output directory for parsed entry JSON files
 pub fn get_json_path() -> String {
-    format!("{}/json", get_data_dir())
+    format!("{dir}/json", dir = get_data_dir())
 }
 
 /// Path to the output directory for raw HTML files
 pub fn get_html_path() -> String {
-    format!("{}/html", get_data_dir())
+    format!("{dir}/html", dir = get_data_dir())
 }
 
 /// Path to the output directory for screenshots
 pub fn get_screenshot_path() -> String {
-    format!("{}/screenshots", get_data_dir())
+    format!("{dir}/screenshots", dir = get_data_dir())
 }
 
 /// Entry identifier with metadata
@@ -58,7 +56,7 @@ pub struct EntryId {
 impl std::fmt::Display for EntryId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let encoded = urlencoding::encode(self.url.as_str());
-        write!(f, "{}-{}", self.date, encoded)
+        write!(f, "{date}-{encoded}", date = self.date)
     }
 }
 

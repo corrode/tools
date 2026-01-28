@@ -25,7 +25,7 @@ impl Repository {
     /// Creates a new repository instance.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
-        log::info!("Opening database at: {}", database_url);
+        log::info!("Opening database at: {database_url}");
 
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
@@ -605,7 +605,7 @@ impl Repository {
         // Add site filter if present
         if let Some(site) = site_filter {
             query.push(" AND m.url LIKE ");
-            query.push_bind(format!("%{}%", site));
+            query.push_bind(format!("%{site}%"));
         }
 
         // Add date range filter
@@ -682,7 +682,7 @@ impl Repository {
         // Add site filter if present
         if let Some(site) = site_filter {
             query.push(" AND m.url LIKE ");
-            query.push_bind(format!("%{}%", site));
+            query.push_bind(format!("%{site}%"));
         }
 
         // Add date range filter

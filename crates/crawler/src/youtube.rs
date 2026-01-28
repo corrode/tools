@@ -73,7 +73,7 @@ impl YouTube {
         let client = reqwest::Client::new();
 
         // Fetch basic info
-        let url_info = format!("https://youtube.com/get_video_info?video_id={}", video_id);
+        let url_info = format!("https://youtube.com/get_video_info?video_id={video_id}");
         let basic_response = client
             .get(&url_info)
             .send()
@@ -87,8 +87,7 @@ impl YouTube {
         let api_key = std::env::var("YOUTUBE_API_KEY")
             .context("YOUTUBE_API_KEY environment variable not set")?;
         let api_url = format!(
-            "https://www.googleapis.com/youtube/v3/videos?id={}&part=snippet,statistics&key={}",
-            video_id, api_key
+            "https://www.googleapis.com/youtube/v3/videos?id={video_id}&part=snippet,statistics&key={api_key}"
         );
         let api_response = client
             .get(&api_url)
@@ -158,7 +157,7 @@ impl YouTube {
 
     /// Parse URL query string into a HashMap
     fn parse_query_string(query: &str) -> Result<HashMap<String, String>> {
-        let url = format!("http://localhost?{}", query);
+        let url = format!("http://localhost?{query}");
         let parsed_url = Url::parse(&url).context("Failed to parse query string")?;
         Ok(parsed_url.query_pairs().into_owned().collect())
     }

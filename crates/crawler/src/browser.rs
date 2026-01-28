@@ -91,7 +91,7 @@ impl Browser {
             Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| entry_id.url.clone());
 
         if target_url != entry_id.url {
-            log::info!("Rewritten YouTube URL to thumbnail: {}", target_url);
+            log::info!("Rewritten YouTube URL to thumbnail: {target_url}");
         }
 
         // Quick check for common error status codes with timeout
@@ -124,8 +124,8 @@ impl Browser {
 
         log::debug!("Waiting for navigation to complete (30s timeout)...");
         if let Err(e) = tab.wait_until_navigated() {
-            log::error!("Navigation timeout or error for {}: {}", entry_id.url, e);
-            bail!("Navigation failed: {}", e);
+            log::error!("Navigation timeout or error for {}: {e}", entry_id.url);
+            bail!("Navigation failed: {e}");
         }
         log::debug!("Navigation completed successfully");
 
@@ -168,7 +168,7 @@ impl Browser {
 
     /// Takes a screenshot of the current page
     fn take_screenshot(&self, tab: &Tab, entry_id: &EntryId) -> Result<()> {
-        let screenshot_path = format!("{}/{}.jpg", get_screenshot_path(), entry_id);
+        let screenshot_path = format!("{}/{entry_id}.jpg", get_screenshot_path());
         log::info!("Creating screenshot {screenshot_path}");
         let screenshot =
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
@@ -179,7 +179,7 @@ impl Browser {
 
     /// Saves raw HTML to disk for future analysis
     fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
-        let html_path = format!("{}/{}.html", get_html_path(), entry_id);
+        let html_path = format!("{}/{entry_id}.html", get_html_path());
         log::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
         log::debug!("Raw HTML saved successfully");
@@ -189,10 +189,8 @@ impl Browser {
     /// Removes cookie consent banners from a webpage
     fn remove_cookie_banner(&self, tab: &Tab) -> Result<()> {
         let all_selectors = COOKIE_BANNER_SELECTORS.join(", ");
-        let js = format!(
-            r#"document.querySelectorAll('{}').forEach(el => el.remove());"#,
-            all_selectors
-        );
+        let js =
+            format!(r#"document.querySelectorAll('{all_selectors}').forEach(el => el.remove());"#);
 
         tab.evaluate(&js, false)?;
         log::debug!("Attempted to remove cookie banner elements");
