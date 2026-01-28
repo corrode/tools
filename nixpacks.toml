@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["chromium", "glib", "openssl", "cacert", "sqlite", "file"]
+nixPkgs = ["chromium", "glib", "openssl", "sqlite", "file"]
 
 [staticAssets]
 assets = "./assets"
