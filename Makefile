@@ -3,6 +3,19 @@ SERVER_IP := 46.225.7.147
 REMOTE_DIR := /data/coolify/applications/search/data
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 
+.PHONY: lint
+lint:
+	cargo fmt --all -- --check
+	cargo clippy --workspace --all-targets --all-features -- -D warnings 
+	
+.PHONY: format fmt
+format fmt:
+	cargo fmt --all
+	
+.PHONY: dev
+dev:
+	cargo watch -x 'run --bin server'
+
 .PHONY: db-copy
 db-copy:
 	ssh $(SERVER_USER)@$(SERVER_IP) "mkdir -p $(REMOTE_DIR)"

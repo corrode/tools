@@ -1,14 +1,15 @@
-//! Parser for TWiR content files
+//! Parser for This Week in Rust (TWiR) Markdown content files
 
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use types::EntryId;
 
-// GitHub repository configuration
-const GITHUB_OWNER: &str = "rust-lang";
-const GITHUB_REPO: &str = "this-week-in-rust";
-const GITHUB_BRANCH: &str = "main";
+/// This Week in Rust configuration
+const TWIR_GITHUB_OWNER: &str = "rust-lang";
+const TWIR_GITHUB_REPO: &str = "this-week-in-rust";
+const TWIR_GITHUB_BRANCH: &str = "main";
+const TWIR_DATE_FORMATS: [&str; 2] = ["%Y-%m-%d", "%Y-%m-%d %H:%M"];
 
 /// Parser for TWiR content
 pub struct TwirParser {
@@ -27,7 +28,7 @@ impl TwirParser {
     pub async fn fetch_twir_entries(&self) -> Result<Vec<serde_json::Value>> {
         let url = format!(
             "https://api.github.com/repos/{}/{}/contents/content?ref={}",
-            GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH
+            TWIR_GITHUB_OWNER, TWIR_GITHUB_REPO, TWIR_GITHUB_BRANCH
         );
 
         let response = self
@@ -54,25 +55,23 @@ impl TwirParser {
     }
 
     /// Parses a TWiR file into EntryId structs
-    pub fn parse_file(&self, content: &str) -> Vec<EntryId> {
-        let (meta, body) = content.split_once("\n\n").unwrap();
-        if let Ok(date) = self.parse_date_from(meta) {
-            let body = self.skip_intro(body);
-            self.content_to_entry_ids(&body, date)
-        } else {
-            Vec::new()
-        }
+    pub fn parse_file(&self, content: &str) -> Option<Vec<EntryId>> {
+        let (meta, body) = content.split_once("\n\n")?;
+        let date = self.parse_date_from_meta(meta).ok()?;
+        let body = self.skip_intro_section(body);
+        Some(self.content_to_entry_ids(&body, date))
     }
 
     /// Parses the date from TWiR metadata
-    fn parse_date_from(&self, meta: &str) -> Result<NaiveDate> {
+    fn parse_date_from_meta(&self, meta: &str) -> Result<NaiveDate> {
         for line in meta.lines() {
-            if line.starts_with("Date") {
-                let date_str = line.split_once(":").unwrap().1.trim();
-                let date_formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M"];
+            if let Some((key, date_str)) = line.split_once(":")
+                && key.trim() == "Date"
+            {
+                let date_formats = TWIR_DATE_FORMATS;
 
                 for format in date_formats.iter() {
-                    if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
+                    if let Ok(date) = NaiveDate::parse_from_str(date_str.trim(), format) {
                         return Ok(date);
                     }
                 }
@@ -83,7 +82,7 @@ impl TwirParser {
     }
 
     /// Skips the intro section of TWiR content
-    fn skip_intro(&self, body: &str) -> String {
+    fn skip_intro_section(&self, body: &str) -> String {
         let mut in_header = false;
         let mut header_line = 0;
 
@@ -203,7 +202,7 @@ mod tests {
             against a slice.
         "};
 
-        assert_eq!(parser.skip_intro(input), expected.trim_end());
+        assert_eq!(parser.skip_intro_section(input), expected.trim_end());
     }
 
     #[test]
@@ -230,7 +229,7 @@ mod tests {
             against a slice.
         "};
 
-        assert_eq!(parser.skip_intro(input), expected.trim_end());
+        assert_eq!(parser.skip_intro_section(input), expected.trim_end());
     }
 
     #[test]
@@ -243,7 +242,7 @@ mod tests {
             in a week, ever. 10 1.0 issues were closed this week, and 0 opened.
         "};
 
-        assert_eq!(parser.skip_intro(input), input);
+        assert_eq!(parser.skip_intro_section(input), input);
     }
 
     #[test]
@@ -304,7 +303,7 @@ mod tests {
             Date: 2024-08-21
         "};
 
-        let date = parser.parse_date_from(meta);
+        let date = parser.parse_date_from_meta(meta);
         assert!(date.is_ok());
         assert_eq!(date.unwrap(), NaiveDate::from_ymd_opt(2024, 8, 21).unwrap());
     }
@@ -317,7 +316,7 @@ mod tests {
             Date: 2024-08-21 12:00
         "};
 
-        let date = parser.parse_date_from(meta);
+        let date = parser.parse_date_from_meta(meta);
         assert!(date.is_ok());
         assert_eq!(date.unwrap(), NaiveDate::from_ymd_opt(2024, 8, 21).unwrap());
     }

@@ -1,0 +1,257 @@
+/* Theme Overrides for Stats Page */
+
+/* Hacker News */
+html[data-theme="light-hacker-news"] h1 {
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 14pt;
+  font-weight: bold;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #ff6600;
+}
+
+/* Dark TWIR */
+html[data-theme="dark-twir"] h1 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #d2991d;
+  text-transform: none;
+  align-items: center;
+}
+
+/* Dark GitHub */
+html[data-theme="dark-github"] h1 {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Stats Grid Layout */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: var(--color-primary);
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: "Martian Mono", monospace;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: "Martian Mono", monospace;
+}
+
+.section {
+  margin-bottom: 48px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 24px;
+  font-family: "Inter", sans-serif;
+}
+
+/* Lists (Categories & Years) */
+.category-list, .year-list {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0;
+}
+
+.category-item, .year-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.15s ease;
+}
+
+.category-item:hover, .year-item:hover {
+  background-color: rgba(72, 213, 151, 0.02);
+}
+
+.category-item:last-child, .year-item:last-child {
+  border-bottom: none;
+}
+
+.category-name, .year-name {
+  font-weight: 500;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-icon, .domain-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.category-icon svg, .domain-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--color-primary);
+}
+
+.category-count, .year-count {
+  font-family: "Martian Mono", monospace;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Progress Bars */
+.progress-bar {
+  height: 6px;
+  background-color: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary-muted), var(--color-primary));
+  transition: width 0.3s ease;
+}
+
+.year-section {
+  margin-bottom: 32px;
+}
+
+.year-subsection-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 16px;
+  font-family: "Martian Mono", monospace;
+}
+
+/* Domain List */
+.domain-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.domain-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background-color: rgba(72, 213, 151, 0.05);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.domain-item:hover {
+  background-color: rgba(72, 213, 151, 0.1);
+  border: 1px solid var(--color-primary);
+  padding: 9px 13px;
+}
+
+.domain-name {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-count {
+  font-family: "Martian Mono", monospace;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+/* Keywords */
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.keyword-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  background-color: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  font-family: "Martian Mono", monospace;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.keyword-tag:hover {
+  background-color: rgba(72, 213, 151, 0.08);
+  color: var(--color-text);
+}
+
+.keyword-count {
+  font-family: "Martian Mono", monospace;
+  color: var(--color-primary);
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* Navigation */
+.back-link {
+  display: inline-block;
+  margin-bottom: 32px;
+  font-weight: 500;
+}

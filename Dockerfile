@@ -29,7 +29,7 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 # Copy binaries and assets
 COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
 COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
-COPY --chown=appuser:appuser assets /app/assets
+COPY --chown=appuser:appuser static /app/static
 
 # Set environment variables
 ENV PORT=3000

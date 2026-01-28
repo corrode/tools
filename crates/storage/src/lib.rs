@@ -28,7 +28,7 @@ impl Repository {
         log::info!("Opening database at: {database_url}");
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(5)
+            .max_connections(20)
             .connect(&database_url)
             .await
             .context("Failed to connect to SQLite database")?;

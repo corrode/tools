@@ -49,6 +49,9 @@ pub struct Entry {
     pub text: Option<String>,
 }
 
+/// Date of the first TWiR issue
+const FIRST_ISSUE_DATE: NaiveDate = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
+
 /// Search result with relevance information and highlighted content
 #[derive(Debug)]
 pub struct SearchResult {
@@ -89,7 +92,7 @@ impl SearchResult {
     /// Returns the TWIR issue number based on date
     /// First issue was 2013-06-29, weekly cadence
     pub fn twir_issue(&self) -> usize {
-        let first_issue_date = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
+        let first_issue_date = FIRST_ISSUE_DATE;
         let days_diff = self
             .entry
             .id

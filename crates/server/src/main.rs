@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
-        .nest_service("/assets", ServeDir::new("assets"))
+        .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());

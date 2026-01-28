@@ -101,9 +101,13 @@ pub async fn main() -> Result<()> {
         });
 
         if let Some(file) = matching_file {
-            let file_name = file["name"].as_str().unwrap();
-            info!("Starting from file: {file_name}");
-            Some(file_name.to_string())
+            if let Some(file_name) = file["name"].as_str() {
+                info!("Starting from file: {file_name}");
+                Some(file_name.to_string())
+            } else {
+                info!("No file name found for start date, starting from beginning");
+                None
+            }
         } else {
             info!("No file found for start date, starting from beginning");
             None
@@ -157,7 +161,11 @@ pub async fn main() -> Result<()> {
         };
 
         // Parse and process entries
-        for id in parser.parse_file(&content) {
+        let Some(ids) = parser.parse_file(&content) else {
+            log::warn!("No valid entries found in file: {file_name}");
+            continue;
+        };
+        for id in ids {
             dry_run_stats.urls_found += 1;
 
             // Skip if URL shouldn't be processed
