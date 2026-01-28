@@ -1,12 +1,13 @@
 [phases.setup]
-nixPkgs = ["chromium", "glib", "openssl", "sqlite", "file", "cargo", "rustc"]
+nixPkgs = ["chromium", "glib", "openssl", "sqlite", "file", "rustup"]
+cmds = ["rustup default stable"]
 
 [staticAssets]
 assets = "./assets"
 
 [phases.build]
 cmds = [
-  'cargo build --release --workspace',
+  '. $HOME/.cargo/env && cargo build --release --workspace',
   'mkdir -p /app/bin',
   'cp target/release/server /app/bin/',
   'cp target/release/crawler /app/bin/',
