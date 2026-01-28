@@ -137,24 +137,24 @@ impl Sanitizer {
         }
 
         // Fallback: use body but remove noise
-        if let Ok(body_selector) = Selector::parse("body") {
-            if let Some(body) = document.select(&body_selector).next() {
-                let mut body_html = body.html();
+        if let Ok(body_selector) = Selector::parse("body")
+            && let Some(body) = document.select(&body_selector).next()
+        {
+            let mut body_html = body.html();
 
-                // Remove noise elements by replacing them with empty strings
-                for noise in &noise_selectors {
-                    if let Ok(selector) = Selector::parse(noise) {
-                        let doc = Html::parse_document(&body_html);
-                        let mut cleaned = body_html.clone();
-                        for elem in doc.select(&selector) {
-                            cleaned = cleaned.replace(&elem.html(), "");
-                        }
-                        body_html = cleaned;
+            // Remove noise elements by replacing them with empty strings
+            for noise in &noise_selectors {
+                if let Ok(selector) = Selector::parse(noise) {
+                    let doc = Html::parse_document(&body_html);
+                    let mut cleaned = body_html.clone();
+                    for elem in doc.select(&selector) {
+                        cleaned = cleaned.replace(&elem.html(), "");
                     }
+                    body_html = cleaned;
                 }
-
-                return body_html;
             }
+
+            return body_html;
         }
 
         // Ultimate fallback: return original

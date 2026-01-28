@@ -153,7 +153,7 @@ impl Browser {
 
         if text
             .as_ref()
-            .map_or(false, |t| t.contains("Verifying you are human"))
+            .is_some_and(|t| t.contains("Verifying you are human"))
         {
             bail!("Captcha detected: {}", entry_id.url);
         }

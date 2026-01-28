@@ -790,28 +790,28 @@ mod tests {
     #[test]
     fn test_parse_query_with_site() {
         let (terms, site) = Repository::parse_query("linux site:corrode.dev");
-        assert_eq!(terms, "linux");
+        assert_eq!(terms, vec!["linux"]);
         assert_eq!(site, Some("corrode.dev".to_string()));
     }
 
     #[test]
     fn test_parse_query_site_only() {
         let (terms, site) = Repository::parse_query("site:example.com");
-        assert_eq!(terms, "");
+        assert_eq!(terms, Vec::<String>::new());
         assert_eq!(site, Some("example.com".to_string()));
     }
 
     #[test]
     fn test_parse_query_no_site() {
         let (terms, site) = Repository::parse_query("rust async await");
-        assert_eq!(terms, "rust async await");
+        assert_eq!(terms, vec!["rust", "async", "await"]);
         assert_eq!(site, None);
     }
 
     #[test]
     fn test_parse_query_multiple_terms_with_site() {
         let (terms, site) = Repository::parse_query("embedded systems site:rust-lang.org");
-        assert_eq!(terms, "embedded systems");
+        assert_eq!(terms, vec!["embedded", "systems"]);
         assert_eq!(site, Some("rust-lang.org".to_string()));
     }
 }
