@@ -1,2 +1,10 @@
 [staticAssets]
 assets = "./assets"
+
+[phases.build]
+cmds = [
+  'cargo build --release --workspace',
+  'mkdir -p /app/bin',
+  'cp target/release/server /app/bin/',
+  'cp target/release/crawler /app/bin/',
+]
