@@ -2,8 +2,7 @@
 
 use super::cookies::COOKIE_BANNER_SELECTORS;
 use super::sanitizer::Sanitizer;
-use super::{HTML_OUT_PATH, SCREENSHOT_OUT_PATH};
-use types::EntryId;
+use types::{EntryId, get_html_path, get_screenshot_path};
 
 use anyhow::{Result, bail};
 use headless_chrome::{
@@ -35,10 +34,16 @@ impl Browser {
     /// # Arguments
     /// * `debug` - If true, saves raw HTML/Markdown and screenshots to disk for future analysis
     pub fn new(debug: bool) -> Result<Self> {
+        let mut args = Vec::new();
+        if std::env::var("CHROME_NO_SANDBOX").is_ok() {
+            args.push(std::ffi::OsStr::new("--no-sandbox"));
+        }
+
         let opt = LaunchOptionsBuilder::default()
             .headless(true)
             .window_size(Some((1920, 1080)))
             .idle_browser_timeout(time::Duration::from_millis(60 * 60_000))
+            .args(args)
             .build()?;
 
         Ok(Self {
@@ -163,7 +168,7 @@ impl Browser {
 
     /// Takes a screenshot of the current page
     fn take_screenshot(&self, tab: &Tab, entry_id: &EntryId) -> Result<()> {
-        let screenshot_path = format!("{SCREENSHOT_OUT_PATH}/{}.jpg", entry_id);
+        let screenshot_path = format!("{}/{}.jpg", get_screenshot_path(), entry_id);
         log::info!("Creating screenshot {screenshot_path}");
         let screenshot =
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
@@ -174,7 +179,7 @@ impl Browser {
 
     /// Saves raw HTML to disk for future analysis
     fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
-        let html_path = format!("{HTML_OUT_PATH}/{}.html", entry_id);
+        let html_path = format!("{}/{}.html", get_html_path(), entry_id);
         log::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
         log::debug!("Raw HTML saved successfully");

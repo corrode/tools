@@ -124,7 +124,7 @@ pub async fn main() -> Result<()> {
             log::debug!("Skipping item '{}' without download_url field", file_name);
             continue;
         };
-        let markdown_file_path = format!("{}/{}", MARKDOWN_OUT_PATH, file_name);
+        let markdown_file_path = format!("{}/{}", get_markdown_path(), file_name);
 
         // Check if we should start processing from this file
         if !resume_crawling {
@@ -225,7 +225,7 @@ pub async fn main() -> Result<()> {
 
                         if args.debug {
                             // Write JSON file for troubleshooting
-                            let json_path = format!("{}/{}.json", JSON_OUT_PATH, entry.id);
+                            let json_path = format!("{}/{}.json", get_json_path(), entry.id);
                             if let Err(e) =
                                 fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
                             {
@@ -263,10 +263,10 @@ pub async fn main() -> Result<()> {
 
 /// Creates necessary output directories
 fn create_output_directories() -> Result<()> {
-    fs::create_dir_all(MARKDOWN_OUT_PATH)?;
-    fs::create_dir_all(JSON_OUT_PATH)?;
-    fs::create_dir_all(HTML_OUT_PATH)?;
-    fs::create_dir_all(SCREENSHOT_OUT_PATH)?;
+    fs::create_dir_all(get_markdown_path())?;
+    fs::create_dir_all(get_json_path())?;
+    fs::create_dir_all(get_html_path())?;
+    fs::create_dir_all(get_screenshot_path())?;
     Ok(())
 }
 

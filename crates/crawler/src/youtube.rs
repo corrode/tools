@@ -31,8 +31,6 @@ pub struct YouTubeThumbnails {
 }
 
 impl YouTube {
-    const API_KEY: &'static str = "AIzaSyDHTKjtUchUxUOzCtYW4V_h1zzcyd0P6c0";
-
     /// Create a new YouTube instance from a URL
     pub async fn new(url: &str) -> Result<Self> {
         let video_id = Self::extract_video_id(url)?;
@@ -86,10 +84,11 @@ impl YouTube {
         let basic_info = Self::parse_query_string(&basic_response)?;
 
         // Fetch API info
+        let api_key = std::env::var("YOUTUBE_API_KEY")
+            .context("YOUTUBE_API_KEY environment variable not set")?;
         let api_url = format!(
             "https://www.googleapis.com/youtube/v3/videos?id={}&part=snippet,statistics&key={}",
-            video_id,
-            Self::API_KEY
+            video_id, api_key
         );
         let api_response = client
             .get(&api_url)

@@ -16,6 +16,7 @@ use tower_http::services::ServeDir;
 pub use types::Entry;
 
 use std::sync::Arc;
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,12 +26,44 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handlers::index))
+        .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
         .nest_service("/assets", ServeDir::new("assets"))
         .with_state(repo);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    println!("Listening on http://localhost:3000");
-    Ok(axum::serve(listener, app).await?)
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    println!("Listening on http://{}", addr);
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }

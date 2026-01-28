@@ -12,18 +12,35 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+/// Get the base data directory
+pub fn get_data_dir() -> String {
+    std::env::var("DATA_DIR").unwrap_or_else(|_| "data".to_string())
+}
+
 /// Path to the SQLite database file
 pub fn get_search_index_path() -> String {
-    std::env::var("SEARCH_INDEX_PATH").unwrap_or_else(|_| "data/index.db".to_string())
+    std::env::var("SEARCH_INDEX_PATH").unwrap_or_else(|_| format!("{}/index.db", get_data_dir()))
 }
+
 /// Path to the output directory for TWiR markdown files
-pub const MARKDOWN_OUT_PATH: &str = "data/markdown";
+pub fn get_markdown_path() -> String {
+    format!("{}/markdown", get_data_dir())
+}
+
 /// Path to the output directory for parsed entry JSON files
-pub const JSON_OUT_PATH: &str = "data/json";
+pub fn get_json_path() -> String {
+    format!("{}/json", get_data_dir())
+}
+
 /// Path to the output directory for raw HTML files
-pub const HTML_OUT_PATH: &str = "data/html";
+pub fn get_html_path() -> String {
+    format!("{}/html", get_data_dir())
+}
+
 /// Path to the output directory for screenshots
-pub const SCREENSHOT_OUT_PATH: &str = "data/screenshots";
+pub fn get_screenshot_path() -> String {
+    format!("{}/screenshots", get_data_dir())
+}
 
 /// Entry identifier with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
