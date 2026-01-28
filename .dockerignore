@@ -1,8 +1,7 @@
 target/
 .git/
 .env
-.nixpacks/
 backups/
 data/
+fixtures/
 Dockerfile
-docker-compose.yaml
