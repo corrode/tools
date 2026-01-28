@@ -1,0 +1,8 @@
+target/
+.git/
+.env
+.nixpacks/
+backups/
+data/
+Dockerfile
+docker-compose.yaml
