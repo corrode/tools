@@ -8,7 +8,7 @@ mod browser;
 mod cookies;
 mod parser;
 mod sanitizer;
-mod youtube;
+// mod youtube;
 
 pub use browser::Browser;
 pub use parser::TwirParser;
@@ -25,9 +25,9 @@ use std::fs;
 #[command(name = "twir-crawler")]
 #[command(about = "Crawls and indexes This Week in Rust content", long_about = None)]
 struct Args {
-    /// Save raw HTML to disk for future analysis
+    /// Enable debug mode: save raw HTML, screenshots, JSON, and markdown to disk
     #[arg(long, default_value_t = false)]
-    save_raw_html: bool,
+    debug: bool,
 
     /// Start from the beginning, ignoring checkpoint
     #[arg(long, default_value_t = false)]
@@ -60,7 +60,7 @@ pub async fn main() -> Result<()> {
 
     create_output_directories()?;
 
-    let mut browser = Browser::new(args.save_raw_html)?;
+    let mut browser = Browser::new(args.debug)?;
     let parser = TwirParser::new();
     let repo = Repository::new(types::get_search_index_path()).await?;
     let mut crawl_count = 0;
@@ -149,7 +149,9 @@ pub async fn main() -> Result<()> {
         } else {
             info!("Downloading new file: {}", file_name);
             let content = parser.download_content(download_url).await?;
-            fs::write(&markdown_file_path, &content)?;
+            if args.debug {
+                fs::write(&markdown_file_path, &content)?;
+            }
             content
         };
 
@@ -187,7 +189,7 @@ pub async fn main() -> Result<()> {
                         crawl_count
                     );
                     drop(browser);
-                    browser = Browser::new(args.save_raw_html)?;
+                    browser = Browser::new(args.debug)?;
                 }
 
                 // Crawl and store content
@@ -200,7 +202,7 @@ pub async fn main() -> Result<()> {
                     if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
                         log::warn!("Browser connection closed, recreating browser and retrying...");
                         drop(browser);
-                        browser = Browser::new(args.save_raw_html)?;
+                        browser = Browser::new(args.debug)?;
                         browser.crawl(&id).await
                     } else {
                         crawl_result
@@ -221,11 +223,14 @@ pub async fn main() -> Result<()> {
 
                         info!("Successfully stored entry: {}", entry.id.url);
 
-                        // Write JSON file for troubleshooting
-                        let json_path = format!("{}/{}.json", JSON_OUT_PATH, entry.id);
-                        if let Err(e) = fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
-                        {
-                            info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                        if args.debug {
+                            // Write JSON file for troubleshooting
+                            let json_path = format!("{}/{}.json", JSON_OUT_PATH, entry.id);
+                            if let Err(e) =
+                                fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
+                            {
+                                info!("Failed to save JSON for {}: {}", entry.id.url, e);
+                            }
                         }
                     }
                     Err(e) => {

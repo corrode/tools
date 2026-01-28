@@ -26,15 +26,15 @@ static YOUTUBE_SHORT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Wrapper around headless Chrome for crawling web pages
 pub struct Browser {
     inner: ChromeBrowser,
-    save_raw_html: bool,
+    debug: bool,
 }
 
 impl Browser {
     /// Creates a new browser instance
     ///
     /// # Arguments
-    /// * `save_raw_html` - If true, saves raw HTML to disk for future analysis
-    pub fn new(save_raw_html: bool) -> Result<Self> {
+    /// * `debug` - If true, saves raw HTML/Markdown and screenshots to disk for future analysis
+    pub fn new(debug: bool) -> Result<Self> {
         let opt = LaunchOptionsBuilder::default()
             .headless(true)
             .window_size(Some((1920, 1080)))
@@ -43,7 +43,7 @@ impl Browser {
 
         Ok(Self {
             inner: ChromeBrowser::new(opt)?,
-            save_raw_html,
+            debug,
         })
     }
 
@@ -131,7 +131,7 @@ impl Browser {
                 log::trace!("HTML: {html}");
 
                 // Save raw HTML if flag is enabled
-                if self.save_raw_html {
+                if self.debug {
                     self.save_raw_html(&html, entry_id)?;
                 }
 
@@ -146,7 +146,9 @@ impl Browser {
             }
         };
 
-        self.take_screenshot(&tab, entry_id)?;
+        if self.debug {
+            self.take_screenshot(&tab, entry_id)?;
+        }
         tab.close(true)?;
 
         if text
