@@ -1,8 +1,9 @@
 //! Browser automation for crawling web pages
 
 use super::cookies::COOKIE_BANNER_SELECTORS;
+use super::paths;
 use super::sanitizer::Sanitizer;
-use types::{EntryId, get_html_path, get_screenshot_path};
+use types::EntryId;
 
 use anyhow::{Result, bail};
 use headless_chrome::{
@@ -168,7 +169,7 @@ impl Browser {
 
     /// Takes a screenshot of the current page
     fn take_screenshot(&self, tab: &Tab, entry_id: &EntryId) -> Result<()> {
-        let screenshot_path = format!("{}/{entry_id}.jpg", get_screenshot_path());
+        let screenshot_path = format!("{}/{entry_id}.jpg", *paths::SCREENSHOT_PATH);
         log::info!("Creating screenshot {screenshot_path}");
         let screenshot =
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
@@ -179,7 +180,7 @@ impl Browser {
 
     /// Saves raw HTML to disk for future analysis
     fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
-        let html_path = format!("{}/{entry_id}.html", get_html_path());
+        let html_path = format!("{}/{entry_id}.html", *paths::HTML_PATH);
         log::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
         log::debug!("Raw HTML saved successfully");

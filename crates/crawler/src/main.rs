@@ -7,6 +7,7 @@
 mod browser;
 mod cookies;
 mod parser;
+mod paths;
 mod sanitizer;
 // mod youtube;
 
@@ -124,7 +125,7 @@ pub async fn main() -> Result<()> {
             log::debug!("Skipping item '{file_name}' without download_url field");
             continue;
         };
-        let markdown_file_path = format!("{}/{file_name}", get_markdown_path());
+        let markdown_file_path = format!("{}/{file_name}", &*paths::MARKDOWN_PATH);
 
         // Check if we should start processing from this file
         if !resume_crawling {
@@ -222,7 +223,7 @@ pub async fn main() -> Result<()> {
 
                         if args.debug {
                             // Write JSON file for troubleshooting
-                            let json_path = format!("{}/{}.json", get_json_path(), entry.id);
+                            let json_path = format!("{}/{}.json", &*paths::JSON_PATH, entry.id);
                             if let Err(e) =
                                 fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
                             {
@@ -260,10 +261,10 @@ pub async fn main() -> Result<()> {
 
 /// Creates necessary output directories
 fn create_output_directories() -> Result<()> {
-    fs::create_dir_all(get_markdown_path())?;
-    fs::create_dir_all(get_json_path())?;
-    fs::create_dir_all(get_html_path())?;
-    fs::create_dir_all(get_screenshot_path())?;
+    fs::create_dir_all(&*paths::MARKDOWN_PATH)?;
+    fs::create_dir_all(&*paths::JSON_PATH)?;
+    fs::create_dir_all(&*paths::HTML_PATH)?;
+    fs::create_dir_all(&*paths::SCREENSHOT_PATH)?;
     Ok(())
 }
 

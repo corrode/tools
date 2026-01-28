@@ -20,26 +20,6 @@ pub fn get_search_index_path() -> String {
         .unwrap_or_else(|_| format!("{dir}/index.db", dir = get_data_dir()))
 }
 
-/// Path to the output directory for TWiR markdown files
-pub fn get_markdown_path() -> String {
-    format!("{dir}/markdown", dir = get_data_dir())
-}
-
-/// Path to the output directory for parsed entry JSON files
-pub fn get_json_path() -> String {
-    format!("{dir}/json", dir = get_data_dir())
-}
-
-/// Path to the output directory for raw HTML files
-pub fn get_html_path() -> String {
-    format!("{dir}/html", dir = get_data_dir())
-}
-
-/// Path to the output directory for screenshots
-pub fn get_screenshot_path() -> String {
-    format!("{dir}/screenshots", dir = get_data_dir())
-}
-
 /// Entry identifier with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntryId {
