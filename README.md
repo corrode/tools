@@ -18,7 +18,7 @@ To index content, run the crawler:
 RUST_LOG=crawler=debug cargo run -p crawler
 ```
 
-this will crawl new articles from 'This Week in Rust' and create/update the `data/index.db` sqlite file.
+this will crawl new articles and create/update the `data/index.db` sqlite file.
 
 Or use `cargo-watch` to automatically restart the application when files change:
 

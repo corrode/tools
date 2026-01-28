@@ -1,8 +1,9 @@
 [package]
 name = "server"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
 default-run = "server"
-publish = false
 
 [dependencies]
 types = { workspace = true }

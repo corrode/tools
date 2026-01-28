@@ -132,25 +132,19 @@ impl Browser {
 
         self.remove_cookie_banner(&tab)?;
 
-        let text = match tab.get_content() {
-            Ok(html) => {
-                log::trace!("HTML: {html}");
+        let html = tab.get_content()?;
+        log::trace!("HTML: {html}");
 
-                // Save raw HTML if flag is enabled
-                if self.debug {
-                    self.save_raw_html(&html, entry_id)?;
-                }
+        // Save raw HTML if flag is enabled
+        if self.debug {
+            self.save_raw_html(&html, entry_id)?;
+        }
 
-                // Sanitize HTML and extract plain text content
-                // dom_smoothie handles both cleaning and text extraction
-                let text = Sanitizer::sanitize(&html)?;
-                log::debug!("Extracted text: {} chars", text.len());
-                Some(text)
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        // Sanitize HTML and extract plain text content
+        // dom_smoothie handles both cleaning and text extraction
+        let text = Sanitizer::sanitize(&html)?;
+        log::debug!("Extracted text: {} chars", text.len());
+        let text = Some(text);
 
         if self.debug {
             self.take_screenshot(&tab, entry_id)?;

@@ -1,7 +1,8 @@
 [package]
 name = "types"
-edition = "2024"
-publish = false
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
 
 [dependencies]
 chrono = { workspace = true }

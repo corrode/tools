@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::missing_crate_level_docs)]
 
-//! Module for crawling and indexing This Week in Rust content.
+//! Module for crawling and indexing content.
 //! Handles fetching articles, parsing content, and storing entries in the database.
 
 mod browser;
@@ -24,7 +24,7 @@ use std::fs;
 /// Command line arguments for the crawler
 #[derive(Parser, Debug)]
 #[command(name = "twir-crawler")]
-#[command(about = "Crawls and indexes This Week in Rust content", long_about = None)]
+#[command(about = "Crawls and indexes Rust content", long_about = None)]
 struct Args {
     /// Enable debug mode: save raw HTML, screenshots, JSON, and markdown to disk
     #[arg(long, default_value_t = false)]
