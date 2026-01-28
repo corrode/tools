@@ -1,6 +1,5 @@
 [workspace]
 members = ["crates/*"]
-default-members = ["crates/server"]
 resolver = "2"
 
 [workspace.lints.rust]

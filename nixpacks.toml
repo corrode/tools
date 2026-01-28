@@ -1,9 +1,0 @@
-providers = ["rust"]
-
-[phases.build]
-# Build the entire workspace so both 'server' and 'crawler' binaries are compiled
-cmds = [
-    "cargo build --release --workspace",
-    "mkdir -p bin",
-    "find target/release -maxdepth 1 -type f -executable -exec cp {} bin/ \\;"
-]
