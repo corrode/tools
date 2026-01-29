@@ -186,11 +186,6 @@ html[data-theme="dark-twir"] .tag {
     letter-spacing: normal;
 }
 
-/* Dark Oxide */
-html[data-theme="dark-cathode"] .result-meta .domain {
-    border: 1px solid var(--color-primary);
-}
-
 /* General Search Styles */
 
 .search-container {
@@ -575,7 +570,6 @@ html[data-theme="dark-cathode"] .result-meta .domain {
     color: var(--color-text-muted);
     margin-top: 12px;
     font-family: "Martian Mono", monospace;
-    text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
