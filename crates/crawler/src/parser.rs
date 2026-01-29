@@ -156,9 +156,7 @@ impl TwirParser {
 
                         // Parse attribution line for Author and URL
                         // Remove leading dashes/em-dashes
-                        let clean_line = trimmed
-                            .trim_start_matches(|c| c == '—' || c == '–' || c == '-')
-                            .trim();
+                        let clean_line = trimmed.trim_start_matches(['—', '–', '-']).trim();
 
                         let parser = Parser::new(clean_line);
                         for event in parser {
@@ -214,15 +212,14 @@ impl TwirParser {
                     if !current_category
                         .to_lowercase()
                         .contains("quote of the week")
+                        && let Ok(url) = url::Url::parse(&current_url)
                     {
-                        if let Ok(url) = url::Url::parse(&current_url) {
-                            entries.push(EntryId {
-                                title: current_title.clone(),
-                                url,
-                                category: current_category.clone(),
-                                date,
-                            });
-                        }
+                        entries.push(EntryId {
+                            title: current_title.clone(),
+                            url,
+                            category: current_category.clone(),
+                            date,
+                        });
                     }
                     current_title.clear();
                     current_url.clear();
