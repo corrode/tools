@@ -48,7 +48,7 @@
 }
 
 :root {
-    /* Default theme (oxide dark) */
+    /* Default theme (cathode dark) */
     --color-background: #0a0e11;
     --color-surface: #111418;
     --color-primary: #48d597;
@@ -188,7 +188,7 @@ html[data-theme="dark-twir"] .header-link {
     align-items: baseline;
 }
 
-html[data-theme="dark-oxide"] {
+html[data-theme="dark-cathode"] {
     --color-background: #0a0e11;
     --color-surface: #111418;
     --color-primary: #48d597;
@@ -198,7 +198,7 @@ html[data-theme="dark-oxide"] {
     --color-border: #1f2327;
 }
 
-html[data-theme="dark-oxide"] .logo {
+html[data-theme="dark-cathode"] .logo {
     filter: brightness(0) saturate(100%) invert(77%) sepia(18%) saturate(1366%)
         hue-rotate(100deg) brightness(95%) contrast(92%);
 }
@@ -389,11 +389,11 @@ mark {
 }
 
 /* Oxide grid pattern */
-html[data-theme="dark-oxide"] .hero-pattern {
+html[data-theme="dark-cathode"] .hero-pattern {
     background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23ffffff' stroke-width='1' fill='none' fill-rule='evenodd' stroke-opacity='0.02'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-html[data-theme="dark-oxide"] .hero-pattern::after {
+html[data-theme="dark-cathode"] .hero-pattern::after {
     background: linear-gradient(
         to bottom,
         transparent 0%,

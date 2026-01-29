@@ -187,7 +187,7 @@ html[data-theme="dark-twir"] .tag {
 }
 
 /* Dark Oxide */
-html[data-theme="dark-oxide"] .result-meta .domain {
+html[data-theme="dark-cathode"] .result-meta .domain {
     border: 1px solid var(--color-primary);
 }
 
