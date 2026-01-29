@@ -49,6 +49,19 @@ pub struct Entry {
     pub text: Option<String>,
 }
 
+/// Quote of the Week
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Quote {
+    /// The quote text
+    pub text: String,
+    /// The author of the quote
+    pub author: String,
+    /// Optional URL for the quote attribution
+    pub url: Option<Url>,
+    /// Date of the TWiR issue containing the quote
+    pub date: NaiveDate,
+}
+
 /// Date of the first TWiR issue
 const FIRST_ISSUE_DATE: NaiveDate = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
 

@@ -3,13 +3,19 @@
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use types::EntryId;
+use types::{EntryId, Quote};
 
 /// This Week in Rust configuration
 const TWIR_GITHUB_OWNER: &str = "rust-lang";
 const TWIR_GITHUB_REPO: &str = "this-week-in-rust";
 const TWIR_GITHUB_BRANCH: &str = "main";
 const TWIR_DATE_FORMATS: [&str; 2] = ["%Y-%m-%d", "%Y-%m-%d %H:%M"];
+
+/// Result of parsing a TWiR file
+pub struct ParseResult {
+    pub entries: Vec<EntryId>,
+    pub quotes: Vec<Quote>,
+}
 
 /// Parser for TWiR content
 pub struct TwirParser {
@@ -54,12 +60,18 @@ impl TwirParser {
             .await?)
     }
 
-    /// Parses a TWiR file into EntryId structs
-    pub fn parse_file(&self, content: &str) -> Option<Vec<EntryId>> {
+    /// Parses a TWiR file into entries and quotes
+    pub fn parse_file(&self, content: &str) -> Option<ParseResult> {
         let (meta, body) = content.split_once("\n\n")?;
         let date = self.parse_date_from_meta(meta).ok()?;
+
+        // Extract quotes from the full body
+        let quotes = self.extract_quotes(body, date);
+
         let body = self.skip_intro_section(body);
-        Some(self.content_to_entry_ids(&body, date))
+        let entries = self.content_to_entry_ids(&body, date);
+
+        Some(ParseResult { entries, quotes })
     }
 
     /// Parses the date from TWiR metadata
@@ -105,7 +117,79 @@ impl TwirParser {
         body.to_string()
     }
 
-    /// Converts markdown content to EntryId structs
+    /// Extracts quotes from the content
+    fn extract_quotes(&self, content: &str, date: NaiveDate) -> Vec<Quote> {
+        let mut quotes = Vec::new();
+        let mut lines = content.lines().peekable();
+
+        while let Some(line) = lines.next() {
+            if line.trim_start().starts_with("#")
+                && line.to_lowercase().contains("quote of the week")
+            {
+                let mut quote_text = String::new();
+                let mut author = String::new();
+                let mut url = None;
+
+                // Read until next header or end
+                while let Some(line) = lines.peek() {
+                    if line.trim_start().starts_with("#") {
+                        break;
+                    }
+                    let line = lines.next().unwrap();
+                    let trimmed = line.trim();
+
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+
+                    if let Some(text) = trimmed.strip_prefix(">") {
+                        if !quote_text.is_empty() {
+                            quote_text.push('\n');
+                        }
+                        quote_text.push_str(text.trim());
+                    } else if !quote_text.is_empty() && author.is_empty() {
+                        // Assume this is the attribution line if we have text and no author yet
+                        // Filter out "Thanks to..." lines which usually come after attribution
+                        if trimmed.starts_with("Thanks to") {
+                            continue;
+                        }
+
+                        // Parse attribution line for Author and URL
+                        // Remove leading dashes/em-dashes
+                        let clean_line = trimmed
+                            .trim_start_matches(|c| c == '—' || c == '–' || c == '-')
+                            .trim();
+
+                        let parser = Parser::new(clean_line);
+                        for event in parser {
+                            match event {
+                                Event::Text(text) => author.push_str(&text),
+                                Event::Start(Tag::Link { dest_url, .. }) => {
+                                    if let Ok(u) = url::Url::parse(&dest_url) {
+                                        url = Some(u);
+                                    }
+                                }
+                                Event::Code(text) => author.push_str(&text),
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+
+                if !quote_text.is_empty() && !author.is_empty() {
+                    quotes.push(Quote {
+                        text: quote_text,
+                        author: author.trim().to_string(),
+                        url,
+                        date,
+                    });
+                }
+            }
+        }
+        quotes
+    }
+
+    /// Converts Markdown content to EntryId structs
     fn content_to_entry_ids(&self, content: &str, date: NaiveDate) -> Vec<EntryId> {
         let mut entries = Vec::new();
         let mut current_category = String::new();
@@ -126,13 +210,19 @@ impl TwirParser {
                 }
                 Event::End(TagEnd::Link) => {
                     in_link = false;
-                    if let Ok(url) = url::Url::parse(&current_url) {
-                        entries.push(EntryId {
-                            title: current_title.clone(),
-                            url,
-                            category: current_category.clone(),
-                            date,
-                        });
+                    // Don't add entries from "Quote of the Week" section to search results
+                    if !current_category
+                        .to_lowercase()
+                        .contains("quote of the week")
+                    {
+                        if let Ok(url) = url::Url::parse(&current_url) {
+                            entries.push(EntryId {
+                                title: current_title.clone(),
+                                url,
+                                category: current_category.clone(),
+                                date,
+                            });
+                        }
                     }
                     current_title.clear();
                     current_url.clear();
@@ -319,5 +409,35 @@ mod tests {
         let date = parser.parse_date_from_meta(meta);
         assert!(date.is_ok());
         assert_eq!(date.unwrap(), NaiveDate::from_ymd_opt(2024, 8, 21).unwrap());
+    }
+
+    #[test]
+    fn test_extract_quotes() {
+        let parser = setup();
+        let content = indoc! {"
+            # Quote of the Week
+            
+            > Memory errors are fundamentally state errors.
+            
+            — [desiringmachines on /r/rust](https://www.reddit.com/r/rust).
+            
+            Thanks to dikaiosune.
+            
+            # Next Section
+        "};
+
+        let date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+        let quotes = parser.extract_quotes(content, date);
+
+        assert_eq!(quotes.len(), 1);
+        assert_eq!(
+            quotes[0].text,
+            "Memory errors are fundamentally state errors."
+        );
+        assert_eq!(quotes[0].author, "desiringmachines on /r/rust.");
+        assert_eq!(
+            quotes[0].url.as_ref().unwrap().as_str(),
+            "https://www.reddit.com/r/rust"
+        );
     }
 }

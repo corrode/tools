@@ -149,10 +149,10 @@
     {% endif %}
 
     <!-- Quote of the Week Easter Egg (outside results div) -->
-    {% if !results.is_empty() %}
+    {% if !results.is_empty() %} {% if let Some(quote) = quote %}
     <div class="quote-easter-egg">
-        <div class="quote-content" id="random-quote"></div>
-        <div class="quote-attribution">— Quote of the Week</div>
+        <div class="quote-content">"{{ quote.text }}"</div>
+        <div class="quote-attribution">— {{ quote.author }}</div>
     </div>
-    {% endif %} {% endif %}
+    {% endif %} {% endif %} {% endif %}
 </div>

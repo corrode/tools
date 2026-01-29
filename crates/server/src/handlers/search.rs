@@ -12,6 +12,12 @@ use crate::text_utils::clean_preview;
 use storage::Repository;
 use types::SearchResult;
 
+#[derive(Clone)]
+pub struct DisplayQuote {
+    pub text: String,
+    pub author: String,
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
 struct SearchTemplate {
@@ -25,6 +31,7 @@ struct SearchTemplate {
     sort_by: Option<String>,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
+    pub quote: Option<DisplayQuote>,
 }
 
 #[derive(Template)]
@@ -40,6 +47,7 @@ struct ResultsTemplate {
     sort_by: Option<String>,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
+    pub quote: Option<DisplayQuote>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -146,6 +154,16 @@ pub(crate) async fn search(
         None
     };
 
+    // Select random quote
+    let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
+        Some(DisplayQuote {
+            text: q.text,
+            author: q.author,
+        })
+    } else {
+        None
+    };
+
     if headers.contains_key("hx-request") {
         let template = ResultsTemplate {
             query: params.q,
@@ -158,6 +176,7 @@ pub(crate) async fn search(
             sort_by: params.sort_by,
             prev_page_href,
             next_page_href,
+            quote,
         };
 
         template
@@ -176,6 +195,7 @@ pub(crate) async fn search(
             sort_by: params.sort_by,
             prev_page_href,
             next_page_href,
+            quote,
         };
 
         template

@@ -75,19 +75,16 @@
                         />
                     </svg>
                 </div>
-                <button
-                    type="button"
-                    class="filter-button"
-                    onclick="toggleFilters()"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path
-                            d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-                        />
-                    </svg>
-                </button>
+                <details class="filter-container" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}open{% endif %}>
+                    <summary class="filter-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+                            />
+                        </svg>
+                    </summary>
 
-                <div id="filter-panel">
+                    <div id="filter-panel">
                     <div class="filter-group">
                         <label class="filter-label">Date Range:</label>
                         <div class="dual-range-container">
@@ -187,6 +184,7 @@
                         </select>
                     </div>
                 </div>
+                </details>
             </form>
 
             {% include "results.html" %}
@@ -271,17 +269,6 @@
                 setTheme(savedTheme);
                 document.getElementById("theme-select").value = savedTheme;
 
-                // Restore filter panel state
-                const filtersOpen =
-                    localStorage.getItem("filtersOpen") === "true";
-                const filterPanel = document.getElementById("filter-panel");
-                if (filtersOpen && filterPanel) {
-                    filterPanel.style.display = "block";
-                }
-
-                // Get and set search query and filters from URL
-
-
                 // Initialize range display visual state on load
                 {
                     const startInput = document.getElementById("start-year");
@@ -312,101 +299,6 @@
 
             });
 
-            function toggleFilters() {
-                const filterPanel = document.getElementById("filter-panel");
-                const isOpen = filterPanel.style.display === "block";
-                filterPanel.style.display = !isOpen ? "block" : "none";
-
-                // Save filter state to localStorage
-                localStorage.setItem("filtersOpen", !isOpen ? "true" : "false");
-            }
-
-            // Quote of the Week Easter Egg
-            const quotes = [
-                {
-                    text: "Rust is a language empowering everyone to build reliable and efficient software.",
-                    author: "Rust Lang",
-                },
-                {
-                    text: "If it compiles, it (probably) works!",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Fearless concurrency: writing concurrent code without data races.",
-                    author: "Rust Book",
-                },
-                {
-                    text: "Ownership is Rust's most unique feature, and it enables Rust to make memory safety guarantees without needing a garbage collector.",
-                    author: "Rust Book",
-                },
-                {
-                    text: "Rust combines low-level control with high-level ergonomics.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Zero-cost abstractions: you don't pay for what you don't use.",
-                    author: "Bjarne Stroustrup (C++ principle, adopted by Rust)",
-                },
-                {
-                    text: "Fighting with the borrow checker makes you a better programmer.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Rust's error messages are so good, they teach you the language.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Move fast and don't break things.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Compile time is runtime for Rust programmers.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "In Rust, we trust (the compiler).",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Unsafe Rust: with great power comes great responsibility.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Cargo is Rust's secret weapon for productivity.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "The Rust compiler: your strictest reviewer and best teacher.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Memory safety without garbage collection: the Rust promise.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Rust makes concurrent programming not just safe, but enjoyable.",
-                    author: "Rust Community",
-                },
-                {
-                    text: "Type systems are documentation that the compiler can verify.",
-                    author: "Rust Community",
-                },
-            ];
-
-            function showRandomQuote() {
-                const quoteElement = document.getElementById("random-quote");
-                const attributionElement =
-                    document.querySelector(".quote-attribution");
-                if (quoteElement && attributionElement) {
-                    const randomQuote =
-                        quotes[Math.floor(Math.random() * quotes.length)];
-                    quoteElement.textContent = '"' + randomQuote.text + '"';
-                    attributionElement.textContent = "— " + randomQuote.author;
-                }
-            }
-
-            // Show quote on load
-            document.addEventListener("DOMContentLoaded", showRandomQuote);
         </script>
     </body>
 </html>

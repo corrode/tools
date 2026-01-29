@@ -51,6 +51,7 @@ struct DryRunStats {
     urls_skipped: usize,
     urls_already_crawled: usize,
     urls_would_crawl: usize,
+    quotes_found: usize,
 }
 
 /// Main indexing function that processes and stores TWiR content
@@ -64,6 +65,7 @@ pub async fn main() -> Result<()> {
     let mut browser = Browser::new(args.debug)?;
     let parser = TwirParser::new();
     let repo = Repository::new(types::get_search_index_path()).await?;
+
     let mut crawl_count = 0;
 
     // Fetch all entries first
@@ -161,11 +163,27 @@ pub async fn main() -> Result<()> {
         };
 
         // Parse and process entries
-        let Some(ids) = parser.parse_file(&content) else {
+        let Some(parse_result) = parser.parse_file(&content) else {
             log::warn!("No valid entries found in file: {file_name}");
             continue;
         };
-        for id in ids {
+
+        // Process quotes
+        for quote in parse_result.quotes {
+            dry_run_stats.quotes_found += 1;
+
+            if args.dry_run {
+                info!(
+                    "[DRY RUN] Would insert quote: \"{}\" by {}",
+                    quote.text.lines().next().unwrap_or(""),
+                    quote.author
+                );
+            } else if let Err(e) = repo.insert_quote(&quote).await {
+                log::warn!("Failed to insert quote: {e}");
+            }
+        }
+
+        for id in parse_result.entries {
             dry_run_stats.urls_found += 1;
 
             // Skip if URL shouldn't be processed
@@ -251,6 +269,7 @@ pub async fn main() -> Result<()> {
         info!("=== DRY RUN SUMMARY ===");
         info!("Files processed: {}", dry_run_stats.files_processed);
         info!("URLs found: {}", dry_run_stats.urls_found);
+        info!("Quotes found: {}", dry_run_stats.quotes_found);
         info!("URLs skipped (filtered): {}", dry_run_stats.urls_skipped);
         info!(
             "URLs already crawled: {}",

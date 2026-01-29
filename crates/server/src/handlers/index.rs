@@ -1,8 +1,12 @@
 use anyhow::Result;
 use askama::Template;
-use axum::response::Html;
+use axum::{extract::State, response::Html};
+use std::sync::Arc;
+use storage::Repository;
 
 use types::SearchResult;
+
+use crate::handlers::search::DisplayQuote;
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -17,10 +21,22 @@ struct SearchTemplate {
     sort_by: Option<String>,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
+    quote: Option<DisplayQuote>,
 }
 
 /// Handler for the index page
-pub(crate) async fn index() -> Result<Html<String>, axum::http::StatusCode> {
+pub(crate) async fn index(
+    State(repo): State<Arc<Repository>>,
+) -> Result<Html<String>, axum::http::StatusCode> {
+    let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
+        Some(DisplayQuote {
+            text: q.text,
+            author: q.author,
+        })
+    } else {
+        None
+    };
+
     let template = SearchTemplate {
         query: None,
         results: vec![],
@@ -32,6 +48,7 @@ pub(crate) async fn index() -> Result<Html<String>, axum::http::StatusCode> {
         sort_by: None,
         prev_page_href: None,
         next_page_href: None,
+        quote,
     };
     template
         .render()

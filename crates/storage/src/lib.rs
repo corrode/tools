@@ -57,6 +57,21 @@ impl Repository {
         .execute(&self.pool)
         .await?;
 
+        // Create quotes table
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS quotes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT NOT NULL,
+                author TEXT NOT NULL,
+                url TEXT,
+                date TEXT NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
         // Create FTS5 virtual table
         sqlx::query(
             r#"
@@ -115,6 +130,56 @@ impl Repository {
             .await?;
 
         Ok(())
+    }
+
+    /// Inserts a new quote
+    pub async fn insert_quote(&self, quote: &types::Quote) -> Result<()> {
+        log::debug!("Inserting quote by: {}", quote.author);
+
+        let date_str = quote.date.format("%Y-%m-%d").to_string();
+        let url_str = quote.url.as_ref().map(|u| u.as_str());
+
+        sqlx::query(
+            r#"
+            INSERT INTO quotes(text, author, url, date)
+            VALUES (?, ?, ?, ?)
+            "#,
+        )
+        .bind(&quote.text)
+        .bind(&quote.author)
+        .bind(url_str)
+        .bind(&date_str)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Retrieves a random quote from the database
+    pub async fn get_random_quote(&self) -> Result<Option<types::Quote>> {
+        use sqlx::Row;
+        let quote = sqlx::query(
+            r#"
+            SELECT text, author, url, date
+            FROM quotes
+            ORDER BY RANDOM()
+            LIMIT 1
+            "#,
+        )
+        .map(|row: sqlx::sqlite::SqliteRow| {
+            let url_str: Option<String> = row.get("url");
+            let url = url_str.and_then(|u| url::Url::parse(&u).ok());
+            types::Quote {
+                text: row.get("text"),
+                author: row.get("author"),
+                url,
+                date: row.get("date"),
+            }
+        })
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(quote)
     }
 
     /// Inserts a new entry
