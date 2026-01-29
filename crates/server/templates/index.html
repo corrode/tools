@@ -21,7 +21,7 @@
                     <option value="light-hacker-news">Hacker News</option>
                 </optgroup>
                 <optgroup label="Dark Themes">
-                    <option value="dark-oxide">Oxide (Default)</option>
+                    <option value="dark-cathode">Cathode (Default)</option>
                     <option value="dark-github">GitHub</option>
                     <option value="dark-twir">This Week in Rust</option>
                 </optgroup>
@@ -268,7 +268,7 @@
             // Initialize theme
             document.addEventListener("DOMContentLoaded", () => {
                 const savedTheme =
-                    localStorage.getItem("theme") || "dark-oxide";
+                    localStorage.getItem("theme") || "dark-cathode";
                 setTheme(savedTheme);
                 document.getElementById("theme-select").value = savedTheme;
 
