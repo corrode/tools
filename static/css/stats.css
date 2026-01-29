@@ -21,12 +21,6 @@ html[data-theme="dark-twir"] h1 {
     align-items: center;
 }
 
-/* Dark GitHub */
-html[data-theme="dark-github"] h1 {
-    color: #ffffff;
-    font-weight: 700;
-}
-
 /* Stats Grid Layout */
 .stats-grid {
     display: grid;

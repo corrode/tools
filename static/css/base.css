@@ -203,47 +203,6 @@ html[data-theme="dark-cathode"] .logo {
         hue-rotate(100deg) brightness(95%) contrast(92%);
 }
 
-html[data-theme="dark-github"] {
-    --color-background: #0d1117;
-    --color-surface: #161b22;
-    --color-primary: #58a6ff;
-    --color-primary-muted: #1f6feb;
-    --color-text: #c9d1d9;
-    --color-text-muted: #8b949e;
-    --color-border: #30363d;
-}
-
-html[data-theme="dark-github"] h1,
-html[data-theme="dark-github"] h2 {
-    color: #ffffff;
-    font-weight: 700;
-}
-
-html[data-theme="dark-github"] mark {
-    background: rgba(88, 166, 255, 0.3);
-}
-
-/* GitHub purple/blue radial glow */
-html[data-theme="dark-github"] .hero-pattern {
-    background: radial-gradient(
-        ellipse 80% 50% at 50% -20%,
-        rgba(120, 119, 198, 0.3),
-        transparent
-    );
-}
-
-html[data-theme="dark-github"] .hero-pattern::after {
-    display: none;
-}
-
-html[data-theme="dark-github"] .header-link:hover {
-    opacity: 1;
-}
-
-html[data-theme="dark-github"] a:visited {
-    color: #ffffff;
-}
-
 /* Prevent transitions during load */
 .preload * {
     transition: none !important;
