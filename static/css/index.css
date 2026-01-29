@@ -239,8 +239,12 @@ html[data-theme="dark-cathode"] .result-meta .domain {
     pointer-events: none;
 }
 
-.filter-container {
-    display: contents;
+.filter-toggle-checkbox {
+    display: none;
+}
+
+.filter-toggle-checkbox:not(:checked) ~ #filter-panel {
+    display: none;
 }
 
 .filter-button {
@@ -253,10 +257,6 @@ html[data-theme="dark-cathode"] .result-meta .domain {
     list-style: none;
     display: inline-flex;
     align-items: center;
-}
-
-.filter-button::-webkit-details-marker {
-    display: none;
 }
 
 .filter-button:hover {
@@ -277,6 +277,8 @@ html[data-theme="dark-cathode"] .result-meta .domain {
     padding: 20px;
     margin-bottom: 20px;
     width: 100%;
+    flex-basis: 100%;
+    flex-shrink: 0;
 }
 
 .filter-group {
