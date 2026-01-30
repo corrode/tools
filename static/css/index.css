@@ -242,7 +242,17 @@ html[data-theme="dark-twir"] .tag {
     width: 20px;
     height: 20px;
     color: var(--color-text-muted);
-    pointer-events: none;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-icon:hover {
+    color: var(--color-primary);
 }
 
 .filter-toggle-checkbox {

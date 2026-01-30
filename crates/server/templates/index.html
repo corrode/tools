@@ -77,20 +77,28 @@
                         oninput="if(this.value.trim().length > 0) document.querySelector('.filter-button').style.display = 'inline-flex';"
                         onkeydown="if(event.key === 'Enter') { document.getElementById('filter-toggle').checked = false; setTimeout(() => document.activeElement.blur(), 50); }"
                     />
-                    <svg
+                    <button
+                        type="submit"
                         class="search-icon"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                        style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
+                        aria-label="Search"
+                        onclick="document.getElementById('filter-toggle').checked = false; setTimeout(() => document.getElementById('search').blur(), 50);"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                    </svg>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            style="width: 100%; height: 100%;"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                    </button>
                 </div>
 
                 <input type="checkbox" id="filter-toggle" class="filter-toggle-checkbox" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}checked{% endif %} />
