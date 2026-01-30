@@ -3,6 +3,7 @@
 use super::cookies::COOKIE_BANNER_SELECTORS;
 use super::paths;
 use super::sanitizer::Sanitizer;
+use super::youtube::YouTube;
 use types::EntryId;
 
 use anyhow::{Result, bail};
@@ -86,6 +87,28 @@ impl Browser {
     /// Crawls a webpage and returns its text content
     pub async fn crawl(&self, entry_id: &EntryId) -> Result<Option<String>> {
         log::info!("Crawling {}", entry_id.url);
+
+        // Try specialized YouTube crawler first
+        if YOUTUBE_PATTERN.is_match(entry_id.url.as_str())
+            || YOUTUBE_SHORT_PATTERN.is_match(entry_id.url.as_str())
+        {
+            match YouTube::new(entry_id.url.as_str()).await {
+                Ok(video) => {
+                    log::info!("Successfully crawled YouTube video: {}", video.title);
+                    let content = format!(
+                        "{}\n\n{}\n\nThumbnail: {}",
+                        video.title, video.description, video.thumbnails.maxres
+                    );
+                    return Ok(Some(content));
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Failed to crawl YouTube video: {}. Falling back to standard crawler.",
+                        e
+                    );
+                }
+            }
+        }
 
         // Rewrite YouTube URLs to thumbnail URLs to avoid cookie banners
         let target_url =

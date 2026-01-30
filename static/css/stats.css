@@ -261,3 +261,27 @@ html[data-theme="dark-twir"] h1 {
     margin-bottom: 32px;
     font-weight: 500;
 }
+
+@media (max-width: 600px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .stat-card {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .category-item,
+    .year-item {
+        padding: 12px 16px;
+    }
+
+    .domain-list {
+        grid-template-columns: 1fr;
+    }
+}

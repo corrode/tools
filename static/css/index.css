@@ -699,3 +699,48 @@ html[data-theme="dark-twir"] .tag {
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
+
+@media (max-width: 768px) {
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .active-filters {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .result-item {
+        padding: 20px;
+    }
+
+    .result-meta {
+        flex-wrap: wrap;
+    }
+
+    .result-meta .domain {
+        margin-left: 0;
+    }
+
+    .pagination {
+        padding: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .dual-range-slider {
+        padding: 24px 0;
+    }
+
+    .dual-range-input::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .dual-range-input::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+}

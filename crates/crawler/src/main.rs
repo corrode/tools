@@ -9,7 +9,7 @@ mod cookies;
 mod parser;
 mod paths;
 mod sanitizer;
-// mod youtube;
+mod youtube;
 
 pub use browser::Browser;
 pub use parser::TwirParser;
@@ -57,6 +57,7 @@ struct DryRunStats {
 /// Main indexing function that processes and stores TWiR content
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     env_logger::init();
     let args = Args::parse();
 

@@ -4,6 +4,17 @@ An experimental search engine for Rust-related content.
 
 This project crawls sources like "This Week in Rust" posts, storing the data in an sqlite database.
 
+## Configuration
+
+To crawl YouTube videos, you need a YouTube Data API v3 key.
+
+1. Create a `.env` file in the root directory.
+2. Add your API key:
+
+```env
+YOUTUBE_API_KEY=your_api_key_here
+```
+
 ## Starting the server
 
 ```sh
