@@ -152,6 +152,24 @@ html[data-theme="light-hacker-news"] footer {
     background-color: #f6f6ef;
 }
 
+html[data-theme="light-hacker-news"] .theme-switcher {
+    top: 2px;
+    right: 2px;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+html[data-theme="light-hacker-news"] .theme-switcher select {
+    border-radius: 0;
+    border: 1px solid #000000;
+    background-color: #f6f6ef;
+    color: #000000;
+    font-family: Verdana, Geneva, sans-serif;
+    font-size: 9pt;
+    padding: 1px;
+}
+
 html[data-theme="dark-twir"] {
     --color-background: #2a2a2a;
     --color-surface: #353535;
@@ -276,6 +294,7 @@ h2 {
     display: inline-flex;
     align-items: center;
     gap: 12px;
+    white-space: nowrap;
 }
 
 .logo {
@@ -290,6 +309,7 @@ h2 {
     display: inline-flex;
     align-items: center;
     gap: 12px;
+    white-space: nowrap;
 }
 
 .header-link:hover {

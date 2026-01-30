@@ -92,11 +92,18 @@
             <div class="result-snippet">{{ snippet|safe }}</div>
             {% endif %}
             <div class="result-meta">
-                <span class="domain-icon">{{ result.icon_svg()|safe }}</span>
-                TWiR #{{ result.twir_issue() }} | {{ result.entry.id.category }}
-                | {{ result.entry.id.date }} | ~{{ result.reading_time_minutes()
-                }} min read
-                <span class="domain">{{ result.domain() }}</span>
+                <span class="meta-item">
+                    <span class="domain-icon"
+                        >{{ result.icon_svg()|safe }}</span
+                    >
+                    <span class="domain">{{ result.domain() }}</span>
+                </span>
+                <span class="meta-item">TWiR #{{ result.twir_issue() }}</span>
+                <span class="meta-item">{{ result.entry.id.category }}</span>
+                <span class="meta-item">{{ result.entry.id.date }}</span>
+                <span class="meta-item"
+                    >~{{ result.reading_time_minutes() }} min read</span
+                >
             </div>
         </div>
         {% endfor %} {% endif %}

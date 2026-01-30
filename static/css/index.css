@@ -113,6 +113,15 @@ html[data-theme="light-hacker-news"] .result-meta .domain {
     font-weight: normal;
 }
 
+html[data-theme="light-hacker-news"] .meta-item {
+    color: #828282;
+}
+
+html[data-theme="light-hacker-news"] .meta-item:not(:last-child)::after {
+    margin: 0 4px;
+    color: #828282;
+}
+
 html[data-theme="light-hacker-news"] .discussion-link {
     color: #828282;
 }
@@ -171,10 +180,12 @@ html[data-theme="dark-twir"] .result-meta {
     letter-spacing: normal;
 }
 
-html[data-theme="dark-twir"] .result-meta .domain {
-    background-color: rgba(210, 153, 29, 0.1);
+html[data-theme="dark-twir"] .meta-item {
     color: #d2991d;
-    border: 1px solid rgba(210, 153, 29, 0.2);
+}
+
+html[data-theme="dark-twir"] .meta-item:not(:last-child)::after {
+    color: rgba(210, 153, 29, 0.4);
 }
 
 html[data-theme="dark-twir"] .tag {
@@ -565,7 +576,8 @@ html[data-theme="dark-twir"] .tag {
 .result-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    row-gap: 6px;
     font-size: 0.8rem;
     color: var(--color-text-muted);
     margin-top: 12px;
@@ -573,13 +585,18 @@ html[data-theme="dark-twir"] .tag {
     letter-spacing: 0.05em;
 }
 
-.result-meta .domain {
-    margin-left: auto;
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    font-size: 0.75rem;
     font-weight: 400;
-    background-color: transparent;
-    padding: 4px 10px;
-    border-radius: 4px;
-    color: var(--color-text-muted);
+}
+
+.meta-item:not(:last-child)::after {
+    content: "|";
+    margin: 0 8px;
+    color: var(--color-border);
 }
 
 .domain-icon {
@@ -589,6 +606,7 @@ html[data-theme="dark-twir"] .tag {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
+    margin-right: 6px;
 }
 
 .domain-icon svg {
@@ -714,14 +732,6 @@ html[data-theme="dark-twir"] .tag {
 
     .result-item {
         padding: 20px;
-    }
-
-    .result-meta {
-        flex-wrap: wrap;
-    }
-
-    .result-meta .domain {
-        margin-left: 0;
     }
 
     .pagination {
