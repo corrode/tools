@@ -747,4 +747,18 @@ html[data-theme="dark-twir"] .tag {
     #search {
         font-size: 16px; /* Prevents auto-zoom on iOS */
     }
+
+    @media (max-width: 600px) {
+        .search-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--color-background);
+            margin-left: -16px;
+            margin-right: -16px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--color-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+    }
 }
