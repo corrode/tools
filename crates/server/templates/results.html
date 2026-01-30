@@ -1,6 +1,6 @@
 <div id="results-container">
+    {% if let Some(q) = query %}
     <div class="results" id="search-results">
-        {% if let Some(q) = query %}
         <!-- Show result count and active filters -->
         {% if total_results > 0 %}
         <div class="results-header">
@@ -99,20 +99,11 @@
                 <span class="domain">{{ result.domain() }}</span>
             </div>
         </div>
-        {% endfor %} {% endif %} {% else %}
-        <!-- Empty initial state -->
-        <div class="result-item">
-            <div class="result-title">Start searching</div>
-            <div class="result-snippet">
-                Enter your search terms above to find Rust content from This
-                Week in Rust.
-            </div>
-        </div>
-        {% endif %}
+        {% endfor %} {% endif %}
     </div>
 
     <!-- Pagination (outside results div, aligned right) -->
-    {% if let Some(q) = query %} {% if current_page > 1 || has_more %}
+    {% if current_page > 1 || has_more %}
     <div class="pagination">
         {% if let Some(prev) = prev_page_href %}
         <a
