@@ -743,4 +743,8 @@ html[data-theme="dark-twir"] .tag {
         width: 24px;
         height: 24px;
     }
+
+    #search {
+        font-size: 16px; /* Prevents auto-zoom on iOS */
+    }
 }

@@ -506,7 +506,7 @@ html[data-theme^="light"] .icon-github {
 
 @media (max-width: 600px) {
     .container {
-        padding: 24px 16px;
+        padding: 80px 16px 24px;
     }
     h1 {
         font-size: 2rem;

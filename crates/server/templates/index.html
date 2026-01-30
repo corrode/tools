@@ -49,16 +49,17 @@
                 hx-swap="outerHTML"
                 hx-push-url="true"
                 hx-indicator=".search-icon"
+                hx-trigger="submit, input from:#search delay:500ms"
             >
                 <div class="search-input-wrapper">
                     <input
-                        type="text"
+                        type="search"
                         id="search"
                         name="q"
                         value="{{ query.as_deref().unwrap_or("") }}"
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
-                        hx-trigger="input changed delay:500ms, search"
+                        onkeydown="if(event.key === 'Enter') { document.getElementById('filter-toggle').checked = false; setTimeout(() => document.activeElement.blur(), 50); }"
                     />
                     <svg
                         class="search-icon"
