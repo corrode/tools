@@ -8,7 +8,9 @@ use serde_json::Value;
 use std::env;
 use storage::Repository;
 use types::{Entry, EntryId};
+use yt_transcript_rs::api::YouTubeTranscriptApi;
 
+/// Indexer for YouTube playlists
 pub struct Youtube {
     client: Client,
     api_key: String,
@@ -16,6 +18,7 @@ pub struct Youtube {
 }
 
 impl Youtube {
+    /// Creates a new YouTube indexer
     pub fn new(api_key: String) -> Self {
         // Default to the Rust Channel Uploads playlist if not specified
         // Channel ID: UCaYhcUwRBNscFNUKTjgPFiA -> Uploads Playlist: UUaYhcUwRBNscFNUKTjgPFiA
@@ -64,6 +67,29 @@ impl Youtube {
         let next_page_token = json["nextPageToken"].as_str().map(|s| s.to_string());
 
         Ok((items, next_page_token))
+    }
+
+    /// Fetches the transcript for a given video ID
+    pub async fn fetch_transcript(video_id: &str) -> Option<String> {
+        match YouTubeTranscriptApi::new(None, None, None) {
+            Ok(api) => match api.fetch_transcript(video_id, &["en"], false).await {
+                Ok(transcript) => {
+                    let mut content = String::from("\n\nTranscript:\n");
+                    for snippet in transcript.snippets {
+                        content.push_str(&format!("{} ", snippet.text));
+                    }
+                    Some(content)
+                }
+                Err(e) => {
+                    debug!("Failed to fetch transcript for {}: {:?}", video_id, e);
+                    None
+                }
+            },
+            Err(e) => {
+                warn!("Failed to initialize YouTubeTranscriptApi: {}", e);
+                None
+            }
+        }
     }
 }
 
@@ -122,11 +148,16 @@ impl Indexer for Youtube {
                     date,
                 };
 
-                // For now, we use the description as the text content.
-                // TODO: Fetch transcripts
+                let mut content = format!("{}\n\n{}", title, description);
+
+                if let Some(transcript) = Self::fetch_transcript(video_id).await {
+                    info!("Fetched transcript for video: {}", title);
+                    content.push_str(&transcript);
+                }
+
                 let entry = Entry {
                     id: entry_id,
-                    text: Some(format!("{}\n\n{}", title, description)),
+                    text: Some(content),
                 };
 
                 if let Err(e) = repo.insert_entry(&entry).await {

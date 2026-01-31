@@ -1,10 +1,12 @@
 use anyhow::{Context, Result, bail};
+use crawler::indexer::youtube::Youtube as YoutubeIndexer;
 use regex::Regex;
 use serde_json::Value;
 use std::env;
 
 #[derive(Debug, Clone)]
 pub struct YouTube {
+    pub id: String,
     pub title: String,
     pub description: String,
     pub thumbnails: YouTubeThumbnails,
@@ -84,6 +86,7 @@ impl YouTube {
         let id = item["id"].as_str().unwrap_or("").to_string();
 
         Ok(Self {
+            id: id.clone(),
             title: snippet["title"].as_str().unwrap_or("").to_string(),
             description: snippet["description"].as_str().unwrap_or("").to_string(),
             thumbnails: Self::parse_thumbnails(&snippet["thumbnails"], &id),
@@ -117,9 +120,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     // Set up logging
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .init();
+    env_logger::init();
 
     // Ensure API key is set for the test
     if env::var("YOUTUBE_API_KEY").is_err() {
@@ -144,6 +145,20 @@ async fn main() -> anyhow::Result<()> {
             println!("Thumbnail:   {}", video.thumbnails.maxres);
             println!("----------------------------------------");
             println!("Description:\n{}", video.description);
+            println!("----------------------------------------");
+
+            // Fetch transcript
+            println!("Fetching transcript...");
+            match YoutubeIndexer::fetch_transcript(&video.id).await {
+                Some(transcript) => {
+                    println!("Successfully fetched transcript!");
+                    println!("\nTranscript content (First 500 chars):");
+                    println!("{}", transcript.chars().take(500).collect::<String>());
+                }
+                None => {
+                    eprintln!("Failed to fetch transcript.");
+                }
+            }
             println!("----------------------------------------");
         }
         Err(e) => {

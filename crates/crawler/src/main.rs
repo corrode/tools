@@ -4,18 +4,12 @@
 //! Module for crawling and indexing content.
 //! Handles fetching articles, parsing content, and storing entries in the database.
 
-mod browser;
-mod cookies;
-mod indexer;
-mod parser;
-mod paths;
-mod sanitizer;
-
 use anyhow::Context;
 use anyhow::Result;
-use browser::Browser;
 use clap::Parser;
-use indexer::Indexer;
+use crawler::browser::Browser;
+use crawler::indexer::{self, Indexer};
+use crawler::paths;
 use log::info;
 use std::env;
 use std::fs;

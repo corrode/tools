@@ -2,7 +2,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use storage::Repository;
 
+/// TWiR indexer module
 pub mod twir;
+/// YouTube indexer module
 pub mod youtube;
 
 /// Trait for content indexers

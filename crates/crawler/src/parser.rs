@@ -13,7 +13,9 @@ const TWIR_DATE_FORMATS: [&str; 2] = ["%Y-%m-%d", "%Y-%m-%d %H:%M"];
 
 /// Result of parsing a TWiR file
 pub struct ParseResult {
+    /// Extracted entries
     pub entries: Vec<EntryId>,
+    /// Extracted quotes
     pub quotes: Vec<Quote>,
 }
 
