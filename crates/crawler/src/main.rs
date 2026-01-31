@@ -267,7 +267,6 @@ pub async fn main() -> Result<()> {
     }
 
     if args.dry_run {
-        info!("=== DRY RUN SUMMARY ===");
         info!("Files processed: {}", dry_run_stats.files_processed);
         info!("URLs found: {}", dry_run_stats.urls_found);
         info!("Quotes found: {}", dry_run_stats.quotes_found);
@@ -280,7 +279,6 @@ pub async fn main() -> Result<()> {
             "URLs that would be crawled: {}",
             dry_run_stats.urls_would_crawl
         );
-        info!("======================");
     } else {
         info!("Successfully indexed all TWiR content");
     }
