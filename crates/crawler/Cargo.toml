@@ -9,6 +9,7 @@ types = { workspace = true }
 storage = { workspace = true }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
 dom_smoothie = { workspace = true }

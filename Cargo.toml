@@ -47,6 +47,7 @@ single_match_else = "deny"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }

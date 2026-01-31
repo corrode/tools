@@ -6,20 +6,20 @@
 
 mod browser;
 mod cookies;
+mod indexer;
 mod parser;
 mod paths;
 mod sanitizer;
-mod youtube;
 
-pub use browser::Browser;
-pub use parser::TwirParser;
-pub use storage::Repository;
-pub use types::*;
-
+use anyhow::Context;
 use anyhow::Result;
+use browser::Browser;
 use clap::Parser;
+use indexer::Indexer;
 use log::info;
+use std::env;
 use std::fs;
+use storage::Repository;
 
 /// Command line arguments for the crawler
 #[derive(Parser, Debug)]
@@ -43,18 +43,20 @@ struct Args {
     dry_run: bool,
 }
 
-/// Statistics for dry-run mode
-#[derive(Default)]
-struct DryRunStats {
-    files_processed: usize,
-    urls_found: usize,
-    urls_skipped: usize,
-    urls_already_crawled: usize,
-    urls_would_crawl: usize,
-    quotes_found: usize,
+/// Creates necessary output directories
+fn create_output_directories() -> Result<()> {
+    for path in [
+        &*paths::MARKDOWN_PATH,
+        &*paths::JSON_PATH,
+        &*paths::HTML_PATH,
+        &*paths::SCREENSHOT_PATH,
+    ] {
+        fs::create_dir_all(path)?;
+    }
+    Ok(())
 }
 
-/// Main indexing function that processes and stores TWiR content
+/// Main indexing function that processes and stores content
 #[tokio::main]
 pub async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
@@ -63,285 +65,34 @@ pub async fn main() -> Result<()> {
 
     create_output_directories()?;
 
-    let mut browser = Browser::new(args.debug)?;
-    let parser = TwirParser::new();
+    let mut indexers: Vec<Box<dyn Indexer>> = Vec::new();
+
+    let browser =
+        Browser::new(args.debug).context("Failed to initialize Browser for TWiR indexer")?;
+    let twir = indexer::twir::Twir::new(browser)
+        .with_debug(args.debug)
+        .with_dry_run(args.dry_run)
+        .with_overwrite(args.overwrite)
+        .with_start_date(args.start_date.clone());
+    indexers.push(Box::new(twir));
+
+    // Set up YouTube Indexer
+    let api_key =
+        env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
+    let youtube = indexer::youtube::Youtube::new(api_key);
+    indexers.push(Box::new(youtube));
+
     let repo = Repository::new(types::get_search_index_path()).await?;
 
-    let mut crawl_count = 0;
-
-    // Fetch all entries first
-    let entries = parser.fetch_twir_entries().await?;
-
-    // Determine the start date
-    let start_date_str = if args.overwrite {
-        info!("Overwrite mode: starting from beginning");
-        None
-    } else if let Some(ref date) = args.start_date {
-        info!("Using specified start date: {date}");
-        Some(date.clone())
-    } else {
-        // Use latest date from database as default
-        if let Some(latest_date) = repo.get_latest_entry_date().await? {
-            let date_str = latest_date.format("%Y-%m-%d").to_string();
-            info!("Resuming from latest database entry date: {date_str}");
-            Some(date_str)
+    for mut indexer in indexers {
+        let name = indexer.name();
+        info!("Starting indexer: {name}");
+        if let Err(e) = indexer.index(&repo).await {
+            log::error!("Indexer {name} failed: {e}");
         } else {
-            info!("No entries in database, starting from beginning");
-            None
-        }
-    };
-
-    // Find the checkpoint file based on start date
-    let checkpoint = if let Some(ref start_date) = start_date_str {
-        let matching_file = entries.iter().find(|item| {
-            if let Some(file_name) = item["name"].as_str() {
-                // File names are like "2013-06-29-this-week-in-rust.md"
-                // Extract date prefix (first 10 chars: "YYYY-MM-DD")
-                file_name.len() >= 10 && &file_name[0..10] >= start_date.as_str()
-            } else {
-                false
-            }
-        });
-
-        if let Some(file) = matching_file {
-            if let Some(file_name) = file["name"].as_str() {
-                info!("Starting from file: {file_name}");
-                Some(file_name.to_string())
-            } else {
-                info!("No file name found for start date, starting from beginning");
-                None
-            }
-        } else {
-            info!("No file found for start date, starting from beginning");
-            None
-        }
-    } else {
-        None
-    };
-
-    let mut resume_crawling = checkpoint.is_none(); // If no checkpoint, start immediately
-    let mut dry_run_stats = DryRunStats::default();
-
-    for item in entries {
-        // Skip items that don't have the expected fields (e.g., directories)
-        let Some(file_name) = item["name"].as_str() else {
-            log::debug!("Skipping item without name field");
-            continue;
-        };
-        let Some(download_url) = item["download_url"].as_str() else {
-            log::debug!("Skipping item '{file_name}' without download_url field");
-            continue;
-        };
-        let markdown_file_path = format!("{}/{file_name}", &*paths::MARKDOWN_PATH);
-
-        // Check if we should start processing from this file
-        if !resume_crawling {
-            if Some(file_name.to_string()) == checkpoint {
-                // We've reached the checkpoint file, start processing from here
-                info!("Reached checkpoint file: {file_name}, resuming crawling");
-                resume_crawling = true;
-            } else {
-                // Skip files before the checkpoint
-                info!("Skipping file before checkpoint: {file_name}");
-                continue;
-            }
-        }
-
-        info!("Processing file: {file_name}");
-        dry_run_stats.files_processed += 1;
-
-        // Download file if we don't have it yet
-        let content = if fs::metadata(&markdown_file_path).is_ok() {
-            info!("Reading existing file: {file_name}");
-            fs::read_to_string(&markdown_file_path)?
-        } else {
-            info!("Downloading new file: {file_name}");
-            let content = parser.download_content(download_url).await?;
-            if args.debug {
-                fs::write(&markdown_file_path, &content)?;
-            }
-            content
-        };
-
-        // Parse and process entries
-        let Some(parse_result) = parser.parse_file(&content) else {
-            log::warn!("No valid entries found in file: {file_name}");
-            continue;
-        };
-
-        // Process quotes
-        for quote in parse_result.quotes {
-            dry_run_stats.quotes_found += 1;
-
-            if args.dry_run {
-                info!(
-                    "[DRY RUN] Would insert quote: \"{}\" by {}",
-                    quote.text.lines().next().unwrap_or(""),
-                    quote.author
-                );
-            } else if let Err(e) = repo.insert_quote(&quote).await {
-                log::warn!("Failed to insert quote: {e}");
-            }
-        }
-
-        for id in parse_result.entries {
-            dry_run_stats.urls_found += 1;
-
-            // Skip if URL shouldn't be processed
-            if !should_process_url(&id.url) {
-                log::debug!("Skipping URL based on criteria: {}", id.url);
-                dry_run_stats.urls_skipped += 1;
-                continue;
-            }
-
-            // Skip if URL already exists in database
-            if repo.url_exists(&id.url).await? {
-                log::info!("Skipping already crawled URL: {}", id.url);
-                dry_run_stats.urls_already_crawled += 1;
-                continue;
-            }
-
-            if args.dry_run {
-                // Dry run mode: just log what would be crawled
-                info!(
-                    "[DRY RUN] Would crawl: {} | {} | {} | {}",
-                    id.date, id.category, id.title, id.url
-                );
-                dry_run_stats.urls_would_crawl += 1;
-            } else {
-                // Recreate browser every 50 crawls to prevent memory leaks
-                crawl_count += 1;
-                if crawl_count % 50 == 0 {
-                    info!("Recreating browser after {crawl_count} crawls to prevent memory issues");
-                    drop(browser);
-                    browser = Browser::new(args.debug)?;
-                }
-
-                // Crawl and store content
-                log::info!("Crawling URL: {}", id.url);
-                let crawl_result = browser.crawl(&id).await;
-
-                // If browser connection is closed, recreate it and retry once
-                let crawl_result = if let Err(ref e) = crawl_result {
-                    let err_msg = e.to_string();
-                    if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
-                        log::warn!("Browser connection closed, recreating browser and retrying...");
-                        drop(browser);
-                        browser = Browser::new(args.debug)?;
-                        browser.crawl(&id).await
-                    } else {
-                        crawl_result
-                    }
-                } else {
-                    crawl_result
-                };
-
-                match crawl_result {
-                    Ok(text) => {
-                        let entry = Entry { id, text };
-
-                        // Store in database
-                        if let Err(e) = repo.insert_entry(&entry).await {
-                            info!("Failed to store entry {}: {e}", entry.id.url);
-                            continue;
-                        }
-
-                        info!("Successfully stored entry: {}", entry.id.url);
-
-                        if args.debug {
-                            // Write JSON file for troubleshooting
-                            let json_path = format!("{}/{}.json", &*paths::JSON_PATH, entry.id);
-                            if let Err(e) =
-                                fs::write(&json_path, serde_json::to_string_pretty(&entry)?)
-                            {
-                                info!("Failed to save JSON for {}: {e}", entry.id.url);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        log::warn!("Failed to crawl {}: {e}", id.url);
-                    }
-                }
-            }
+            info!("Indexer {name} completed successfully.");
         }
     }
 
-    if args.dry_run {
-        info!("Files processed: {}", dry_run_stats.files_processed);
-        info!("URLs found: {}", dry_run_stats.urls_found);
-        info!("Quotes found: {}", dry_run_stats.quotes_found);
-        info!("URLs skipped (filtered): {}", dry_run_stats.urls_skipped);
-        info!(
-            "URLs already crawled: {}",
-            dry_run_stats.urls_already_crawled
-        );
-        info!(
-            "URLs that would be crawled: {}",
-            dry_run_stats.urls_would_crawl
-        );
-    } else {
-        info!("Successfully indexed all TWiR content");
-    }
     Ok(())
-}
-
-/// Creates necessary output directories
-fn create_output_directories() -> Result<()> {
-    fs::create_dir_all(&*paths::MARKDOWN_PATH)?;
-    fs::create_dir_all(&*paths::JSON_PATH)?;
-    fs::create_dir_all(&*paths::HTML_PATH)?;
-    fs::create_dir_all(&*paths::SCREENSHOT_PATH)?;
-    Ok(())
-}
-
-/// Determines if a URL should be processed based on various criteria
-fn should_process_url(url: &url::Url) -> bool {
-    let supported_protocols = ["http", "https"];
-    if !supported_protocols
-        .iter()
-        .any(|protocol| url.scheme() == *protocol)
-    {
-        log::info!("Skipping unsupported protocol: {url}");
-        return false;
-    }
-
-    let ignored_urls = [
-        // Social media and forums
-        "github.com",
-        "reddit.com",
-        "meetup.com",
-        "twitter.com",
-        "https://t.me", // Explicitly using full URL to avoid matching other domains
-        "x.com",
-        "vimeo.com",
-        "bsky.app",
-        "mastodon.social",
-        "irc.mozilla.org",
-        "mibbit.com",
-        // TWiR infrastructure (appears in every issue template)
-        "this-week-in-rust.org",
-        "this-week-in-rust.us11.list-manage.com", // Newsletter signup
-        "users.rust-lang.org",                    // Rust user forum
-        // Rust project infrastructure
-        "rust-lang.org",
-        "forge.rust-lang.org",
-        "foundation.rust-lang.org",
-        // Event platforms
-        "luma.com",
-        "lu.ma",
-        "eventbrite.com",
-        "calagator.org",
-        // Job/recruiting platforms
-        "smartrecruiters.com",
-        "bamboohr.com",
-        // Other
-        "google.com/calendar",
-    ];
-
-    if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
-        log::debug!("Skipping ignored URL: {url}");
-        return false;
-    }
-
-    true
 }
