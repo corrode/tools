@@ -51,7 +51,8 @@ impl Repository {
                 date TEXT NOT NULL,
                 text TEXT,
                 entry_type TEXT NOT NULL DEFAULT 'article',
-                thumbnail_url TEXT
+                thumbnail_url TEXT,
+                tags TEXT
             )
             "#,
         )
@@ -63,6 +64,40 @@ impl Repository {
         let _ = sqlx::query("ALTER TABLE entries_meta ADD COLUMN thumbnail_url TEXT")
             .execute(&self.pool)
             .await;
+
+        // Create tags table
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create entry_tags junction table
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS entry_tags (
+                entry_id INTEGER NOT NULL,
+                tag_id INTEGER NOT NULL,
+                PRIMARY KEY (entry_id, tag_id),
+                FOREIGN KEY (entry_id) REFERENCES entries_meta(id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create index for tag lookups
+        // Note: PRIMARY KEY (entry_id, tag_id) covers lookups by entry_id
+        // and UNIQUE(name) in tags table covers lookups by tag name
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_entry_tags_tag ON entry_tags(tag_id)")
+            .execute(&self.pool)
+            .await?;
 
         // Create quotes table
         sqlx::query(
@@ -197,7 +232,7 @@ impl Repository {
         let date_str = entry.id.date.format("%Y-%m-%d").to_string();
         let url_str = entry.id.url.as_str();
 
-        sqlx::query(
+        let entry_id: i64 = sqlx::query_scalar(
             r#"
             INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -207,6 +242,7 @@ impl Repository {
                 date = excluded.date,
                 text = excluded.text,
                 thumbnail_url = excluded.thumbnail_url
+            RETURNING id
             "#,
         )
         .bind(&entry.id.title)
@@ -216,8 +252,32 @@ impl Repository {
         .bind(entry.text.as_deref().unwrap_or(""))
         .bind("article")
         .bind(&entry.thumbnail_url)
-        .execute(&mut *tx)
+        .fetch_one(&mut *tx)
         .await?;
+
+        // Handle tags
+        sqlx::query("DELETE FROM entry_tags WHERE entry_id = ?")
+            .bind(entry_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for tag in &entry.tags {
+            sqlx::query("INSERT OR IGNORE INTO tags (name) VALUES (?)")
+                .bind(tag)
+                .execute(&mut *tx)
+                .await?;
+
+            let tag_id: i64 = sqlx::query_scalar("SELECT id FROM tags WHERE name = ?")
+                .bind(tag)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            sqlx::query("INSERT INTO entry_tags (entry_id, tag_id) VALUES (?, ?)")
+                .bind(entry_id)
+                .bind(tag_id)
+                .execute(&mut *tx)
+                .await?;
+        }
 
         tx.commit().await?;
         Ok(())
@@ -803,6 +863,7 @@ impl Repository {
                                     .unwrap_or_default(),
                             },
                             text: row.get("text"),
+                            tags: vec![],
                         },
                         rank: row.get("rank"),
                         snippet: row.get("snippet"),
@@ -820,10 +881,20 @@ impl Repository {
 
         let rows = sqlx::query(
             r#"
-            SELECT title, url, category, date, text, thumbnail_url
-            FROM entries_meta
-            WHERE date = ?
-            ORDER BY category, title
+            SELECT
+                m.title,
+                m.url,
+                m.category,
+                m.date,
+                m.text,
+                m.thumbnail_url,
+                GROUP_CONCAT(t.name) as tags
+            FROM entries_meta m
+            LEFT JOIN entry_tags et ON m.id = et.entry_id
+            LEFT JOIN tags t ON et.tag_id = t.id
+            WHERE m.date = ?
+            GROUP BY m.id
+            ORDER BY m.category, m.title
             "#,
         )
         .bind(&date_str)
@@ -851,6 +922,11 @@ impl Repository {
                         date,
                     },
                     text: row.get("text"),
+                    tags: row
+                        .try_get::<&str, _>("tags")
+                        .ok()
+                        .map(|t| t.split(',').map(String::from).collect())
+                        .unwrap_or_default(),
                 })
             })
             .collect();

@@ -49,6 +49,9 @@ pub struct Entry {
     pub text: Option<String>,
     /// Optional thumbnail URL (relative or absolute)
     pub thumbnail_url: Option<String>,
+    /// Optional tags or related metadata (e.g. "issue:123", "author:name")
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 /// Quote of the Week

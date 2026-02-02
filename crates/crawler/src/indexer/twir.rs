@@ -115,6 +115,22 @@ impl Indexer for Twir {
         "twir"
     }
 
+    fn set_debug(&mut self, value: bool) {
+        self.debug = value;
+    }
+
+    fn set_dry_run(&mut self, value: bool) {
+        self.dry_run = value;
+    }
+
+    fn set_overwrite(&mut self, value: bool) {
+        self.overwrite = value;
+    }
+
+    fn set_start_date(&mut self, date: Option<String>) {
+        self.start_date = date;
+    }
+
     async fn index(&mut self, repo: &Repository) -> Result<()> {
         info!("Fetching TWiR entries...");
         let entries = self.parser.fetch_twir_entries().await?;
@@ -260,6 +276,7 @@ impl Indexer for Twir {
                             id: id.clone(),
                             text: Some(text),
                             thumbnail_url: None,
+                            tags: vec!["twir".to_string(), "newsletter".to_string()],
                         };
                         if let Err(e) = repo.insert_entry(&entry).await {
                             log::error!("Failed to store entry {}: {e}", id.url);

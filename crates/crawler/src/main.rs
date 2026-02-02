@@ -6,7 +6,8 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use crawler::browser::Browser;
 use crawler::indexer::{self, Indexer};
 use crawler::paths;
 use log::info;
@@ -34,6 +35,17 @@ struct Args {
     /// Dry run mode: parse TWiR files and show what would be crawled without actually crawling
     #[arg(long, default_value_t = false)]
     dry_run: bool,
+
+    /// Specific indexer to run
+    #[arg(long, value_enum)]
+    indexer: CrawlerName,
+}
+
+#[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
+enum CrawlerName {
+    Twir,
+    Youtube,
+    Rfc,
 }
 
 /// Creates necessary output directories
@@ -49,6 +61,23 @@ fn create_output_directories() -> Result<()> {
     Ok(())
 }
 
+fn create_twir_indexer(debug: bool) -> Result<Box<dyn Indexer>> {
+    let browser = Browser::new(debug).context("Failed to initialize Browser for TWiR indexer")?;
+    let twir = indexer::twir::Twir::new(browser);
+    Ok(Box::new(twir))
+}
+
+fn create_rfc_indexer() -> Box<dyn Indexer> {
+    Box::new(indexer::rfc::Rfc::new())
+}
+
+fn create_youtube_indexer() -> Result<Box<dyn Indexer>> {
+    let api_key =
+        env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
+    let youtube = indexer::youtube::Youtube::new(api_key);
+    Ok(Box::new(youtube))
+}
+
 /// Main indexing function that processes and stores content
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -58,33 +87,25 @@ pub async fn main() -> Result<()> {
 
     create_output_directories()?;
 
-    let mut indexers: Vec<Box<dyn Indexer>> = Vec::new();
+    let mut indexer: Box<dyn Indexer> = match args.indexer {
+        CrawlerName::Twir => create_twir_indexer(args.debug)?,
+        CrawlerName::Rfc => create_rfc_indexer(),
+        CrawlerName::Youtube => create_youtube_indexer()?,
+    };
 
-    // let browser =
-    //     Browser::new(args.debug).context("Failed to initialize Browser for TWiR indexer")?;
-    // let twir = indexer::twir::Twir::new(browser)
-    //     .with_debug(args.debug)
-    //     .with_dry_run(args.dry_run)
-    //     .with_overwrite(args.overwrite)
-    //     .with_start_date(args.start_date.clone());
-    // indexers.push(Box::new(twir));
-
-    // Set up YouTube Indexer
-    let api_key =
-        env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
-    let youtube = indexer::youtube::Youtube::new(api_key).with_overwrite(args.overwrite);
-    indexers.push(Box::new(youtube));
+    indexer.set_debug(args.debug);
+    indexer.set_dry_run(args.dry_run);
+    indexer.set_overwrite(args.overwrite);
+    indexer.set_start_date(args.start_date);
 
     let repo = Repository::new(types::get_search_index_path()).await?;
 
-    for mut indexer in indexers {
-        let name = indexer.name();
-        info!("Starting indexer: {name}");
-        if let Err(e) = indexer.index(&repo).await {
-            log::error!("Indexer {name} failed: {e}");
-        } else {
-            info!("Indexer {name} completed successfully.");
-        }
+    let name = indexer.name();
+    info!("Starting indexer: {name}");
+    if let Err(e) = indexer.index(&repo).await {
+        log::error!("Indexer {name} failed: {e}");
+    } else {
+        info!("Indexer {name} completed successfully.");
     }
 
     Ok(())

@@ -143,6 +143,10 @@ impl Indexer for Youtube {
         "youtube"
     }
 
+    fn set_overwrite(&mut self, value: bool) {
+        self.overwrite = value;
+    }
+
     async fn index(&mut self, repo: &Repository) -> Result<()> {
         info!("Indexing YouTube playlist: {}", self.playlist_id);
 
@@ -230,6 +234,7 @@ impl Indexer for Youtube {
                     id: entry_id,
                     text: Some(content),
                     thumbnail_url,
+                    tags: vec!["youtube".to_string(), "video".to_string()],
                 };
 
                 if let Err(e) = repo.insert_entry(&entry).await {
