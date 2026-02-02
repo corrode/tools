@@ -50,12 +50,19 @@ impl Repository {
                 category TEXT NOT NULL,
                 date TEXT NOT NULL,
                 text TEXT,
-                entry_type TEXT NOT NULL DEFAULT 'article'
+                entry_type TEXT NOT NULL DEFAULT 'article',
+                thumbnail_url TEXT
             )
             "#,
         )
         .execute(&self.pool)
         .await?;
+
+        // Add thumbnail_url column if it doesn't exist (migration for existing DBs)
+        // We ignore the error if the column already exists
+        let _ = sqlx::query("ALTER TABLE entries_meta ADD COLUMN thumbnail_url TEXT")
+            .execute(&self.pool)
+            .await;
 
         // Create quotes table
         sqlx::query(
@@ -192,13 +199,14 @@ impl Repository {
 
         sqlx::query(
             r#"
-            INSERT INTO entries_meta(title, url, category, date, text, entry_type)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
                 title = excluded.title,
                 category = excluded.category,
                 date = excluded.date,
-                text = excluded.text
+                text = excluded.text,
+                thumbnail_url = excluded.thumbnail_url
             "#,
         )
         .bind(&entry.id.title)
@@ -207,6 +215,7 @@ impl Repository {
         .bind(&date_str)
         .bind(entry.text.as_deref().unwrap_or(""))
         .bind("article")
+        .bind(&entry.thumbnail_url)
         .execute(&mut *tx)
         .await?;
 
@@ -722,7 +731,7 @@ impl Repository {
             let mut q = QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url,
                 rank,
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
@@ -736,7 +745,7 @@ impl Repository {
             QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url,
                 0.0 as rank,
                 NULL as snippet
             FROM entries_meta m
@@ -785,6 +794,7 @@ impl Repository {
                     let date = row.get::<String, _>("date");
                     SearchResult {
                         entry: Entry {
+                            thumbnail_url: row.try_get("thumbnail_url").ok(),
                             id: EntryId {
                                 title: row.get("title"),
                                 url,
@@ -810,8 +820,8 @@ impl Repository {
 
         let rows = sqlx::query(
             r#"
-            SELECT title, url, category, date, text
-            FROM entries
+            SELECT title, url, category, date, text, thumbnail_url
+            FROM entries_meta
             WHERE date = ?
             ORDER BY category, title
             "#,
@@ -833,6 +843,7 @@ impl Repository {
                 };
 
                 url::Url::parse(row.get("url")).ok().map(|url| Entry {
+                    thumbnail_url: row.try_get("thumbnail_url").ok(),
                     id: EntryId {
                         title: row.get("title"),
                         url,

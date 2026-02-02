@@ -1,4 +1,5 @@
 use super::Indexer;
+use anyhow::bail;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate};
@@ -6,15 +7,28 @@ use log::{debug, info, warn};
 use reqwest::Client;
 use serde_json::Value;
 use std::env;
+use std::path::PathBuf;
 use storage::Repository;
+use tokio::fs;
 use types::{Entry, EntryId};
-use yt_transcript_rs::api::YouTubeTranscriptApi;
+use ytt::YouTubeTranscript;
+
+#[derive(Debug, Default)]
+struct YoutubeStats {
+    videos_processed: usize,
+    thumbnails_downloaded: usize,
+    transcripts_found: usize,
+    transcripts_failed: usize,
+    total_transcript_length: usize,
+}
 
 /// Indexer for YouTube playlists
 pub struct Youtube {
     client: Client,
     api_key: String,
     playlist_id: String,
+    overwrite: bool,
+    static_dir: PathBuf,
 }
 
 impl Youtube {
@@ -29,7 +43,21 @@ impl Youtube {
             client: Client::new(),
             api_key,
             playlist_id,
+            overwrite: false,
+            static_dir: PathBuf::from("static/youtube"),
         }
+    }
+
+    /// Set overwrite mode
+    pub fn with_overwrite(mut self, overwrite: bool) -> Self {
+        self.overwrite = overwrite;
+        self
+    }
+
+    /// Set static directory for thumbnails
+    pub fn with_static_dir(mut self, static_dir: PathBuf) -> Self {
+        self.static_dir = static_dir;
+        self
     }
 
     async fn fetch_playlist_items(
@@ -42,7 +70,7 @@ impl Youtube {
         );
 
         if let Some(token) = page_token {
-            url.push_str(&format!("&pageToken={}", token));
+            url.push_str(&format!("&pageToken={token}"));
         }
 
         let response = self.client.get(&url).send().await?;
@@ -50,11 +78,7 @@ impl Youtube {
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            anyhow::bail!(
-                "YouTube API request failed with status: {}. Body: {}",
-                status,
-                text
-            );
+            bail!("YouTube API request failed with status: {status}. Body: {text}");
         }
 
         let json: Value = response.json().await?;
@@ -69,24 +93,44 @@ impl Youtube {
         Ok((items, next_page_token))
     }
 
+    async fn download_thumbnail(&self, url: &str, video_id: &str) -> Result<Option<String>> {
+        if url.is_empty() {
+            return Ok(None);
+        }
+
+        let file_name = format!("{video_id}.jpg");
+        let file_path = self.static_dir.join(&file_name);
+
+        // Ensure directory exists
+        if !fs::try_exists(&self.static_dir).await? {
+            fs::create_dir_all(&self.static_dir).await?;
+        }
+
+        if fs::try_exists(&file_path).await? && !self.overwrite {
+            return Ok(Some(format!("/static/youtube/{file_name}")));
+        }
+
+        let bytes = self.client.get(url).send().await?.bytes().await?;
+        fs::write(&file_path, bytes).await?;
+
+        Ok(Some(format!("/static/youtube/{file_name}")))
+    }
+
     /// Fetches the transcript for a given video ID
     pub async fn fetch_transcript(video_id: &str) -> Option<String> {
-        match YouTubeTranscriptApi::new(None, None, None) {
-            Ok(api) => match api.fetch_transcript(video_id, &["en"], false).await {
-                Ok(transcript) => {
-                    let mut content = String::from("\n\nTranscript:\n");
-                    for snippet in transcript.snippets {
-                        content.push_str(&format!("{} ", snippet.text));
-                    }
-                    Some(content)
-                }
-                Err(e) => {
-                    debug!("Failed to fetch transcript for {}: {:?}", video_id, e);
-                    None
-                }
-            },
+        let api = YouTubeTranscript::new();
+        match api.fetch_transcript(video_id, Some(vec!["en"])).await {
+            Ok(transcript) => {
+                let content = transcript
+                    .transcript
+                    .iter()
+                    .map(|snippet| snippet.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Some(content)
+            }
             Err(e) => {
-                warn!("Failed to initialize YouTubeTranscriptApi: {}", e);
+                debug!("Failed to fetch transcript for {}: {:?}", video_id, e);
                 None
             }
         }
@@ -102,8 +146,8 @@ impl Indexer for Youtube {
     async fn index(&mut self, repo: &Repository) -> Result<()> {
         info!("Indexing YouTube playlist: {}", self.playlist_id);
 
+        let mut stats = YoutubeStats::default();
         let mut next_page_token = None;
-        let mut total_processed = 0;
 
         loop {
             let (items, token) = self.fetch_playlist_items(next_page_token.clone()).await?;
@@ -124,20 +168,39 @@ impl Indexer for Youtube {
                 let url_str = format!("https://www.youtube.com/watch?v={}", video_id);
                 let url = url::Url::parse(&url_str)?;
 
-                // Skip if already exists
-                if repo.url_exists(&url).await? {
-                    debug!("Skipping existing video: {}", title);
+                // Skip if already exists and not overwriting
+                if !self.overwrite && repo.url_exists(&url).await? {
+                    debug!("Skipping existing video: {title}");
                     continue;
                 }
 
                 let date = match DateTime::parse_from_rfc3339(published_at) {
                     Ok(dt) => dt.date_naive(),
                     Err(_) => {
-                        warn!(
-                            "Failed to parse date for video {}: {}",
-                            video_id, published_at
-                        );
+                        warn!("Failed to parse date for video {video_id}: {published_at}",);
                         NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+                    }
+                };
+
+                // Thumbnail handling
+                let thumbnails = &snippet["thumbnails"];
+                // Prefer high (480x360), then medium, then default.
+                let thumb_url = thumbnails["high"]["url"]
+                    .as_str()
+                    .or_else(|| thumbnails["medium"]["url"].as_str())
+                    .or_else(|| thumbnails["default"]["url"].as_str())
+                    .unwrap_or("");
+
+                let thumbnail_url = match self.download_thumbnail(thumb_url, video_id).await {
+                    Ok(path) => {
+                        if path.is_some() {
+                            stats.thumbnails_downloaded += 1;
+                        }
+                        path
+                    }
+                    Err(e) => {
+                        warn!("Failed to download thumbnail for {video_id}: {e}");
+                        None
                     }
                 };
 
@@ -148,25 +211,33 @@ impl Indexer for Youtube {
                     date,
                 };
 
-                let mut content = format!("{}\n\n{}", title, description);
+                let mut content = format!("{title}\n\n{description}");
 
                 if let Some(transcript) = Self::fetch_transcript(video_id).await {
-                    info!("Fetched transcript for video: {}", title);
+                    info!("Fetched transcript for video: {title}");
+                    info!(
+                        "Start of transcript: {}",
+                        &transcript[..transcript.len().min(100)]
+                    );
                     content.push_str(&transcript);
+                    stats.transcripts_found += 1;
+                    stats.total_transcript_length += transcript.len();
+                } else {
+                    stats.transcripts_failed += 1;
                 }
 
                 let entry = Entry {
                     id: entry_id,
                     text: Some(content),
+                    thumbnail_url,
                 };
 
                 if let Err(e) = repo.insert_entry(&entry).await {
-                    warn!("Failed to insert video entry {}: {}", video_id, e);
+                    warn!("Failed to insert video entry {video_id}: {e}");
                 } else {
-                    info!("Indexed video: {}", title);
+                    info!("Indexed video: {title}");
                 }
-
-                total_processed += 1;
+                stats.videos_processed += 1;
             }
 
             next_page_token = token;
@@ -175,10 +246,22 @@ impl Indexer for Youtube {
             }
         }
 
+        info!("YouTube indexing complete.");
+        info!("Stats:");
+        info!("  Videos Processed: {}", stats.videos_processed);
+        info!("  Thumbnails Downloaded: {}", stats.thumbnails_downloaded);
+        info!("  Transcripts Found: {}", stats.transcripts_found);
+        info!("  Transcripts Failed: {}", stats.transcripts_failed);
         info!(
-            "YouTube indexing complete. Processed {} videos.",
-            total_processed
+            "  Total Transcript Length: {} chars",
+            stats.total_transcript_length
         );
+        if stats.transcripts_found > 0 {
+            info!(
+                "  Avg Transcript Length: {} chars",
+                stats.total_transcript_length / stats.transcripts_found
+            );
+        }
         Ok(())
     }
 }

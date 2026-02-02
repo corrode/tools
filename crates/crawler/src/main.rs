@@ -61,19 +61,19 @@ pub async fn main() -> Result<()> {
 
     let mut indexers: Vec<Box<dyn Indexer>> = Vec::new();
 
-    let browser =
-        Browser::new(args.debug).context("Failed to initialize Browser for TWiR indexer")?;
-    let twir = indexer::twir::Twir::new(browser)
-        .with_debug(args.debug)
-        .with_dry_run(args.dry_run)
-        .with_overwrite(args.overwrite)
-        .with_start_date(args.start_date.clone());
-    indexers.push(Box::new(twir));
+    // let browser =
+    //     Browser::new(args.debug).context("Failed to initialize Browser for TWiR indexer")?;
+    // let twir = indexer::twir::Twir::new(browser)
+    //     .with_debug(args.debug)
+    //     .with_dry_run(args.dry_run)
+    //     .with_overwrite(args.overwrite)
+    //     .with_start_date(args.start_date.clone());
+    // indexers.push(Box::new(twir));
 
     // Set up YouTube Indexer
     let api_key =
         env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
-    let youtube = indexer::youtube::Youtube::new(api_key);
+    let youtube = indexer::youtube::Youtube::new(api_key).with_overwrite(args.overwrite);
     indexers.push(Box::new(youtube));
 
     let repo = Repository::new(types::get_search_index_path()).await?;

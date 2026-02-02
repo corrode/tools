@@ -47,6 +47,8 @@ pub struct Entry {
     pub id: EntryId,
     /// Full text content of the article
     pub text: Option<String>,
+    /// Optional thumbnail URL (relative or absolute)
+    pub thumbnail_url: Option<String>,
 }
 
 /// Quote of the Week
