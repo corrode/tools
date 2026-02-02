@@ -29,6 +29,8 @@ struct SearchTemplate {
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    start_index: i64,
+    end_index: i64,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
     pub quote: Option<DisplayQuote>,
@@ -45,6 +47,8 @@ struct ResultsTemplate {
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    start_index: i64,
+    end_index: i64,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
     pub quote: Option<DisplayQuote>,
@@ -140,7 +144,7 @@ pub(crate) async fn search(
         .collect();
 
     let current_page = params.page.unwrap_or(1).max(1);
-    let has_more = results.len() == 20; // If we got 20 results, there might be more
+    let has_more = results.len() == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {
         Some(build_url(&params, current_page - 1))
@@ -153,6 +157,9 @@ pub(crate) async fn search(
     } else {
         None
     };
+
+    let start_index = ((current_page - 1) * Repository::RESULTS_PER_PAGE + 1) as i64;
+    let end_index = start_index + results.len() as i64 - 1;
 
     // Select random quote
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
@@ -174,6 +181,8 @@ pub(crate) async fn search(
             start_year: params.start_year,
             end_year: params.end_year,
             sort_by: params.sort_by,
+            start_index,
+            end_index,
             prev_page_href,
             next_page_href,
             quote,
@@ -193,6 +202,8 @@ pub(crate) async fn search(
             start_year: params.start_year,
             end_year: params.end_year,
             sort_by: params.sort_by,
+            start_index,
+            end_index,
             prev_page_href,
             next_page_href,
             quote,

@@ -22,6 +22,9 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Number of results per page
+    pub const RESULTS_PER_PAGE: u32 = 20;
+
     /// Creates a new repository instance.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
@@ -636,7 +639,6 @@ impl Repository {
         sort_by: Option<&str>,
         page: Option<u32>,
     ) -> Result<Vec<SearchResult>> {
-        const RESULTS_PER_PAGE: u32 = 20;
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
 
@@ -709,10 +711,10 @@ impl Repository {
 
         // Add pagination
         let page_num = page.unwrap_or(1).max(1);
-        let offset = (page_num - 1) * RESULTS_PER_PAGE;
+        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
 
         query.push(" LIMIT ");
-        query.push_bind(RESULTS_PER_PAGE as i64);
+        query.push_bind(Self::RESULTS_PER_PAGE as i64);
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 

@@ -1,75 +1,76 @@
 <div id="results-container">
     {% if let Some(q) = query %}
     <div class="results" id="search-results">
-        <!-- Show result count and active filters -->
-        {% if total_results > 0 %}
-        <div class="results-header">
-            <div class="result-count">
-                Found {{ total_results }} result{% if total_results != 1 %}s{%
-                endif %}
-            </div>
-            <div class="active-filters" id="active-filters">
-                {% let start = start_year.unwrap_or(2013) %} {% let end =
-                end_year.unwrap_or(2025) %} {% if start != 2013 || end != 2025
-                %}
-                <span class="filter-tag">
-                    Date: {{ start }} - {{ end }}
-                    <span
-                        class="filter-tag-remove"
-                        onclick="
-                            document.getElementById('start-year').value = 2013;
-                            document.getElementById('end-year').value = 2025;
-                            document.getElementById('start-year-display').value = 2013;
-                            document.getElementById('end-year-display').value = 2025;
-                            var rangeSelected = document.getElementById('range-selected');
-                            if(rangeSelected) { rangeSelected.style.left = '0%'; rangeSelected.style.width = '100%'; }
-                        "
-                        hx-get="/search"
-                        hx-include=".search-container"
-                        hx-target="#results-container"
-                        hx-swap="outerHTML"
-                        >×</span
-                    >
-                </span>
-                {% endif %} {% let sort =
-                sort_by.as_deref().unwrap_or("relevance") %} {% if sort !=
-                "relevance" %}
-                <span class="filter-tag">
-                    Sort: {% if sort == "date-desc" %}Newest first{% else if
-                    sort == "date-asc" %}Oldest first{% else %}{{ sort }}{%
-                    endif %}
-                    <span
-                        class="filter-tag-remove"
-                        onclick="document.getElementById('sort-by').value = 'relevance';"
-                        hx-get="/search"
-                        hx-include=".search-container"
-                        hx-target="#results-container"
-                        hx-swap="outerHTML"
-                        >×</span
-                    >
-                </span>
-                {% endif %} {% if (start != 2013 || end != 2025) || sort !=
-                "relevance" %}
-                <button
-                    class="clear-filters"
+        {% let start = start_year.unwrap_or(2013) %}
+        {% let end = end_year.unwrap_or(2025) %}
+        {% let sort = sort_by.as_deref().unwrap_or("relevance") %}
+        {% if (start != 2013 || end != 2025) || sort != "relevance" %}
+        <div class="active-filters" id="active-filters">
+            {% if start != 2013 || end != 2025 %}
+            <span class="filter-tag">
+                Date: {{ start }} - {{ end }}
+                <span
+                    class="filter-tag-remove"
                     onclick="
                         document.getElementById('start-year').value = 2013;
                         document.getElementById('end-year').value = 2025;
-                        document.getElementById('start-year-display').value = 2013;
-                        document.getElementById('end-year-display').value = 2025;
-                        const rangeSelected = document.getElementById('range-selected');
-                        if(rangeSelected) { rangeSelected.style.left = '0%'; rangeSelected.style.width = '100%'; }
-                        document.getElementById('sort-by').value = 'relevance';
+                        document.getElementById('start-year-display').value =
+                            2013;
+                        document.getElementById('end-year-display').value =
+                            2025;
+                        var rangeSelected =
+                            document.getElementById('range-selected');
+                        if (rangeSelected) {
+                            rangeSelected.style.left = '0%';
+                            rangeSelected.style.width = '100%';
+                        }
                     "
                     hx-get="/search"
                     hx-include=".search-container"
                     hx-target="#results-container"
                     hx-swap="outerHTML"
+                    >×</span
                 >
-                    Clear all
-                </button>
-                {% endif %}
-            </div>
+            </span>
+            {% endif %} {% if sort != "relevance" %}
+            <span class="filter-tag">
+                Sort: {% if sort == "date-desc" %}Newest first{% else if sort ==
+                "date-asc" %}Oldest first{% else %}{{ sort }}{% endif %}
+                <span
+                    class="filter-tag-remove"
+                    onclick="
+                        document.getElementById('sort-by').value = 'relevance'
+                    "
+                    hx-get="/search"
+                    hx-include=".search-container"
+                    hx-target="#results-container"
+                    hx-swap="outerHTML"
+                    >×</span
+                >
+            </span>
+            {% endif %}
+            <button
+                class="clear-filters"
+                onclick="
+                    document.getElementById('start-year').value = 2013;
+                    document.getElementById('end-year').value = 2025;
+                    document.getElementById('start-year-display').value = 2013;
+                    document.getElementById('end-year-display').value = 2025;
+                    const rangeSelected =
+                        document.getElementById('range-selected');
+                    if (rangeSelected) {
+                        rangeSelected.style.left = '0%';
+                        rangeSelected.style.width = '100%';
+                    }
+                    document.getElementById('sort-by').value = 'relevance';
+                "
+                hx-get="/search"
+                hx-include=".search-container"
+                hx-target="#results-container"
+                hx-swap="outerHTML"
+            >
+                Clear all
+            </button>
         </div>
         {% endif %} {% if results.is_empty() %}
         <div class="result-item">
@@ -110,7 +111,7 @@
     </div>
 
     <!-- Pagination (outside results div, aligned right) -->
-    {% if current_page > 1 || has_more %}
+    {% if total_results > 0 %}
     <div class="pagination">
         {% if let Some(prev) = prev_page_href %}
         <a
@@ -127,7 +128,10 @@
         <span class="pagination-btn disabled">← Previous</span>
         {% endif %}
 
-        <span class="pagination-info">Page {{ current_page }}</span>
+        <span class="pagination-info">
+            Showing {{ start_index }}-{{ end_index }} of {{ total_results }}
+            results
+        </span>
 
         {% if let Some(next) = next_page_href %}
         <a
