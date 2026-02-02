@@ -23,8 +23,6 @@ pub struct DisplayQuote {
 struct SearchTemplate {
     query: Option<String>,
     results: Vec<SearchResult>,
-    current_page: u32,
-    has_more: bool,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -41,8 +39,6 @@ struct SearchTemplate {
 struct ResultsTemplate {
     query: Option<String>,
     results: Vec<SearchResult>,
-    current_page: u32,
-    has_more: bool,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -175,8 +171,6 @@ pub(crate) async fn search(
         let template = ResultsTemplate {
             query: params.q,
             results,
-            current_page,
-            has_more,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,
@@ -196,8 +190,6 @@ pub(crate) async fn search(
         let template = SearchTemplate {
             query: params.q,
             results,
-            current_page,
-            has_more,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,

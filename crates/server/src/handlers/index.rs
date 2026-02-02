@@ -13,8 +13,6 @@ use crate::handlers::search::DisplayQuote;
 struct SearchTemplate {
     query: Option<String>,
     results: Vec<SearchResult>,
-    current_page: u32,
-    has_more: bool,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -42,8 +40,6 @@ pub(crate) async fn index(
     let template = SearchTemplate {
         query: None,
         results: vec![],
-        current_page: 1,
-        has_more: false,
         total_results: 0,
         start_year: None,
         end_year: None,
