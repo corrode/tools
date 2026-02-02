@@ -7,7 +7,6 @@
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
-use crawler::browser::Browser;
 use crawler::indexer::{self, Indexer};
 use crawler::paths;
 use log::info;
