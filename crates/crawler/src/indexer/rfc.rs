@@ -190,7 +190,18 @@ impl Indexer for Rfc {
                 }
             };
 
-            let (date_opt, title_opt, tags) = self.parse_metadata(&content);
+            let (date_opt, title_opt, mut tags) = self.parse_metadata(&content);
+
+            tags.push("rfc".to_string());
+
+            let mut reference = None;
+
+            if let Some(filename) = file.name.strip_suffix(".md")
+                && let Some(first_part) = filename.split('-').next()
+                && let Ok(num) = first_part.parse::<u32>()
+            {
+                reference = Some(format!("RFC #{}", num));
+            }
 
             let date = date_opt.unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap());
 
@@ -207,6 +218,7 @@ impl Indexer for Rfc {
                 id: entry_id,
                 text: Some(content),
                 thumbnail_url: None,
+                reference,
                 tags,
             };
 

@@ -17,6 +17,8 @@ pub struct ParseResult {
     pub entries: Vec<EntryId>,
     /// Extracted quotes
     pub quotes: Vec<Quote>,
+    /// Issue number
+    pub issue_number: Option<u32>,
 }
 
 /// Parser for TWiR content
@@ -66,6 +68,11 @@ impl TwirParser {
     pub fn parse_file(&self, content: &str) -> Option<ParseResult> {
         let (meta, body) = content.split_once("\n\n")?;
         let date = self.parse_date_from_meta(meta).ok()?;
+        let mut issue_number = self.parse_number_from_meta(meta);
+
+        if issue_number.is_none() {
+            issue_number = self.parse_number_from_body(body);
+        }
 
         // Extract quotes from the full body
         let quotes = self.extract_quotes(body, date);
@@ -73,7 +80,49 @@ impl TwirParser {
         let body = self.skip_intro_section(body);
         let entries = self.content_to_entry_ids(&body, date);
 
-        Some(ParseResult { entries, quotes })
+        Some(ParseResult {
+            entries,
+            quotes,
+            issue_number,
+        })
+    }
+
+    /// Parses the issue number from TWiR metadata
+    fn parse_number_from_meta(&self, meta: &str) -> Option<u32> {
+        let mut title_number = None;
+
+        for line in meta.lines() {
+            if let Some((key, val)) = line.split_once(":") {
+                let key = key.trim();
+                let val = val.trim();
+
+                if key == "Number" {
+                    return val.parse().ok();
+                }
+
+                if key == "Title"
+                    && let Some(num_str) = val.strip_prefix("This Week in Rust ")
+                    && let Ok(num) = num_str.parse::<u32>()
+                {
+                    title_number = Some(num);
+                }
+            }
+        }
+        title_number
+    }
+
+    /// Parses the issue number from the body content
+    fn parse_number_from_body(&self, body: &str) -> Option<u32> {
+        for line in body.lines().take(10) {
+            let line = line.trim();
+            if let Some(rest) = line.strip_prefix("# This Week in Rust ") {
+                let num_str = rest.split_whitespace().next().unwrap_or(rest);
+                if let Ok(num) = num_str.parse::<u32>() {
+                    return Some(num);
+                }
+            }
+        }
+        None
     }
 
     /// Parses the date from TWiR metadata

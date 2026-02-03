@@ -108,14 +108,15 @@ impl Repository {
 
         let entry_id: i64 = sqlx::query_scalar(
             r#"
-            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url, reference)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
                 title = excluded.title,
                 category = excluded.category,
                 date = excluded.date,
                 text = excluded.text,
-                thumbnail_url = excluded.thumbnail_url
+                thumbnail_url = excluded.thumbnail_url,
+                reference = excluded.reference
             RETURNING id
             "#,
         )
@@ -126,6 +127,7 @@ impl Repository {
         .bind(entry.text.as_deref().unwrap_or(""))
         .bind("article")
         .bind(&entry.thumbnail_url)
+        .bind(&entry.reference)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -664,7 +666,7 @@ impl Repository {
             let mut q = QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
                 rank,
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
@@ -678,7 +680,7 @@ impl Repository {
             QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
                 0.0 as rank,
                 NULL as snippet
             FROM entries_meta m
@@ -728,6 +730,7 @@ impl Repository {
                     SearchResult {
                         entry: Entry {
                             thumbnail_url: row.try_get("thumbnail_url").ok(),
+                            reference: row.try_get("reference").ok(),
                             id: EntryId {
                                 title: row.get("title"),
                                 url,
@@ -761,6 +764,7 @@ impl Repository {
                 m.date,
                 m.text,
                 m.thumbnail_url,
+                m.reference,
                 GROUP_CONCAT(t.name) as tags
             FROM entries_meta m
             LEFT JOIN entry_tags et ON m.id = et.entry_id
@@ -788,6 +792,7 @@ impl Repository {
 
                 url::Url::parse(row.get("url")).ok().map(|url| Entry {
                     thumbnail_url: row.try_get("thumbnail_url").ok(),
+                    reference: row.try_get("reference").ok(),
                     id: EntryId {
                         title: row.get("title"),
                         url,

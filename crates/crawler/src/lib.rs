@@ -12,8 +12,7 @@ pub mod browser;
 pub mod cookies;
 /// Indexing logic for various sources
 pub mod indexer;
-/// Content parsing logic
-pub mod parser;
+
 /// File system paths
 pub mod paths;
 /// HTML sanitization

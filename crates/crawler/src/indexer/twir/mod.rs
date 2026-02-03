@@ -1,11 +1,14 @@
 use super::Indexer;
-use crate::{browser::Browser, parser::TwirParser, paths};
+use crate::{browser::Browser, paths};
 use anyhow::Result;
 use async_trait::async_trait;
 use log::info;
 use std::fs;
 use storage::Repository;
 use types::Entry;
+
+mod parser;
+use parser::TwirParser;
 
 /// Indexer for "This Week in Rust" newsletter
 pub struct Twir {
@@ -199,6 +202,8 @@ impl Indexer for Twir {
                 continue;
             };
 
+            let issue_number = parse_result.issue_number;
+
             // Process Quotes
             for quote in parse_result.quotes {
                 if self.dry_run {
@@ -272,11 +277,15 @@ impl Indexer for Twir {
 
                 match crawl_result {
                     Ok(Some(text)) => {
+                        let tags = vec!["twir".to_string(), "newsletter".to_string()];
+                        let reference = issue_number.map(|num| format!("TWiR #{}", num));
+
                         let entry = Entry {
                             id: id.clone(),
                             text: Some(text),
                             thumbnail_url: None,
-                            tags: vec!["twir".to_string(), "newsletter".to_string()],
+                            reference,
+                            tags,
                         };
                         if let Err(e) = repo.insert_entry(&entry).await {
                             log::error!("Failed to store entry {}: {e}", id.url);

@@ -1,10 +1,10 @@
 <div id="results-container">
     {% if let Some(q) = query %}
     <div class="results" id="search-results">
-        {% let start = start_year.unwrap_or(2013) %}
-        {% let end = end_year.unwrap_or(2025) %}
-        {% let sort = sort_by.as_deref().unwrap_or("relevance") %}
-        {% if (start != 2013 || end != 2025) || sort != "relevance" %}
+        {% let start = start_year.unwrap_or(2013) %} {% let end =
+        end_year.unwrap_or(2025) %} {% let sort =
+        sort_by.as_deref().unwrap_or("relevance") %} {% if (start != 2013 || end
+        != 2025) || sort != "relevance" %}
         <div class="active-filters" id="active-filters">
             {% if start != 2013 || end != 2025 %}
             <span class="filter-tag">
@@ -99,7 +99,9 @@
                     >
                     <span class="domain">{{ result.domain() }}</span>
                 </span>
-                <span class="meta-item">TWiR #{{ result.twir_issue() }}</span>
+                {% for tag in result.formatted_tags() %}
+                <span class="meta-item">{{ tag }}</span>
+                {% endfor %}
                 <span class="meta-item">{{ result.entry.id.category }}</span>
                 <span class="meta-item">{{ result.entry.id.date }}</span>
                 <span class="meta-item"

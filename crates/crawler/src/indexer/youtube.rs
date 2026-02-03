@@ -231,6 +231,7 @@ impl Indexer for Youtube {
                 }
 
                 let entry = Entry {
+                    reference: None,
                     id: entry_id,
                     text: Some(content),
                     thumbnail_url,

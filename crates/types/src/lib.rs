@@ -49,6 +49,8 @@ pub struct Entry {
     pub text: Option<String>,
     /// Optional thumbnail URL (relative or absolute)
     pub thumbnail_url: Option<String>,
+    /// Reference identifier (e.g. "RFC #123", "TWiR #456")
+    pub reference: Option<String>,
     /// Optional tags or related metadata (e.g. "issue:123", "author:name")
     #[serde(default)]
     pub tags: Vec<String>,
@@ -66,9 +68,6 @@ pub struct Quote {
     /// Date of the TWiR issue containing the quote
     pub date: NaiveDate,
 }
-
-/// Date of the first TWiR issue
-const FIRST_ISSUE_DATE: NaiveDate = NaiveDate::from_ymd_opt(2013, 6, 29).unwrap();
 
 /// Search result with relevance information and highlighted content
 #[derive(Debug)]
@@ -107,24 +106,23 @@ impl SearchResult {
         (words / 200).max(1) // At least 1 minute
     }
 
-    /// Returns the TWIR issue number based on date
-    /// First issue was 2013-06-29, weekly cadence
-    pub fn twir_issue(&self) -> usize {
-        let first_issue_date = FIRST_ISSUE_DATE;
-        let days_diff = self
-            .entry
-            .id
-            .date
-            .signed_duration_since(first_issue_date)
-            .num_days();
+    /// Returns formatted tags for display
+    pub fn formatted_tags(&self) -> Vec<String> {
+        let mut tags = Vec::new();
 
-        // Handle dates before the first issue
-        if days_diff < 0 {
-            return 0;
+        if let Some(ref reference) = self.entry.reference {
+            tags.push(reference.clone());
         }
 
-        // Approximate weekly issues (7 days each), starting from issue 1
-        ((days_diff / 7) as usize) + 1
+        tags.extend(
+            self.entry
+                .tags
+                .iter()
+                .filter(|tag| !matches!(tag.as_str(), "rfc" | "twir" | "newsletter"))
+                .cloned(),
+        );
+
+        tags
     }
 
     /// Returns the icon SVG for this result
