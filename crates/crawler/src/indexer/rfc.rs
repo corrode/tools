@@ -1,3 +1,8 @@
+//! Indexer for Rust RFCs
+//!
+//! This fetches RFC files from the rust-lang/rfcs GitHub repository, and
+//! extracts metadata such as title, date, and tags from the markdown files.
+
 use super::Indexer;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,6 +15,7 @@ use storage::Repository;
 use types::{Entry, EntryId};
 use url::Url;
 
+/// GitHub API URL for the RFCs folder
 const GH_RFCS_FOLDER_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/contents/text";
 
 #[derive(Debug, Deserialize)]
