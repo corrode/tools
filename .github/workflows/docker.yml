@@ -55,15 +55,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # This is needed because we use the `latest` and Coolify
-      # does not automatically redeploy this tag.
-      - name: Trigger Coolify Redeploy
+      - name: Trigger Coolify deployment via webhook
         run: |
-          curl --request POST "${{ secrets.COOLIFY_URL }}/api/v1/applications/${{ secrets.COOLIFY_APPLICATION_ID }}/deploy" \
-            --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            --header "Content-Type: application/json" \
-            --data-raw '{
-              "pullmergeRequestId": null,
-              "branch": "${{ github.ref_name }}",
-              "forceRebuild": true
-            }'
+          curl --request GET "${{env.COOLIFY_URL}}/api/v1/deploy?uuid=${{env.COOLIFY_RESOURCE_ID}}&force=false" \
+               --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
