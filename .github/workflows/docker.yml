@@ -59,5 +59,11 @@ jobs:
       # does not automatically redeploy this tag.
       - name: Trigger Coolify Redeploy
         run: |
-          curl --request GET '${{ secrets.COOLIFY_WEBHOOK }}' \
-            --header 'Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}'
+          curl --request POST "${{ secrets.COOLIFY_URL }}/api/v1/applications/${{ secrets.COOLIFY_APPLICATION_ID }}/deploy" \
+            --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data-raw '{
+              "pullmergeRequestId": null,
+              "branch": "${{ github.ref_name }}",
+              "forceRebuild": true
+            }'
