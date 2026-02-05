@@ -1,10 +1,12 @@
 FROM rust:latest AS chef
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
 FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
+# Ensure that `COPY --from=planner` relies purely on file content for caching.
+RUN touch -t 197001010000 recipe.json
 
 FROM chef AS builder
 # Install build dependencies
