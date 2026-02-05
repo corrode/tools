@@ -57,7 +57,5 @@ jobs:
 
       - name: Trigger Coolify deployment via webhook
         run: |
-          curl --request POST "${{ secrets.COOLIFY_URL }}/api/v1/deploy" \
-               --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-               --header "Content-Type: application/json" \
-               --data '{"uuid": "${{ secrets.COOLIFY_RESOURCE_ID }}", "force": false}'
+          curl --request GET "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_RESOURCE_ID }}&force=false" \
+               --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
