@@ -59,4 +59,4 @@ jobs:
         run: |
           curl --request POST "${{secrets.COOLIFY_URL}}/api/v1/deploy?uuid=${{secrets.COOLIFY_RESOURCE_ID}}&force=false" \
                --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-               --fail --location-trusted
+               --location-trusted
