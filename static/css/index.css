@@ -20,11 +20,17 @@
     margin-bottom: -1px; /* Overlap container border */
 }
 
-.tab:hover {
+.tab:visited:not(.tab-active) {
+    color: var(--color-text-muted);
+}
+
+.tab:hover:not(.tab-active) {
     color: var(--color-text);
 }
 
-.tab-active {
+.tab-active,
+.tab-active:visited,
+.tab-active:hover {
     color: var(--color-primary);
     border-bottom-color: var(--color-primary);
 }
@@ -41,7 +47,6 @@ html[data-theme="light-docs-rs"] .tab {
 
 html[data-theme="light-docs-rs"] .tab-active {
     color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
 }
 
 /* Hacker News tabs */
@@ -57,13 +62,14 @@ html[data-theme="light-hacker-news"] .tab {
     padding: 6px 2px;
 }
 
-html[data-theme="light-hacker-news"] .tab-active {
+html[data-theme="light-hacker-news"] .tab:hover:not(.tab-active) {
     color: #ff6600;
-    border-bottom-color: #ff6600;
 }
 
-html[data-theme="light-hacker-news"] .tab:hover {
+html[data-theme="light-hacker-news"] .tab-active,
+html[data-theme="light-hacker-news"] .tab-active:hover {
     color: #ff6600;
+    border-bottom-color: #ff6600;
 }
 
 /* Dark TWIR tabs */
@@ -73,13 +79,14 @@ html[data-theme="dark-twir"] .tab {
     letter-spacing: normal;
 }
 
-html[data-theme="dark-twir"] .tab-active {
+html[data-theme="dark-twir"] .tab:hover:not(.tab-active) {
     color: #d2991d;
-    border-bottom-color: #d2991d;
 }
 
-html[data-theme="dark-twir"] .tab:hover {
+html[data-theme="dark-twir"] .tab-active,
+html[data-theme="dark-twir"] .tab-active:hover {
     color: #d2991d;
+    border-bottom-color: #d2991d;
 }
 
 /* Light Docs RS */

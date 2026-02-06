@@ -1,5 +1,48 @@
 <div id="results-container">
-    {% if let Some(q) = query %}
+    {% if let Some(q) = query %} {% if !q.is_empty() %}
+    <!-- Content type tabs -->
+    <nav class="search-tabs" role="tablist" aria-label="Content type">
+        <a
+            href="?q={{ q }}"
+            class="tab {% if content_type == crate::handlers::search::ContentType::All %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == crate::handlers::search::ContentType::All %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'all'"
+        >
+            All
+        </a>
+        <a
+            href="?q={{ q }}&type=articles"
+            class="tab {% if content_type == crate::handlers::search::ContentType::Articles %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == crate::handlers::search::ContentType::Articles %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=articles"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'articles'"
+        >
+            Articles
+        </a>
+        <a
+            href="?q={{ q }}&type=video"
+            class="tab {% if content_type == crate::handlers::search::ContentType::Video %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == crate::handlers::search::ContentType::Video %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=video"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'video'"
+        >
+            Videos
+        </a>
+    </nav>
+    {% endif %}
     <div class="results" id="search-results">
         {% let start = start_year.unwrap_or(2013) %} {% let end =
         end_year.unwrap_or(2025) %} {% let sort =
