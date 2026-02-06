@@ -235,7 +235,6 @@ impl Indexer for Youtube {
                     id: entry_id,
                     text: Some(content),
                     thumbnail_url,
-                    tags: vec!["youtube".to_string(), "video".to_string()],
                 };
 
                 if let Err(e) = repo.insert_entry(&entry).await {

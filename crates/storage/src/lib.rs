@@ -131,29 +131,8 @@ impl Repository {
         .fetch_one(&mut *tx)
         .await?;
 
-        // Handle tags
-        sqlx::query("DELETE FROM entry_tags WHERE entry_id = ?")
-            .bind(entry_id)
-            .execute(&mut *tx)
-            .await?;
-
-        for tag in &entry.tags {
-            sqlx::query("INSERT OR IGNORE INTO tags (name) VALUES (?)")
-                .bind(tag)
-                .execute(&mut *tx)
-                .await?;
-
-            let tag_id: i64 = sqlx::query_scalar("SELECT id FROM tags WHERE name = ?")
-                .bind(tag)
-                .fetch_one(&mut *tx)
-                .await?;
-
-            sqlx::query("INSERT INTO entry_tags (entry_id, tag_id) VALUES (?, ?)")
-                .bind(entry_id)
-                .bind(tag_id)
-                .execute(&mut *tx)
-                .await?;
-        }
+        // Note: entry_id is used by the query above, keeping the variable binding
+        let _ = entry_id;
 
         tx.commit().await?;
         Ok(())
@@ -739,7 +718,6 @@ impl Repository {
                                     .unwrap_or_default(),
                             },
                             text: row.get("text"),
-                            tags: vec![],
                         },
                         rank: row.get("rank"),
                         snippet: row.get("snippet"),
@@ -758,20 +736,16 @@ impl Repository {
         let rows = sqlx::query(
             r#"
             SELECT
-                m.title,
-                m.url,
-                m.category,
-                m.date,
-                m.text,
-                m.thumbnail_url,
-                m.reference,
-                GROUP_CONCAT(t.name) as tags
-            FROM entries_meta m
-            LEFT JOIN entry_tags et ON m.id = et.entry_id
-            LEFT JOIN tags t ON et.tag_id = t.id
-            WHERE m.date = ?
-            GROUP BY m.id
-            ORDER BY m.category, m.title
+                title,
+                url,
+                category,
+                date,
+                text,
+                thumbnail_url,
+                reference
+            FROM entries_meta
+            WHERE date = ?
+            ORDER BY category, title
             "#,
         )
         .bind(&date_str)
@@ -800,11 +774,6 @@ impl Repository {
                         date,
                     },
                     text: row.get("text"),
-                    tags: row
-                        .try_get::<&str, _>("tags")
-                        .ok()
-                        .map(|t| t.split(',').map(String::from).collect())
-                        .unwrap_or_default(),
                 })
             })
             .collect();

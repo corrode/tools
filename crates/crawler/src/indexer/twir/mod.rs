@@ -277,7 +277,6 @@ impl Indexer for Twir {
 
                 match crawl_result {
                     Ok(Some(text)) => {
-                        let tags = vec!["twir".to_string(), "newsletter".to_string()];
                         let reference = issue_number.map(|num| format!("TWiR #{}", num));
 
                         let entry = Entry {
@@ -285,7 +284,6 @@ impl Indexer for Twir {
                             text: Some(text),
                             thumbnail_url: None,
                             reference,
-                            tags,
                         };
                         if let Err(e) = repo.insert_entry(&entry).await {
                             log::error!("Failed to store entry {}: {e}", id.url);

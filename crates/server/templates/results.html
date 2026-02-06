@@ -99,9 +99,9 @@
                     >
                     <span class="domain">{{ result.domain() }}</span>
                 </span>
-                {% for tag in result.formatted_tags() %}
-                <span class="meta-item">{{ tag }}</span>
-                {% endfor %}
+                {% if let Some(reference) = result.formatted_reference() %}
+                <span class="meta-item">{{ reference }}</span>
+                {% endif %}
                 <span class="meta-item">{{ result.entry.id.category }}</span>
                 <span class="meta-item">{{ result.entry.id.date }}</span>
                 <span class="meta-item"

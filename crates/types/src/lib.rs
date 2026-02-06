@@ -51,9 +51,6 @@ pub struct Entry {
     pub thumbnail_url: Option<String>,
     /// Reference identifier (e.g. "RFC #123", "TWiR #456")
     pub reference: Option<String>,
-    /// Optional tags or related metadata (e.g. "issue:123", "author:name")
-    #[serde(default)]
-    pub tags: Vec<String>,
 }
 
 /// Quote of the Week
@@ -106,23 +103,9 @@ impl SearchResult {
         (words / 200).max(1) // At least 1 minute
     }
 
-    /// Returns formatted tags for display
-    pub fn formatted_tags(&self) -> Vec<String> {
-        let mut tags = Vec::new();
-
-        if let Some(ref reference) = self.entry.reference {
-            tags.push(reference.clone());
-        }
-
-        tags.extend(
-            self.entry
-                .tags
-                .iter()
-                .filter(|tag| !matches!(tag.as_str(), "rfc" | "twir" | "newsletter"))
-                .cloned(),
-        );
-
-        tags
+    /// Returns formatted reference for display (e.g., "TWiR #541", "RFC #123")
+    pub fn formatted_reference(&self) -> Option<&str> {
+        self.entry.reference.as_deref()
     }
 
     /// Returns the icon SVG for this result

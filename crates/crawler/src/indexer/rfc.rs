@@ -81,11 +81,9 @@ impl Rfc {
             .collect())
     }
 
-    fn parse_metadata(&self, content: &str) -> (Option<NaiveDate>, Option<String>, Vec<String>) {
+    fn parse_metadata(&self, content: &str) -> (Option<NaiveDate>, Option<String>) {
         let mut date = None;
         let mut title = None;
-        let mut tags = Vec::new();
-        let issue_re = Regex::new(r"rust-lang/rust#(\d+)").unwrap();
 
         for line in content.lines() {
             let line = line.trim();
@@ -107,13 +105,6 @@ impl Rfc {
                         "Feature Name" => {
                             title = Some(value.to_string());
                         }
-                        "Rust Issue" => {
-                            if let Some(caps) = issue_re.captures(value)
-                                && let Some(issue_num) = caps.get(1)
-                            {
-                                tags.push(format!("issue:{}", issue_num.as_str()));
-                            }
-                        }
                         _ => {}
                     }
                 }
@@ -123,7 +114,7 @@ impl Rfc {
             }
         }
 
-        (date, title, tags)
+        (date, title)
     }
 
     fn clean_title(&self, filename: &str) -> String {
@@ -196,9 +187,7 @@ impl Indexer for Rfc {
                 }
             };
 
-            let (date_opt, title_opt, mut tags) = self.parse_metadata(&content);
-
-            tags.push("rfc".to_string());
+            let (date_opt, title_opt) = self.parse_metadata(&content);
 
             let mut reference = None;
 
@@ -225,7 +214,6 @@ impl Indexer for Rfc {
                 text: Some(content),
                 thumbnail_url: None,
                 reference,
-                tags,
             };
 
             if let Err(e) = repo.insert_entry(&entry).await {
