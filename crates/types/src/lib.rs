@@ -7,6 +7,7 @@
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use strum::Display;
 use url::Url;
 
@@ -22,6 +23,81 @@ pub enum ContentType {
     Articles,
     /// Video content (YouTube, etc.)
     Video,
+}
+
+/// Duration representation for content
+/// - For articles: estimated reading time in minutes
+/// - For videos: actual duration in seconds
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Duration {
+    /// Estimated reading time for articles (in minutes)
+    ReadingTime(u32),
+    /// Video duration (in seconds)
+    Video(u32),
+}
+
+impl Duration {
+    /// Creates a reading time duration from word count (assuming 200 words per minute)
+    #[must_use]
+    pub fn from_word_count(words: usize) -> Self {
+        let minutes = (words / 200).max(1) as u32;
+        Self::ReadingTime(minutes)
+    }
+
+    /// Creates a video duration from seconds
+    #[must_use]
+    pub fn from_seconds(seconds: u32) -> Self {
+        Self::Video(seconds)
+    }
+
+    /// Parses ISO 8601 duration format (e.g., "PT1H2M3S" -> 3723 seconds)
+    #[must_use]
+    pub fn parse_iso8601(duration: &str) -> Option<Self> {
+        let duration = duration.strip_prefix("PT")?;
+
+        let mut seconds = 0u32;
+        let mut current_num = String::new();
+
+        for ch in duration.chars() {
+            match ch {
+                '0'..='9' => current_num.push(ch),
+                'H' => {
+                    seconds += current_num.parse::<u32>().unwrap_or(0) * 3600;
+                    current_num.clear();
+                }
+                'M' => {
+                    seconds += current_num.parse::<u32>().unwrap_or(0) * 60;
+                    current_num.clear();
+                }
+                'S' => {
+                    seconds += current_num.parse::<u32>().unwrap_or(0);
+                    current_num.clear();
+                }
+                _ => {}
+            }
+        }
+
+        Some(Self::Video(seconds))
+    }
+}
+
+impl fmt::Display for Duration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ReadingTime(minutes) => write!(f, "~{minutes} min read"),
+            Self::Video(total_seconds) => {
+                let hours = total_seconds / 3600;
+                let minutes = (total_seconds % 3600) / 60;
+                let seconds = total_seconds % 60;
+
+                if hours > 0 {
+                    write!(f, "{hours}:{minutes:02}:{seconds:02}")
+                } else {
+                    write!(f, "{minutes}:{seconds:02}")
+                }
+            }
+        }
+    }
 }
 
 /// Get the base data directory
@@ -66,6 +142,8 @@ pub struct Entry {
     pub thumbnail_url: Option<String>,
     /// Reference identifier (e.g. "RFC #123", "TWiR #456")
     pub reference: Option<String>,
+    /// Duration in seconds (for videos)
+    pub duration_seconds: Option<i64>,
 }
 
 /// Quote of the Week
@@ -112,10 +190,27 @@ impl SearchResult {
             .unwrap_or(0)
     }
 
-    /// Returns the estimated reading time in minutes (assuming 200 words per minute)
-    pub fn reading_time_minutes(&self) -> usize {
-        let words = self.word_count();
-        (words / 200).max(1) // At least 1 minute
+    /// Returns the duration for this content
+    /// - For videos: actual video duration (if available)
+    /// - For articles: estimated reading time based on word count
+    #[must_use]
+    pub fn duration(&self) -> Option<Duration> {
+        if let Some(seconds) = self.entry.duration_seconds {
+            // Video with known duration
+            Some(Duration::Video(seconds as u32))
+        } else if self.is_video() {
+            // Video without duration data
+            None
+        } else {
+            // Article - calculate reading time
+            Some(Duration::from_word_count(self.word_count()))
+        }
+    }
+
+    /// Returns true if this result is a video (YouTube)
+    fn is_video(&self) -> bool {
+        let domain = self.domain();
+        domain == "youtube.com" || domain == "www.youtube.com" || domain == "youtu.be"
     }
 
     /// Returns formatted reference for display (e.g., "TWiR #541", "RFC #123")
@@ -278,4 +373,49 @@ pub struct YearlyKeywordStats {
     pub year: i32,
     /// Top keywords for this year
     pub keywords: Vec<KeywordStats>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_duration_from_word_count() {
+        assert_eq!(Duration::from_word_count(0).to_string(), "~1 min read");
+        assert_eq!(Duration::from_word_count(100).to_string(), "~1 min read");
+        assert_eq!(Duration::from_word_count(200).to_string(), "~1 min read");
+        assert_eq!(Duration::from_word_count(400).to_string(), "~2 min read");
+        assert_eq!(Duration::from_word_count(1000).to_string(), "~5 min read");
+    }
+
+    #[test]
+    fn test_duration_video_display() {
+        assert_eq!(Duration::Video(0).to_string(), "0:00");
+        assert_eq!(Duration::Video(5).to_string(), "0:05");
+        assert_eq!(Duration::Video(65).to_string(), "1:05");
+        assert_eq!(Duration::Video(3600).to_string(), "1:00:00");
+        assert_eq!(Duration::Video(3665).to_string(), "1:01:05");
+        assert_eq!(Duration::Video(7325).to_string(), "2:02:05");
+    }
+
+    #[test]
+    fn test_parse_iso8601() {
+        assert_eq!(
+            Duration::parse_iso8601("PT1M30S"),
+            Some(Duration::Video(90))
+        );
+        assert_eq!(Duration::parse_iso8601("PT5M"), Some(Duration::Video(300)));
+        assert_eq!(Duration::parse_iso8601("PT30S"), Some(Duration::Video(30)));
+        assert_eq!(Duration::parse_iso8601("PT1H"), Some(Duration::Video(3600)));
+        assert_eq!(
+            Duration::parse_iso8601("PT1H2M3S"),
+            Some(Duration::Video(3723))
+        );
+        assert_eq!(
+            Duration::parse_iso8601("PT2H30M45S"),
+            Some(Duration::Video(9045))
+        );
+        assert_eq!(Duration::parse_iso8601("invalid"), None);
+        assert_eq!(Duration::parse_iso8601("P1D"), None);
+    }
 }

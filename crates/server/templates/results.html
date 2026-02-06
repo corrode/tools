@@ -147,9 +147,9 @@
                 {% endif %}
                 <span class="meta-item">{{ result.entry.id.category }}</span>
                 <span class="meta-item">{{ result.entry.id.date }}</span>
-                <span class="meta-item"
-                    >~{{ result.reading_time_minutes() }} min read</span
-                >
+                {% if let Some(duration) = result.duration() %}
+                <span class="meta-item">{{ duration }}</span>
+                {% endif %}
             </div>
         </div>
         {% endfor %} {% endif %}

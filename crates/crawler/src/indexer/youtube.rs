@@ -10,7 +10,7 @@ use std::env;
 use std::path::PathBuf;
 use storage::Repository;
 use tokio::fs;
-use types::{Entry, EntryId};
+use types::{Duration, Entry, EntryId};
 use ytt::YouTubeTranscript;
 
 #[derive(Debug, Default)]
@@ -91,6 +91,42 @@ impl Youtube {
         let next_page_token = json["nextPageToken"].as_str().map(|s| s.to_string());
 
         Ok((items, next_page_token))
+    }
+
+    /// Fetches video duration from the YouTube Data API
+    async fn fetch_video_duration(&self, video_id: &str) -> Option<i64> {
+        let url = format!(
+            "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id={}&key={}",
+            video_id, self.api_key
+        );
+
+        let response = match self.client.get(&url).send().await {
+            Ok(r) => r,
+            Err(e) => {
+                debug!("Failed to fetch video duration for {video_id}: {e}");
+                return None;
+            }
+        };
+
+        if !response.status().is_success() {
+            debug!("YouTube API returned error for video {video_id}");
+            return None;
+        }
+
+        let json: Value = match response.json().await {
+            Ok(j) => j,
+            Err(e) => {
+                debug!("Failed to parse duration response for {video_id}: {e}");
+                return None;
+            }
+        };
+
+        let duration_str = json["items"].get(0)?["contentDetails"]["duration"].as_str()?;
+
+        Duration::parse_iso8601(duration_str).map(|d| match d {
+            Duration::Video(seconds) => i64::from(seconds),
+            Duration::ReadingTime(_) => 0,
+        })
     }
 
     async fn download_thumbnail(&self, url: &str, video_id: &str) -> Result<Option<String>> {
@@ -230,11 +266,15 @@ impl Indexer for Youtube {
                     stats.transcripts_failed += 1;
                 }
 
+                // Fetch video duration
+                let duration_seconds = self.fetch_video_duration(video_id).await;
+
                 let entry = Entry {
                     reference: None,
                     id: entry_id,
                     text: Some(content),
                     thumbnail_url,
+                    duration_seconds,
                 };
 
                 if let Err(e) = repo.insert_entry(&entry).await {

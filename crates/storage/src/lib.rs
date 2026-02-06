@@ -108,15 +108,16 @@ impl Repository {
 
         let entry_id: i64 = sqlx::query_scalar(
             r#"
-            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url, reference)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url, reference, duration_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
                 title = excluded.title,
                 category = excluded.category,
                 date = excluded.date,
                 text = excluded.text,
                 thumbnail_url = excluded.thumbnail_url,
-                reference = excluded.reference
+                reference = excluded.reference,
+                duration_seconds = excluded.duration_seconds
             RETURNING id
             "#,
         )
@@ -128,6 +129,7 @@ impl Repository {
         .bind("article")
         .bind(&entry.thumbnail_url)
         .bind(&entry.reference)
+        .bind(entry.duration_seconds)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -658,7 +660,7 @@ impl Repository {
             let mut q = QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference, m.duration_seconds,
                 rank,
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
@@ -672,7 +674,7 @@ impl Repository {
             QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference, m.duration_seconds,
                 0.0 as rank,
                 NULL as snippet
             FROM entries_meta m
@@ -734,6 +736,7 @@ impl Repository {
                         entry: Entry {
                             thumbnail_url: row.try_get("thumbnail_url").ok(),
                             reference: row.try_get("reference").ok(),
+                            duration_seconds: row.try_get("duration_seconds").ok().flatten(),
                             id: EntryId {
                                 title: row.get("title"),
                                 url,
@@ -766,7 +769,8 @@ impl Repository {
                 date,
                 text,
                 thumbnail_url,
-                reference
+                reference,
+                duration_seconds
             FROM entries_meta
             WHERE date = ?
             ORDER BY category, title
@@ -791,6 +795,7 @@ impl Repository {
                 url::Url::parse(row.get("url")).ok().map(|url| Entry {
                     thumbnail_url: row.try_get("thumbnail_url").ok(),
                     reference: row.try_get("reference").ok(),
+                    duration_seconds: row.try_get("duration_seconds").ok().flatten(),
                     id: EntryId {
                         title: row.get("title"),
                         url,

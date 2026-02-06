@@ -214,6 +214,7 @@ impl Indexer for Rfc {
                 text: Some(content),
                 thumbnail_url: None,
                 reference,
+                duration_seconds: None,
             };
 
             if let Err(e) = repo.insert_entry(&entry).await {

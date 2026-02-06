@@ -284,6 +284,7 @@ impl Indexer for Twir {
                             text: Some(text),
                             thumbnail_url: None,
                             reference,
+                            duration_seconds: None,
                         };
                         if let Err(e) = repo.insert_entry(&entry).await {
                             log::error!("Failed to store entry {}: {e}", id.url);
