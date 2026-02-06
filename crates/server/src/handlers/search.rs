@@ -7,6 +7,7 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
+use strum::Display;
 
 use crate::text_utils::clean_preview;
 use storage::Repository;
@@ -18,6 +19,17 @@ pub struct DisplayQuote {
     pub author: String,
 }
 
+/// Content type filter for search results
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum ContentType {
+    #[default]
+    All,
+    Articles,
+    Video,
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
 struct SearchTemplate {
@@ -27,6 +39,7 @@ struct SearchTemplate {
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    content_type: ContentType,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -43,6 +56,7 @@ struct ResultsTemplate {
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    content_type: ContentType,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -59,6 +73,9 @@ pub struct SearchParams {
     end_year: Option<i32>,
     #[serde(rename = "sort-by")]
     sort_by: Option<String>,
+    /// Content type filter: "all" (default), "articles", or "video"
+    #[serde(rename = "type", default)]
+    content_type: ContentType,
     page: Option<u32>,
 }
 
@@ -77,6 +94,9 @@ fn build_url(params: &SearchParams, page: u32) -> String {
     }
     if let Some(sort_by) = &params.sort_by {
         serializer.append_pair("sort-by", sort_by);
+    }
+    if params.content_type != ContentType::All {
+        serializer.append_pair("type", &params.content_type.to_string());
     }
     serializer.append_pair("page", &page.to_string());
 
@@ -174,7 +194,8 @@ pub(crate) async fn search(
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,
-            sort_by: params.sort_by,
+            sort_by: params.sort_by.clone(),
+            content_type: params.content_type,
             start_index,
             end_index,
             prev_page_href,
@@ -194,6 +215,7 @@ pub(crate) async fn search(
             start_year: params.start_year,
             end_year: params.end_year,
             sort_by: params.sort_by,
+            content_type: params.content_type,
             start_index,
             end_index,
             prev_page_href,
