@@ -52,7 +52,8 @@ chrono = { version = "0.4", features = ["serde"] }
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1", features = ["full"] }
+# Only enable the tokio features we actually need (faster than "full")
+tokio = { version = "1", features = ["rt-multi-thread", "net", "signal", "macros", "fs"] }
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1.3"
 sqlx = { version = "0.8", features = [
@@ -90,3 +91,19 @@ charming = "0.3"
 # Internal
 types = { path = "crates/types" }
 storage = { path = "crates/storage" }
+
+# =============================================================================
+# Profile Optimizations for Faster Compile Times
+# =============================================================================
+
+[profile.dev]
+# Faster debug builds on macOS by not bundling debug info into one file
+split-debuginfo = "unpacked"
+
+# Uncomment these for larger projects where proc-macro execution is slow:
+# [profile.dev.build-override]
+# opt-level = 3
+
+# Uncomment to optimize dependencies for faster runtime (increases compile time):
+# [profile.dev.package."*"]
+# opt-level = 1

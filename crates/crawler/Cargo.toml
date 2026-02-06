@@ -23,10 +23,8 @@ reqwest = { workspace = true }
 scraper = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
-urlencoding = { workspace = true }
 dotenvy = "0.15.7"
 ytt = "1.1.0"
 
