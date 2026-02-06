@@ -101,6 +101,9 @@
                     </button>
                 </div>
 
+                <!-- Hidden input for content type filter -->
+                <input type="hidden" id="content-type" name="type" value="{{ content_type }}" />
+
                 <input type="checkbox" id="filter-toggle" class="filter-toggle-checkbox" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}checked{% endif %} />
                 <label for="filter-toggle" class="filter-button" style='{% if query.as_deref().unwrap_or("").is_empty() %}display: none;{% endif %}'>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -211,6 +214,47 @@
                     </div>
                 </div>
             </form>
+
+            <!-- Content type tabs -->
+            {% if let Some(q) = query.as_deref() %}
+            {% if !q.is_empty() %}
+            <nav class="search-tabs" role="tablist" aria-label="Content type">
+                <a href="?q={{ q }}"
+                   class="tab {% if content_type == crate::handlers::search::ContentType::All %}tab-active{% endif %}"
+                   role="tab"
+                   aria-selected="{% if content_type == crate::handlers::search::ContentType::All %}true{% else %}false{% endif %}"
+                   hx-get="/search?q={{ q }}"
+                   hx-target="#results-container"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   onclick="document.getElementById('content-type').value = 'all'">
+                    All
+                </a>
+                <a href="?q={{ q }}&type=articles"
+                   class="tab {% if content_type == crate::handlers::search::ContentType::Articles %}tab-active{% endif %}"
+                   role="tab"
+                   aria-selected="{% if content_type == crate::handlers::search::ContentType::Articles %}true{% else %}false{% endif %}"
+                   hx-get="/search?q={{ q }}&type=articles"
+                   hx-target="#results-container"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   onclick="document.getElementById('content-type').value = 'articles'">
+                    Articles
+                </a>
+                <a href="?q={{ q }}&type=video"
+                   class="tab {% if content_type == crate::handlers::search::ContentType::Video %}tab-active{% endif %}"
+                   role="tab"
+                   aria-selected="{% if content_type == crate::handlers::search::ContentType::Video %}true{% else %}false{% endif %}"
+                   hx-get="/search?q={{ q }}&type=video"
+                   hx-target="#results-container"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   onclick="document.getElementById('content-type').value = 'video'">
+                    Video
+                </a>
+            </nav>
+            {% endif %}
+            {% endif %}
 
             {% include "results.html" %}
         </div>

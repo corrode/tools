@@ -6,7 +6,7 @@ use storage::Repository;
 
 use types::SearchResult;
 
-use crate::handlers::search::DisplayQuote;
+use crate::handlers::search::{ContentType, DisplayQuote};
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -17,6 +17,7 @@ struct SearchTemplate {
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    content_type: ContentType,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -44,6 +45,7 @@ pub(crate) async fn index(
         start_year: None,
         end_year: None,
         sort_by: None,
+        content_type: ContentType::default(),
         start_index: 0,
         end_index: 0,
         prev_page_href: None,

@@ -1,5 +1,87 @@
 /* Theme Overrides for Search Page */
 
+.search-tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0 0 12px 0;
+    padding: 0;
+}
+
+.tab {
+    padding: 8px 2px;
+    font-size: 0.85rem;
+    font-family: "Martian Mono", monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; /* Overlap container border */
+}
+
+.tab:hover {
+    color: var(--color-text);
+}
+
+.tab-active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Light Docs RS tabs */
+html[data-theme="light-docs-rs"] .tab {
+    font-family: "Fira Sans", sans-serif;
+}
+
+html[data-theme="light-docs-rs"] .tab-active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+/* Hacker News tabs */
+html[data-theme="light-hacker-news"] .search-tabs {
+    border-bottom: 1px solid #828282;
+}
+
+html[data-theme="light-hacker-news"] .tab {
+    font-family: Verdana, Geneva, sans-serif;
+    font-size: 10pt;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 6px 2px;
+}
+
+html[data-theme="light-hacker-news"] .tab-active {
+    color: #ff6600;
+    border-bottom-color: #ff6600;
+}
+
+html[data-theme="light-hacker-news"] .tab:hover {
+    color: #ff6600;
+}
+
+/* Dark TWIR tabs */
+html[data-theme="dark-twir"] .tab {
+    font-family: "Univers", sans-serif;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+html[data-theme="dark-twir"] .tab-active {
+    color: #d2991d;
+    border-bottom-color: #d2991d;
+}
+
+html[data-theme="dark-twir"] .tab:hover {
+    color: #d2991d;
+}
+
 /* Light Docs RS */
 html[data-theme="light-docs-rs"] .result-title a {
     color: var(--color-primary);
@@ -203,7 +285,7 @@ html[data-theme="dark-twir"] .tag {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 32px;
+    margin-bottom: 12px;
 }
 
 .search-input-wrapper {
@@ -708,6 +790,16 @@ html[data-theme="dark-twir"] .tag {
 }
 
 @media (max-width: 768px) {
+    .search-tabs {
+        gap: 16px;
+        margin: 0 0 10px 0;
+    }
+
+    .tab {
+        padding: 6px 2px;
+        font-size: 0.8rem;
+    }
+
     .active-filters {
         padding: 16px;
     }
@@ -749,9 +841,19 @@ html[data-theme="dark-twir"] .tag {
             margin-left: -16px;
             margin-right: -16px;
             padding: 12px 16px;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             border-bottom: 1px solid var(--color-border);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-tabs {
+            gap: 12px;
+            margin: 0 0 8px 0;
+        }
+
+        .tab {
+            padding: 4px 0;
+            font-size: 0.75rem;
         }
 
         .active-filters {
