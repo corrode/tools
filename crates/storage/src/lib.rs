@@ -14,7 +14,7 @@ use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
-use types::{CategoryStats, Entry, EntryId, SearchResult, Stats, YearStats};
+use types::{CategoryStats, ContentType, Entry, EntryId, SearchResult, Stats, YearStats};
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
@@ -552,6 +552,7 @@ impl Repository {
         query: &str,
         start_year: Option<i32>,
         end_year: Option<i32>,
+        content_type: ContentType,
     ) -> Result<i64> {
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
@@ -607,6 +608,17 @@ impl Repository {
             query.push_bind(format!("{end}-12-31"));
         }
 
+        // Add content type filter
+        match content_type {
+            ContentType::All => {}
+            ContentType::Articles => {
+                query.push(" AND m.url NOT LIKE '%youtube.com%' AND m.url NOT LIKE '%youtu.be%'");
+            }
+            ContentType::Video => {
+                query.push(" AND (m.url LIKE '%youtube.com%' OR m.url LIKE '%youtu.be%')");
+            }
+        }
+
         let row = query.build().fetch_one(&self.pool).await?;
         Ok(row.get("total"))
     }
@@ -618,6 +630,7 @@ impl Repository {
         start_year: Option<i32>,
         end_year: Option<i32>,
         sort_by: Option<&str>,
+        content_type: ContentType,
         page: Option<u32>,
     ) -> Result<Vec<SearchResult>> {
         // Parse query for site: operator
@@ -681,6 +694,17 @@ impl Repository {
         if let Some(end) = end_year {
             query.push(" AND m.date <= ");
             query.push_bind(format!("{end}-12-31"));
+        }
+
+        // Add content type filter
+        match content_type {
+            ContentType::All => {}
+            ContentType::Articles => {
+                query.push(" AND m.url NOT LIKE '%youtube.com%' AND m.url NOT LIKE '%youtu.be%'");
+            }
+            ContentType::Video => {
+                query.push(" AND (m.url LIKE '%youtube.com%' OR m.url LIKE '%youtu.be%')");
+            }
         }
 
         // Add ORDER BY clause

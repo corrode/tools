@@ -7,7 +7,22 @@
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use url::Url;
+
+/// Content type filter for search results
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum ContentType {
+    /// All content types (default)
+    #[default]
+    All,
+    /// Articles, blog posts, and written content
+    Articles,
+    /// Video content (YouTube, etc.)
+    Video,
+}
 
 /// Get the base data directory
 pub fn get_data_dir() -> String {

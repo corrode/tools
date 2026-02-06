@@ -1,12 +1,11 @@
-use anyhow::Result;
 use askama::Template;
 use axum::{extract::State, response::Html};
 use std::sync::Arc;
 use storage::Repository;
 
-use types::SearchResult;
+use types::{ContentType, SearchResult};
 
-use crate::handlers::search::{ContentType, DisplayQuote};
+use crate::handlers::search::DisplayQuote;
 
 #[derive(Template)]
 #[template(path = "index.html")]

@@ -4,9 +4,9 @@
     <nav class="search-tabs" role="tablist" aria-label="Content type">
         <a
             href="?q={{ q }}"
-            class="tab {% if content_type == crate::handlers::search::ContentType::All %}tab-active{% endif %}"
+            class="tab {% if content_type == types::ContentType::All %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == crate::handlers::search::ContentType::All %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type == types::ContentType::All %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}"
             hx-target="#results-container"
             hx-swap="outerHTML"
@@ -17,9 +17,9 @@
         </a>
         <a
             href="?q={{ q }}&type=articles"
-            class="tab {% if content_type == crate::handlers::search::ContentType::Articles %}tab-active{% endif %}"
+            class="tab {% if content_type == types::ContentType::Articles %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == crate::handlers::search::ContentType::Articles %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type == types::ContentType::Articles %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}&type=articles"
             hx-target="#results-container"
             hx-swap="outerHTML"
@@ -30,9 +30,9 @@
         </a>
         <a
             href="?q={{ q }}&type=video"
-            class="tab {% if content_type == crate::handlers::search::ContentType::Video %}tab-active{% endif %}"
+            class="tab {% if content_type == types::ContentType::Video %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == crate::handlers::search::ContentType::Video %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type == types::ContentType::Video %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}&type=video"
             hx-target="#results-container"
             hx-swap="outerHTML"

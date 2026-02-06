@@ -1,4 +1,3 @@
-use anyhow::Result;
 use askama::Template;
 use axum::{
     extract::{Query, State},
@@ -7,27 +6,15 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
-use strum::Display;
 
 use crate::text_utils::clean_preview;
 use storage::Repository;
-use types::SearchResult;
+use types::{ContentType, SearchResult};
 
 #[derive(Clone)]
 pub struct DisplayQuote {
     pub text: String,
     pub author: String,
-}
-
-/// Content type filter for search results
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum ContentType {
-    #[default]
-    All,
-    Articles,
-    Video,
 }
 
 #[derive(Template)]
@@ -121,13 +108,19 @@ pub(crate) async fn search(
                     params.start_year,
                     params.end_year,
                     params.sort_by.as_deref(),
+                    params.content_type,
                     params.page,
                 )
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             let total = repo
-                .count_search_results(query, params.start_year, params.end_year)
+                .count_search_results(
+                    query,
+                    params.start_year,
+                    params.end_year,
+                    params.content_type,
+                )
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
