@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use types::{EntryId, Quote};
+use types::{EntryId, Quote, Url};
 
 /// This Week in Rust configuration
 const TWIR_GITHUB_OWNER: &str = "rust-lang";

@@ -7,8 +7,8 @@ use axum::{
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::text_utils::clean_preview;
 use storage::Repository;
+use types::search_result::{Article, Video};
 use types::{ContentType, SearchResult};
 
 #[derive(Clone)]
@@ -21,7 +21,8 @@ pub struct DisplayQuote {
 #[template(path = "index.html")]
 struct SearchTemplate {
     query: Option<String>,
-    results: Vec<SearchResult>,
+    videos: Vec<Video>,
+    articles: Vec<Article>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -38,7 +39,8 @@ struct SearchTemplate {
 #[template(path = "results.html")]
 struct ResultsTemplate {
     query: Option<String>,
-    results: Vec<SearchResult>,
+    videos: Vec<Video>,
+    articles: Vec<Article>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -98,7 +100,7 @@ pub(crate) async fn search(
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, StatusCode> {
     // Check if query is provided and not empty/whitespace-only
-    let (results, total_results) = if let Some(query) = &params.q {
+    let (raw_results, total_results) = if let Some(query) = &params.q {
         if query.trim().is_empty() {
             (vec![], 0)
         } else {
@@ -130,30 +132,15 @@ pub(crate) async fn search(
         (vec![], 0)
     };
 
-    // Clean up result text and add fallback snippets
-    let results: Vec<SearchResult> = results
-        .into_iter()
-        .map(|result| {
-            let snippet = if let Some(s) = result.snippet {
-                Some(clean_preview(&s))
-            } else if let Some(ref text) = result.entry.text {
-                // Fallback: use first 200 chars of article text as preview
-                let preview: String = text.chars().take(200).collect();
-                Some(clean_preview(&preview))
-            } else {
-                None
-            };
-
-            SearchResult {
-                entry: result.entry,
-                rank: result.rank,
-                snippet,
-            }
-        })
-        .collect();
+    // Partition results into videos and articles
+    let results_count = raw_results.len();
+    let (video_results, article_results): (Vec<_>, Vec<_>) =
+        raw_results.into_iter().partition(SearchResult::is_video);
+    let videos: Vec<Video> = video_results.into_iter().map(Into::into).collect();
+    let articles: Vec<Article> = article_results.into_iter().map(Into::into).collect();
 
     let current_page = params.page.unwrap_or(1).max(1);
-    let has_more = results.len() == Repository::RESULTS_PER_PAGE as usize;
+    let has_more = results_count == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {
         Some(build_url(&params, current_page - 1))
@@ -168,7 +155,7 @@ pub(crate) async fn search(
     };
 
     let start_index = ((current_page - 1) * Repository::RESULTS_PER_PAGE + 1) as i64;
-    let end_index = start_index + results.len() as i64 - 1;
+    let end_index = start_index + results_count as i64 - 1;
 
     // Select random quote
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
@@ -183,7 +170,8 @@ pub(crate) async fn search(
     if headers.contains_key("hx-request") {
         let template = ResultsTemplate {
             query: params.q,
-            results,
+            videos,
+            articles,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,
@@ -203,7 +191,8 @@ pub(crate) async fn search(
     } else {
         let template = SearchTemplate {
             query: params.q,
-            results,
+            videos,
+            articles,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,

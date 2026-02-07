@@ -5,6 +5,8 @@
 //!
 //! The types are used by the importer, crawler, storage, and server modules.
 
+pub mod search_result;
+
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use sqlx::encode::IsNull;
@@ -290,9 +292,16 @@ impl SearchResult {
     /// Returns true if this result is a video (YouTube)
     // TODO: This isn't great or even accurate. We don't support other video
     // platforms yet, but we should at least check for Vimeo, Twitch, etc.
-    fn is_video(&self) -> bool {
+    #[must_use]
+    pub fn is_video(&self) -> bool {
         let host = self.host_str();
         matches!(host, Some("youtube.com" | "www.youtube.com" | "youtu.be"))
+    }
+
+    /// Returns the thumbnail URL for this result (if available)
+    #[must_use]
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.entry.thumbnail_url.as_deref()
     }
 
     /// Returns formatted reference for display (e.g., "TWiR #541", "RFC #123")

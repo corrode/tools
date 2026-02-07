@@ -10,7 +10,7 @@ use std::env;
 use std::path::PathBuf;
 use storage::Repository;
 use tokio::fs;
-use types::{Duration, Entry, EntryId};
+use types::{Duration, Entry, EntryId, Url};
 use ytt::YouTubeTranscript;
 
 #[derive(Debug, Default)]

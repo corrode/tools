@@ -619,6 +619,56 @@ html[data-theme="dark-twir"] .tag {
     border-bottom: none;
 }
 
+/* Video Result Card */
+.result-item-video {
+    display: flex;
+    gap: 20px;
+}
+
+.video-thumbnail-link {
+    flex-shrink: 0;
+    position: relative;
+    display: block;
+}
+
+.video-thumbnail {
+    width: 160px;
+    height: 90px;
+    border-radius: 4px;
+    background-color: var(--color-surface);
+    object-fit: cover;
+}
+
+.video-thumbnail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-border);
+}
+
+.video-thumbnail-placeholder svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-text-muted);
+}
+
+.video-duration {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-size: 0.7rem;
+    font-family: "Martian Mono", monospace;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.result-content {
+    flex: 1;
+    min-width: 0;
+}
+
 .result-title {
     color: var(--color-text);
     font-size: 1.1rem;
@@ -813,6 +863,17 @@ html[data-theme="dark-twir"] .tag {
 
     .result-item {
         padding: 20px;
+    }
+
+    .result-item-video {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
     }
 
     .pagination {

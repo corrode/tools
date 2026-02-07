@@ -115,49 +115,19 @@
                 Clear all
             </button>
         </div>
-        {% endif %} {% if results.is_empty() %}
+        {% endif %} {% if videos.is_empty() && articles.is_empty() %}
         <div class="result-item">
             <div class="result-title">No results found</div>
             <div class="result-snippet">
                 Try adjusting your search terms or filters.
             </div>
         </div>
-        {% else %} {% for result in results %}
-        <div class="result-item">
-            <div class="result-title">
-                <a
-                    href="{{ result.entry.id.url }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ result.entry.id.title }}</a
-                >
-            </div>
-            {% if let Some(snippet) = result.snippet %}
-            <div class="result-snippet">{{ snippet|safe }}</div>
-            {% endif %}
-            <div class="result-meta">
-                <span class="meta-item">
-                    <span class="domain-icon"
-                        >{{ result.icon_svg()|safe }}</span
-                    >
-                    {% if let Some(host) = result.host_str() %}
-                    <span class="domain">{{ host }}</span>
-                    {% endif %}
-                </span>
-                {% if let Some(reference) = result.formatted_reference() %}
-                <span class="meta-item">{{ reference }}</span>
-                {% endif %}
-                <span class="meta-item">{{ result.entry.id.category }}</span>
-                <span class="meta-item">{{ result.entry.id.date }}</span>
-                {% if let Some(duration) = result.duration() %}
-                <span class="meta-item">{{ duration }}</span>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %} {% endif %}
+        {% else %} {% for video in videos %} {% include "result/video.html" %}
+        {% endfor %} {% for article in articles %} {% include
+        "result/article.html" %} {% endfor %} {% endif %}
     </div>
 
-    <!-- Pagination (outside results div, aligned right) -->
+    <!-- Pagination -->
     {% if total_results > 0 %}
     <div class="pagination">
         {% if let Some(prev) = prev_page_href %}
@@ -197,11 +167,11 @@
     </div>
     {% endif %}
 
-    <!-- Quote of the Week Easter Egg (outside results div) -->
-    {% if !results.is_empty() %} {% if let Some(quote) = quote %}
+    <!-- Quote Easter Egg -->
+    {% if let Some(q) = quote %}
     <div class="quote-easter-egg">
-        <div class="quote-content">"{{ quote.text }}"</div>
-        <div class="quote-attribution">— {{ quote.author }}</div>
+        <div class="quote-content">"{{ q.text }}"</div>
+        <div class="quote-attribution">— {{ q.author }}</div>
     </div>
-    {% endif %} {% endif %} {% endif %}
+    {% endif %} {% endif %}
 </div>

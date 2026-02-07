@@ -7,7 +7,6 @@
 use anyhow::Result;
 
 mod handlers;
-mod text_utils;
 
 use axum::{Router, routing::get};
 use storage::Repository;
