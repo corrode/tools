@@ -12,9 +12,83 @@
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
 use types::{CategoryStats, ContentType, Entry, EntryId, SearchResult, Stats, YearStats};
+
+/// Database row for entry metadata - maps directly to entries_meta table columns
+#[derive(Debug, FromRow)]
+struct EntryRow {
+    title: String,
+    url: String,
+    category: String,
+    date: String,
+    text: Option<String>,
+    thumbnail_url: Option<String>,
+    reference: Option<String>,
+    duration_seconds: Option<i64>,
+}
+
+/// Database row for search results - includes FTS5 rank and snippet
+#[derive(Debug, FromRow)]
+struct SearchResultRow {
+    title: String,
+    url: String,
+    category: String,
+    date: String,
+    text: Option<String>,
+    thumbnail_url: Option<String>,
+    reference: Option<String>,
+    duration_seconds: Option<i64>,
+    rank: f64,
+    snippet: Option<String>,
+}
+
+impl EntryRow {
+    /// Convert database row to domain Entry, returning None if URL or date is invalid
+    fn into_entry(self) -> Option<Entry> {
+        let url = url::Url::parse(&self.url).ok()?;
+        let date = NaiveDate::parse_from_str(&self.date, "%Y-%m-%d").ok()?;
+
+        Some(Entry {
+            id: EntryId {
+                title: self.title,
+                url,
+                category: self.category,
+                date,
+            },
+            text: self.text,
+            thumbnail_url: self.thumbnail_url,
+            reference: self.reference.filter(|r| !r.is_empty()),
+            duration_seconds: self.duration_seconds,
+        })
+    }
+}
+
+impl SearchResultRow {
+    /// Convert database row to domain SearchResult, returning None if URL or date is invalid
+    fn into_search_result(self) -> Option<SearchResult> {
+        let url = url::Url::parse(&self.url).ok()?;
+        let date = NaiveDate::parse_from_str(&self.date, "%Y-%m-%d").ok()?;
+
+        Some(SearchResult {
+            entry: Entry {
+                id: EntryId {
+                    title: self.title,
+                    url,
+                    category: self.category,
+                    date,
+                },
+                text: self.text,
+                thumbnail_url: self.thumbnail_url,
+                reference: self.reference.filter(|r| !r.is_empty()),
+                duration_seconds: self.duration_seconds,
+            },
+            rank: self.rank,
+            snippet: self.snippet,
+        })
+    }
+}
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
@@ -725,32 +799,11 @@ impl Repository {
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
-        let rows = query.build().fetch_all(&self.pool).await?;
+        let rows: Vec<SearchResultRow> = query.build_query_as().fetch_all(&self.pool).await?;
 
         let results = rows
             .into_iter()
-            .filter_map(|row| {
-                url::Url::parse(row.get("url")).ok().map(|url| {
-                    let date = row.get::<String, _>("date");
-                    SearchResult {
-                        entry: Entry {
-                            thumbnail_url: row.try_get("thumbnail_url").ok(),
-                            reference: row.try_get("reference").ok(),
-                            duration_seconds: row.try_get("duration_seconds").ok().flatten(),
-                            id: EntryId {
-                                title: row.get("title"),
-                                url,
-                                category: row.get("category"),
-                                date: NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-                                    .unwrap_or_default(),
-                            },
-                            text: row.get("text"),
-                        },
-                        rank: row.get("rank"),
-                        snippet: row.get("snippet"),
-                    }
-                })
-            })
+            .filter_map(SearchResultRow::into_search_result)
             .collect();
 
         Ok(results)
@@ -760,7 +813,7 @@ impl Repository {
     pub async fn get_entries_by_date(&self, date: NaiveDate) -> Result<Vec<Entry>> {
         let date_str = date.format("%Y-%m-%d").to_string();
 
-        let rows = sqlx::query(
+        let rows: Vec<EntryRow> = sqlx::query_as(
             r#"
             SELECT
                 title,
@@ -780,32 +833,7 @@ impl Repository {
         .fetch_all(&self.pool)
         .await?;
 
-        let entries = rows
-            .into_iter()
-            .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(row.get::<&str, _>("date"), "%Y-%m-%d")
-                else {
-                    log::info!(
-                        "Cannot convert row date to NaiveDate: {}",
-                        row.get::<&str, _>("date")
-                    );
-                    return None;
-                };
-
-                url::Url::parse(row.get("url")).ok().map(|url| Entry {
-                    thumbnail_url: row.try_get("thumbnail_url").ok(),
-                    reference: row.try_get("reference").ok(),
-                    duration_seconds: row.try_get("duration_seconds").ok().flatten(),
-                    id: EntryId {
-                        title: row.get("title"),
-                        url,
-                        category: row.get("category"),
-                        date,
-                    },
-                    text: row.get("text"),
-                })
-            })
-            .collect();
+        let entries = rows.into_iter().filter_map(EntryRow::into_entry).collect();
 
         Ok(entries)
     }
