@@ -140,7 +140,9 @@
                     <span class="domain-icon"
                         >{{ result.icon_svg()|safe }}</span
                     >
-                    <span class="domain">{{ result.domain() }}</span>
+                    {% if let Some(host) = result.host_str() %}
+                    <span class="domain">{{ host }}</span>
+                    {% endif %}
                 </span>
                 {% if let Some(reference) = result.formatted_reference() %}
                 <span class="meta-item">{{ reference }}</span>

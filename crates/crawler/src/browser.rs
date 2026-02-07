@@ -89,11 +89,9 @@ impl Browser {
 
         // Rewrite YouTube URLs to thumbnail URLs to avoid cookie banners
         let target_url =
-            Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| entry_id.url.clone());
+            Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| (*entry_id.url).clone());
 
-        if target_url != entry_id.url {
-            log::info!("Rewritten YouTube URL to thumbnail: {target_url}");
-        }
+        log::info!("Rewritten YouTube URL to thumbnail: {target_url}");
 
         // Quick check for common error status codes with timeout
         let client = reqwest::Client::builder()

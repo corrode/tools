@@ -7,9 +7,92 @@
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use sqlx::encode::IsNull;
+use sqlx::error::BoxDynError;
+use sqlx::{Database, Decode, Encode, FromRow, Sqlite, Type};
 use std::fmt;
 use strum::Display;
-use url::Url;
+
+/// Newtype wrapper around url::URL to satisfy sqlx FromRow
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[repr(transparent)]
+pub struct Url(url::Url);
+
+impl Type<Sqlite> for Url {
+    fn type_info() -> <Sqlite as Database>::TypeInfo {
+        <String as Type<Sqlite>>::type_info()
+    }
+
+    fn compatible(ty: &<Sqlite as Database>::TypeInfo) -> bool {
+        <String as Type<Sqlite>>::compatible(ty)
+    }
+}
+
+impl Encode<'_, Sqlite> for Url {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Sqlite as Database>::ArgumentBuffer<'_>,
+    ) -> Result<IsNull, BoxDynError> {
+        <String as Encode<Sqlite>>::encode(self.0.to_string(), buf)
+    }
+}
+
+impl Decode<'_, Sqlite> for Url {
+    fn decode(value: <Sqlite as Database>::ValueRef<'_>) -> Result<Self, BoxDynError> {
+        let s = <String as Decode<Sqlite>>::decode(value)?;
+        url::Url::parse(&s)
+            .map(Url)
+            .map_err(|e| Box::new(e) as BoxDynError)
+    }
+}
+
+impl Url {
+    /// Parse a string into a URL
+    ///
+    /// # Errors
+    /// Returns an error if the string is not a valid URL
+    pub fn parse(input: &str) -> Result<Self, url::ParseError> {
+        url::Url::parse(input).map(Self)
+    }
+
+    /// Returns the URL as a string slice
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+
+    /// Returns the host string if present
+    #[must_use]
+    pub fn host_str(&self) -> Option<&str> {
+        self.0.host_str()
+    }
+
+    /// Returns the URL scheme (e.g., "http" or "https")
+    #[must_use]
+    pub fn scheme(&self) -> &str {
+        self.0.scheme()
+    }
+}
+
+impl fmt::Display for Url {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<url::Url> for Url {
+    fn from(url: url::Url) -> Self {
+        Self(url)
+    }
+}
+
+impl std::ops::Deref for Url {
+    type Target = url::Url;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 /// Content type filter for search results
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
@@ -112,7 +195,7 @@ pub fn get_search_index_path() -> String {
 }
 
 /// Entry identifier with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntryId {
     /// Title of the article
     pub title: String,
@@ -132,9 +215,10 @@ impl std::fmt::Display for EntryId {
 }
 
 /// Complete TWiR entry with content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Entry {
     /// Identifier and metadata
+    #[sqlx(flatten)]
     pub id: EntryId,
     /// Full text content of the article
     pub text: Option<String>,
@@ -160,9 +244,10 @@ pub struct Quote {
 }
 
 /// Search result with relevance information and highlighted content
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 pub struct SearchResult {
     /// Entry matching the search query
+    #[sqlx(flatten)]
     pub entry: Entry,
     /// Relevance score from FTS5
     pub rank: f64,
@@ -172,13 +257,8 @@ pub struct SearchResult {
 
 impl SearchResult {
     /// Returns the hostname from the URL in a displayable format
-    pub fn domain(&self) -> String {
-        self.entry
-            .id
-            .url
-            .host_str()
-            .unwrap_or("unknown")
-            .to_string()
+    pub fn host_str(&self) -> Option<&str> {
+        self.entry.id.url.host_str()
     }
 
     /// Returns the word count of the article
@@ -208,9 +288,11 @@ impl SearchResult {
     }
 
     /// Returns true if this result is a video (YouTube)
+    // TODO: This isn't great or even accurate. We don't support other video
+    // platforms yet, but we should at least check for Vimeo, Twitch, etc.
     fn is_video(&self) -> bool {
-        let domain = self.domain();
-        domain == "youtube.com" || domain == "www.youtube.com" || domain == "youtu.be"
+        let host = self.host_str();
+        matches!(host, Some("youtube.com" | "www.youtube.com" | "youtu.be"))
     }
 
     /// Returns formatted reference for display (e.g., "TWiR #541", "RFC #123")
@@ -221,20 +303,20 @@ impl SearchResult {
     /// Returns the icon SVG for this result
     /// Prefers domain-specific icons, falls back to category icons
     pub fn icon_svg(&self) -> &'static str {
-        let domain = self.domain();
+        let host = self.host_str();
 
         // Check for domain-specific icons first
-        match domain.as_str() {
-            "news.ycombinator.com" => {
+        match host {
+            Some("news.ycombinator.com") => {
                 r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><path d="M12 6.5l-4 7.5h2v4h4v-4h2z"/></svg>"#
             }
-            "reddit.com" | "www.reddit.com" => {
+            Some("reddit.com" | "www.reddit.com") => {
                 r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/><path d="M9 15c.5 1 1.5 2 3 2s2.5-1 3-2"/><path d="M7 11.5C7 10.7 6.5 10 6 10s-1 .7-1 1.5.5 1.5 1 1.5 1-.7 1-1.5z"/><path d="M19 11.5c0-.8-.5-1.5-1-1.5s-1 .7-1 1.5.5 1.5 1 1.5 1-.7 1-1.5z"/></svg>"#
             }
-            "youtube.com" | "www.youtube.com" | "youtu.be" => {
+            Some("youtube.com" | "www.youtube.com" | "youtu.be") => {
                 r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75,15.02 15.5,11.75 9.75,8.48"/></svg>"#
             }
-            "github.com" => {
+            Some("github.com") => {
                 r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>"#
             }
             _ => {

@@ -12,83 +12,10 @@
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
-use types::{CategoryStats, ContentType, Entry, EntryId, SearchResult, Stats, YearStats};
-
-/// Database row for entry metadata - maps directly to entries_meta table columns
-#[derive(Debug, FromRow)]
-struct EntryRow {
-    title: String,
-    url: String,
-    category: String,
-    date: String,
-    text: Option<String>,
-    thumbnail_url: Option<String>,
-    reference: Option<String>,
-    duration_seconds: Option<i64>,
-}
-
-/// Database row for search results - includes FTS5 rank and snippet
-#[derive(Debug, FromRow)]
-struct SearchResultRow {
-    title: String,
-    url: String,
-    category: String,
-    date: String,
-    text: Option<String>,
-    thumbnail_url: Option<String>,
-    reference: Option<String>,
-    duration_seconds: Option<i64>,
-    rank: f64,
-    snippet: Option<String>,
-}
-
-impl EntryRow {
-    /// Convert database row to domain Entry, returning None if URL or date is invalid
-    fn into_entry(self) -> Option<Entry> {
-        let url = url::Url::parse(&self.url).ok()?;
-        let date = NaiveDate::parse_from_str(&self.date, "%Y-%m-%d").ok()?;
-
-        Some(Entry {
-            id: EntryId {
-                title: self.title,
-                url,
-                category: self.category,
-                date,
-            },
-            text: self.text,
-            thumbnail_url: self.thumbnail_url,
-            reference: self.reference.filter(|r| !r.is_empty()),
-            duration_seconds: self.duration_seconds,
-        })
-    }
-}
-
-impl SearchResultRow {
-    /// Convert database row to domain SearchResult, returning None if URL or date is invalid
-    fn into_search_result(self) -> Option<SearchResult> {
-        let url = url::Url::parse(&self.url).ok()?;
-        let date = NaiveDate::parse_from_str(&self.date, "%Y-%m-%d").ok()?;
-
-        Some(SearchResult {
-            entry: Entry {
-                id: EntryId {
-                    title: self.title,
-                    url,
-                    category: self.category,
-                    date,
-                },
-                text: self.text,
-                thumbnail_url: self.thumbnail_url,
-                reference: self.reference.filter(|r| !r.is_empty()),
-                duration_seconds: self.duration_seconds,
-            },
-            rank: self.rank,
-            snippet: self.snippet,
-        })
-    }
-}
+use types::Url;
+use types::{CategoryStats, ContentType, Entry, SearchResult, Stats, YearStats};
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
@@ -158,7 +85,7 @@ impl Repository {
         )
         .map(|row: sqlx::sqlite::SqliteRow| {
             let url_str: Option<String> = row.get("url");
-            let url = url_str.and_then(|u| url::Url::parse(&u).ok());
+            let url = url_str.and_then(|u| Url::parse(&u).ok());
             types::Quote {
                 text: row.get("text"),
                 author: row.get("author"),
@@ -202,7 +129,7 @@ impl Repository {
         .bind(entry.text.as_deref().unwrap_or(""))
         .bind("article")
         .bind(&entry.thumbnail_url)
-        .bind(&entry.reference)
+        .bind(entry.reference.as_ref().filter(|r| !r.is_empty()))
         .bind(entry.duration_seconds)
         .fetch_one(&mut *tx)
         .await?;
@@ -215,7 +142,7 @@ impl Repository {
     }
 
     /// Checks if a URL already exists in the database
-    pub async fn url_exists(&self, url: &url::Url) -> Result<bool> {
+    pub async fn url_exists(&self, url: &Url) -> Result<bool> {
         let url_str = url.as_str();
         let result = sqlx::query("SELECT 1 FROM entries_meta WHERE url = ? LIMIT 1")
             .bind(url_str)
@@ -799,12 +726,7 @@ impl Repository {
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
-        let rows: Vec<SearchResultRow> = query.build_query_as().fetch_all(&self.pool).await?;
-
-        let results = rows
-            .into_iter()
-            .filter_map(SearchResultRow::into_search_result)
-            .collect();
+        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
 
         Ok(results)
     }
@@ -813,7 +735,7 @@ impl Repository {
     pub async fn get_entries_by_date(&self, date: NaiveDate) -> Result<Vec<Entry>> {
         let date_str = date.format("%Y-%m-%d").to_string();
 
-        let rows: Vec<EntryRow> = sqlx::query_as(
+        let entries: Vec<Entry> = sqlx::query_as(
             r#"
             SELECT
                 title,
@@ -832,8 +754,6 @@ impl Repository {
         .bind(&date_str)
         .fetch_all(&self.pool)
         .await?;
-
-        let entries = rows.into_iter().filter_map(EntryRow::into_entry).collect();
 
         Ok(entries)
     }

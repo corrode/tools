@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use log::info;
 use std::fs;
 use storage::Repository;
-use types::Entry;
+use types::{Entry, Url};
 
 mod parser;
 use parser::TwirParser;
@@ -60,7 +60,7 @@ impl Twir {
     }
 
     /// Determines if a URL should be processed
-    fn should_process_url(&self, url: &url::Url) -> bool {
+    fn should_process_url(&self, url: &Url) -> bool {
         let supported_protocols = ["http", "https"];
         if !supported_protocols
             .iter()

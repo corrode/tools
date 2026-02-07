@@ -206,7 +206,7 @@ impl Indexer for Youtube {
                 }
 
                 let url_str = format!("https://www.youtube.com/watch?v={}", video_id);
-                let url = url::Url::parse(&url_str)?;
+                let url = Url::parse(&url_str)?;
 
                 // Skip if already exists and not overwriting
                 if !self.overwrite && repo.url_exists(&url).await? {

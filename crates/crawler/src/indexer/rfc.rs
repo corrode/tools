@@ -12,8 +12,7 @@ use regex::Regex;
 use reqwest::header;
 use serde::Deserialize;
 use storage::Repository;
-use types::{Entry, EntryId};
-use url::Url;
+use types::{Entry, EntryId, Url};
 
 /// GitHub API URL for the RFCs folder
 const GH_RFCS_FOLDER_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/contents/text";
