@@ -1,10 +1,10 @@
-use anyhow::Result;
 use askama::Template;
 use axum::{extract::State, response::Html};
 use std::sync::Arc;
 use storage::Repository;
 
-use types::SearchResult;
+use types::ContentType;
+use types::search_result::{Article, Video};
 
 use crate::handlers::search::DisplayQuote;
 
@@ -12,11 +12,13 @@ use crate::handlers::search::DisplayQuote;
 #[template(path = "index.html")]
 struct SearchTemplate {
     query: Option<String>,
-    results: Vec<SearchResult>,
+    videos: Vec<Video>,
+    articles: Vec<Article>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
+    content_type: ContentType,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -39,11 +41,13 @@ pub(crate) async fn index(
 
     let template = SearchTemplate {
         query: None,
-        results: vec![],
+        videos: vec![],
+        articles: vec![],
         total_results: 0,
         start_year: None,
         end_year: None,
         sort_by: None,
+        content_type: ContentType::default(),
         start_index: 0,
         end_index: 0,
         prev_page_href: None,

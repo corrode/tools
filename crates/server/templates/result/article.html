@@ -1,0 +1,24 @@
+<div class="result-item">
+    <div class="result-title">
+        <a
+            href="{{ article.url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >{{ article.title }}</a>
+    </div>
+    {% if let Some(snippet) = article.snippet %}
+    <div class="result-snippet">{{ snippet|safe }}</div>
+    {% endif %}
+    <div class="result-meta">
+        <span class="meta-item">
+            <span class="domain-icon">{{ article.icon_svg|safe }}</span>
+            <span class="domain">{{ article.domain }}</span>
+        </span>
+        {% if let Some(reference) = article.reference %}
+        <span class="meta-item">{{ reference }}</span>
+        {% endif %}
+        <span class="meta-item">{{ article.category }}</span>
+        <span class="meta-item">{{ article.date }}</span>
+        <span class="meta-item">{{ article.reading_time }}</span>
+    </div>
+</div>

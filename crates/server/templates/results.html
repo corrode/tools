@@ -1,5 +1,48 @@
 <div id="results-container">
-    {% if let Some(q) = query %}
+    {% if let Some(q) = query %} {% if !q.is_empty() %}
+    <!-- Content type tabs -->
+    <nav class="search-tabs" role="tablist" aria-label="Content type">
+        <a
+            href="?q={{ q }}"
+            class="tab {% if content_type == types::ContentType::All %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == types::ContentType::All %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'all'"
+        >
+            All
+        </a>
+        <a
+            href="?q={{ q }}&type=articles"
+            class="tab {% if content_type == types::ContentType::Articles %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == types::ContentType::Articles %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=articles"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'articles'"
+        >
+            Articles
+        </a>
+        <a
+            href="?q={{ q }}&type=video"
+            class="tab {% if content_type == types::ContentType::Video %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == types::ContentType::Video %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=video"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="document.getElementById('content-type').value = 'video'"
+        >
+            Videos
+        </a>
+    </nav>
+    {% endif %}
     <div class="results" id="search-results">
         {% let start = start_year.unwrap_or(2013) %} {% let end =
         end_year.unwrap_or(2025) %} {% let sort =
@@ -72,47 +115,19 @@
                 Clear all
             </button>
         </div>
-        {% endif %} {% if results.is_empty() %}
+        {% endif %} {% if videos.is_empty() && articles.is_empty() %}
         <div class="result-item">
             <div class="result-title">No results found</div>
             <div class="result-snippet">
                 Try adjusting your search terms or filters.
             </div>
         </div>
-        {% else %} {% for result in results %}
-        <div class="result-item">
-            <div class="result-title">
-                <a
-                    href="{{ result.entry.id.url }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ result.entry.id.title }}</a
-                >
-            </div>
-            {% if let Some(snippet) = result.snippet %}
-            <div class="result-snippet">{{ snippet|safe }}</div>
-            {% endif %}
-            <div class="result-meta">
-                <span class="meta-item">
-                    <span class="domain-icon"
-                        >{{ result.icon_svg()|safe }}</span
-                    >
-                    <span class="domain">{{ result.domain() }}</span>
-                </span>
-                {% if let Some(reference) = result.formatted_reference() %}
-                <span class="meta-item">{{ reference }}</span>
-                {% endif %}
-                <span class="meta-item">{{ result.entry.id.category }}</span>
-                <span class="meta-item">{{ result.entry.id.date }}</span>
-                <span class="meta-item"
-                    >~{{ result.reading_time_minutes() }} min read</span
-                >
-            </div>
-        </div>
-        {% endfor %} {% endif %}
+        {% else %} {% for video in videos %} {% include "result/video.html" %}
+        {% endfor %} {% for article in articles %} {% include
+        "result/article.html" %} {% endfor %} {% endif %}
     </div>
 
-    <!-- Pagination (outside results div, aligned right) -->
+    <!-- Pagination -->
     {% if total_results > 0 %}
     <div class="pagination">
         {% if let Some(prev) = prev_page_href %}
@@ -152,11 +167,11 @@
     </div>
     {% endif %}
 
-    <!-- Quote of the Week Easter Egg (outside results div) -->
-    {% if !results.is_empty() %} {% if let Some(quote) = quote %}
+    <!-- Quote Easter Egg -->
+    {% if let Some(q) = quote %}
     <div class="quote-easter-egg">
-        <div class="quote-content">"{{ quote.text }}"</div>
-        <div class="quote-attribution">— {{ quote.author }}</div>
+        <div class="quote-content">"{{ q.text }}"</div>
+        <div class="quote-attribution">— {{ q.author }}</div>
     </div>
-    {% endif %} {% endif %} {% endif %}
+    {% endif %} {% endif %}
 </div>

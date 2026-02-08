@@ -1,0 +1,61 @@
+<div class="result-item result-item-video">
+    <a
+        href="{{ video.url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="video-thumbnail-link"
+    >
+        <div class="video-thumbnail-wrapper">
+            {% if let Some(thumb) = video.thumbnail_url %}
+            <img
+                src="{{ thumb }}"
+                alt="{{ video.title }}"
+                class="video-thumbnail"
+            />
+            {% else %}
+            <div class="video-thumbnail video-thumbnail-placeholder"></div>
+            {% endif %}
+        </div>
+        <div class="video-play-overlay">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+        </div>
+        {% if let Some(duration) = video.duration %}
+        <span class="video-duration">{{ duration }}</span>
+        {% endif %}
+    </a>
+    <div class="result-content">
+        <div class="result-title">
+            <a href="{{ video.url }}" target="_blank" rel="noopener noreferrer"
+                >{{ video.title }}</a
+            >
+        </div>
+        {% if let Some(snippet) = video.snippet %}
+        <div class="result-snippet">{{ snippet|safe }}</div>
+        {% endif %}
+        <div class="result-meta">
+            <span class="meta-item">
+                <span class="domain-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path
+                            d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"
+                        />
+                        <polygon points="9.75,15.02 15.5,11.75 9.75,8.48" />
+                    </svg>
+                </span>
+                <span class="domain">{{ video.domain }}</span>
+            </span>
+            <span class="meta-item">Video</span>
+            <span class="meta-item">{{ video.date }}</span>
+        </div>
+    </div>
+</div>

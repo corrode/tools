@@ -14,7 +14,8 @@ use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
 use std::path::Path;
-use types::{CategoryStats, Entry, EntryId, SearchResult, Stats, YearStats};
+use types::Url;
+use types::{CategoryStats, ContentType, Entry, SearchResult, Stats, YearStats};
 
 /// Manages storage and retrieval of TWiR entries
 pub struct Repository {
@@ -84,7 +85,7 @@ impl Repository {
         )
         .map(|row: sqlx::sqlite::SqliteRow| {
             let url_str: Option<String> = row.get("url");
-            let url = url_str.and_then(|u| url::Url::parse(&u).ok());
+            let url = url_str.and_then(|u| Url::parse(&u).ok());
             types::Quote {
                 text: row.get("text"),
                 author: row.get("author"),
@@ -108,15 +109,16 @@ impl Repository {
 
         let entry_id: i64 = sqlx::query_scalar(
             r#"
-            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url, reference)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO entries_meta(title, url, category, date, text, entry_type, thumbnail_url, reference, duration_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO UPDATE SET
                 title = excluded.title,
                 category = excluded.category,
                 date = excluded.date,
                 text = excluded.text,
                 thumbnail_url = excluded.thumbnail_url,
-                reference = excluded.reference
+                reference = excluded.reference,
+                duration_seconds = excluded.duration_seconds
             RETURNING id
             "#,
         )
@@ -127,7 +129,8 @@ impl Repository {
         .bind(entry.text.as_deref().unwrap_or(""))
         .bind("article")
         .bind(&entry.thumbnail_url)
-        .bind(&entry.reference)
+        .bind(entry.reference.as_ref().filter(|r| !r.is_empty()))
+        .bind(entry.duration_seconds)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -139,7 +142,7 @@ impl Repository {
     }
 
     /// Checks if a URL already exists in the database
-    pub async fn url_exists(&self, url: &url::Url) -> Result<bool> {
+    pub async fn url_exists(&self, url: &Url) -> Result<bool> {
         let url_str = url.as_str();
         let result = sqlx::query("SELECT 1 FROM entries_meta WHERE url = ? LIMIT 1")
             .bind(url_str)
@@ -552,6 +555,7 @@ impl Repository {
         query: &str,
         start_year: Option<i32>,
         end_year: Option<i32>,
+        content_type: ContentType,
     ) -> Result<i64> {
         // Parse query for site: operator
         let (search_terms, site_filter) = Self::parse_query(query);
@@ -607,6 +611,17 @@ impl Repository {
             query.push_bind(format!("{end}-12-31"));
         }
 
+        // Add content type filter
+        match content_type {
+            ContentType::All => {}
+            ContentType::Articles => {
+                query.push(" AND m.url NOT LIKE '%youtube.com%' AND m.url NOT LIKE '%youtu.be%'");
+            }
+            ContentType::Video => {
+                query.push(" AND (m.url LIKE '%youtube.com%' OR m.url LIKE '%youtu.be%')");
+            }
+        }
+
         let row = query.build().fetch_one(&self.pool).await?;
         Ok(row.get("total"))
     }
@@ -618,6 +633,7 @@ impl Repository {
         start_year: Option<i32>,
         end_year: Option<i32>,
         sort_by: Option<&str>,
+        content_type: ContentType,
         page: Option<u32>,
     ) -> Result<Vec<SearchResult>> {
         // Parse query for site: operator
@@ -645,7 +661,7 @@ impl Repository {
             let mut q = QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference, m.duration_seconds,
                 rank,
                 snippet(entries_fts, -1, '<mark>', '</mark>', '...', 50) as snippet
             FROM entries_fts
@@ -659,7 +675,7 @@ impl Repository {
             QueryBuilder::new(
                 r#"
             SELECT
-                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference,
+                m.title, m.url, m.category, m.date, m.text, m.thumbnail_url, m.reference, m.duration_seconds,
                 0.0 as rank,
                 NULL as snippet
             FROM entries_meta m
@@ -683,6 +699,17 @@ impl Repository {
             query.push_bind(format!("{end}-12-31"));
         }
 
+        // Add content type filter
+        match content_type {
+            ContentType::All => {}
+            ContentType::Articles => {
+                query.push(" AND m.url NOT LIKE '%youtube.com%' AND m.url NOT LIKE '%youtu.be%'");
+            }
+            ContentType::Video => {
+                query.push(" AND (m.url LIKE '%youtube.com%' OR m.url LIKE '%youtu.be%')");
+            }
+        }
+
         // Add ORDER BY clause
         match sort_by {
             Some("date-desc") => query.push(" ORDER BY m.date DESC"),
@@ -699,32 +726,7 @@ impl Repository {
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
-        let rows = query.build().fetch_all(&self.pool).await?;
-
-        let results = rows
-            .into_iter()
-            .filter_map(|row| {
-                url::Url::parse(row.get("url")).ok().map(|url| {
-                    let date = row.get::<String, _>("date");
-                    SearchResult {
-                        entry: Entry {
-                            thumbnail_url: row.try_get("thumbnail_url").ok(),
-                            reference: row.try_get("reference").ok(),
-                            id: EntryId {
-                                title: row.get("title"),
-                                url,
-                                category: row.get("category"),
-                                date: NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-                                    .unwrap_or_default(),
-                            },
-                            text: row.get("text"),
-                        },
-                        rank: row.get("rank"),
-                        snippet: row.get("snippet"),
-                    }
-                })
-            })
-            .collect();
+        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
 
         Ok(results)
     }
@@ -733,7 +735,7 @@ impl Repository {
     pub async fn get_entries_by_date(&self, date: NaiveDate) -> Result<Vec<Entry>> {
         let date_str = date.format("%Y-%m-%d").to_string();
 
-        let rows = sqlx::query(
+        let entries: Vec<Entry> = sqlx::query_as(
             r#"
             SELECT
                 title,
@@ -742,7 +744,8 @@ impl Repository {
                 date,
                 text,
                 thumbnail_url,
-                reference
+                reference,
+                duration_seconds
             FROM entries_meta
             WHERE date = ?
             ORDER BY category, title
@@ -751,32 +754,6 @@ impl Repository {
         .bind(&date_str)
         .fetch_all(&self.pool)
         .await?;
-
-        let entries = rows
-            .into_iter()
-            .filter_map(|row| {
-                let Ok(date) = NaiveDate::parse_from_str(row.get::<&str, _>("date"), "%Y-%m-%d")
-                else {
-                    log::info!(
-                        "Cannot convert row date to NaiveDate: {}",
-                        row.get::<&str, _>("date")
-                    );
-                    return None;
-                };
-
-                url::Url::parse(row.get("url")).ok().map(|url| Entry {
-                    thumbnail_url: row.try_get("thumbnail_url").ok(),
-                    reference: row.try_get("reference").ok(),
-                    id: EntryId {
-                        title: row.get("title"),
-                        url,
-                        category: row.get("category"),
-                        date,
-                    },
-                    text: row.get("text"),
-                })
-            })
-            .collect();
 
         Ok(entries)
     }

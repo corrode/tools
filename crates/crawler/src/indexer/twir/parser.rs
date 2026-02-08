@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use types::{EntryId, Quote};
+use types::{EntryId, Quote, Url};
 
 /// This Week in Rust configuration
 const TWIR_GITHUB_OWNER: &str = "rust-lang";
@@ -214,7 +214,7 @@ impl TwirParser {
                             match event {
                                 Event::Text(text) => author.push_str(&text),
                                 Event::Start(Tag::Link { dest_url, .. }) => {
-                                    if let Ok(u) = url::Url::parse(&dest_url) {
+                                    if let Ok(u) = Url::parse(&dest_url) {
                                         url = Some(u);
                                     }
                                 }
@@ -263,7 +263,7 @@ impl TwirParser {
                     if !current_category
                         .to_lowercase()
                         .contains("quote of the week")
-                        && let Ok(url) = url::Url::parse(&current_url)
+                        && let Ok(url) = Url::parse(&current_url)
                     {
                         entries.push(EntryId {
                             title: current_title.clone(),
@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(first.title, "This Development-cycle in Cargo: 1.81");
         assert_eq!(
             first.url,
-            url::Url::parse("https://blog.rust-lang.org/inside-rust/2024/08/15/this-development-cycle-in-cargo-1.81.html").unwrap()
+            Url::parse("https://blog.rust-lang.org/inside-rust/2024/08/15/this-development-cycle-in-cargo-1.81.html").unwrap()
         );
 
         let second = &entries[1];
@@ -410,7 +410,7 @@ mod tests {
         assert_eq!(second.title, "Async Closures MVP: Call for Testing!");
         assert_eq!(
             second.url,
-            url::Url::parse("https://blog.rust-lang.org/inside-rust/2024/08/09/async-closures-call-for-testing.html").unwrap()
+            Url::parse("https://blog.rust-lang.org/inside-rust/2024/08/09/async-closures-call-for-testing.html").unwrap()
         );
     }
 
@@ -430,7 +430,7 @@ mod tests {
         let first = &entries[0];
         assert_eq!(first.category, "Official");
         assert_eq!(first.title, "This `code` in Cargo");
-        assert_eq!(first.url, url::Url::parse("https://example.com").unwrap());
+        assert_eq!(first.url, Url::parse("https://example.com").unwrap());
     }
 
     #[test]

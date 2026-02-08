@@ -87,6 +87,7 @@ askama = { version = "0.12.1", features = [
     "markdown",
 ] }
 charming = "0.3"
+strum = { version = "0.26", features = ["derive"] }
 
 # Internal
 types = { path = "crates/types" }
