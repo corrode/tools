@@ -27,6 +27,7 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
+        .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);
 

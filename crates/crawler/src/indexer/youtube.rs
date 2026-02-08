@@ -44,7 +44,7 @@ impl Youtube {
             api_key,
             playlist_id,
             overwrite: false,
-            static_dir: PathBuf::from("static/youtube"),
+            static_dir: PathBuf::from("data/static/youtube"),
         }
     }
 

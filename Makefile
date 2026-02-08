@@ -1,6 +1,7 @@
 SERVER_USER := root
 SERVER_IP := 46.225.7.147
 REMOTE_DIR := /data/coolify/applications/search/data
+STATIC_REMOTE_DIR := $(REMOTE_DIR)/static
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 
 .PHONY: help
@@ -35,3 +36,17 @@ db-backup: ## Backup remote DB to local backups/
 	mkdir -p backups
 	@echo "Fetching $(REMOTE_DIR)/index.db to backups/index_$(TIMESTAMP).db"
 	scp $(SERVER_USER)@$(SERVER_IP):$(REMOTE_DIR)/index.db backups/index_$(TIMESTAMP).db
+
+.PHONY: static-sync
+static-sync: ## Bidirectional sync of thumbnails between local and remote
+	@echo "Syncing thumbnails (bidirectional)..."
+	mkdir -p data/static/youtube
+	ssh $(SERVER_USER)@$(SERVER_IP) "mkdir -p $(STATIC_REMOTE_DIR)/youtube"
+	@echo "Pulling from remote..."
+	rsync -avz --progress $(SERVER_USER)@$(SERVER_IP):$(STATIC_REMOTE_DIR)/youtube/ data/static/youtube/
+	@echo "Pushing to remote..."
+	rsync -avz --progress data/static/youtube/ $(SERVER_USER)@$(SERVER_IP):$(STATIC_REMOTE_DIR)/youtube/
+
+.PHONY: deploy
+deploy: db-copy static-sync ## Deploy database and sync static files with remote
+	@echo "Deployment complete"
