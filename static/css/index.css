@@ -72,6 +72,10 @@ html[data-theme="light-hacker-news"] .tab-active:hover {
     border-bottom-color: #ff6600;
 }
 
+html[data-theme="light-hacker-news"] .video-thumbnail-link {
+    border-radius: 0;
+}
+
 /* Dark TWIR tabs */
 html[data-theme="dark-twir"] .tab {
     font-family: "Univers", sans-serif;
@@ -87,6 +91,14 @@ html[data-theme="dark-twir"] .tab-active,
 html[data-theme="dark-twir"] .tab-active:hover {
     color: #d2991d;
     border-bottom-color: #d2991d;
+}
+
+html[data-theme="dark-twir"] .video-thumbnail-link {
+    background-color: #252525;
+}
+
+html[data-theme="dark-twir"] .video-thumbnail-placeholder {
+    background-color: #252525;
 }
 
 /* Light Docs RS */
@@ -627,19 +639,34 @@ html[data-theme="dark-twir"] .tag {
 
 .video-thumbnail-link {
     flex-shrink: 0;
+    width: 293px;
     position: relative;
-    display: block;
+    overflow: hidden;
+    border-radius: 4px;
+    background-color: var(--color-surface);
+    /* 16:9 aspect ratio using padding trick */
+    padding-bottom: 165px; /* 293px * 0.5625 = 165px for 16:9 */
+}
+
+.video-thumbnail-wrapper {
+    position: absolute;
+    top: -16.75%;
+    left: 0;
+    right: 0;
+    bottom: -16.75%;
 }
 
 .video-thumbnail {
-    width: 160px;
-    height: 90px;
-    border-radius: 4px;
-    background-color: var(--color-surface);
-    object-fit: cover;
+    width: 100%;
+    display: block;
 }
 
 .video-thumbnail-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -650,6 +677,37 @@ html[data-theme="dark-twir"] .tag {
     width: 32px;
     height: 32px;
     color: var(--color-text-muted);
+}
+
+/* Play button overlay */
+.video-play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+    pointer-events: none;
+}
+
+.video-play-overlay svg {
+    width: 20px;
+    height: 20px;
+    color: #fff;
+    margin-left: 3px; /* Optical centering for play icon */
+}
+
+.video-thumbnail-link:hover .video-play-overlay {
+    background-color: rgba(0, 0, 0, 0.85);
+    transform: translate(-50%, -50%) scale(1.1);
 }
 
 .video-duration {
@@ -870,10 +928,9 @@ html[data-theme="dark-twir"] .tag {
         gap: 12px;
     }
 
-    .video-thumbnail {
+    .video-thumbnail-link {
         width: 100%;
-        height: auto;
-        aspect-ratio: 16 / 9;
+        padding-bottom: 56.25%;
     }
 
     .pagination {
