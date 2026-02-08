@@ -110,7 +110,7 @@ impl Browser {
         }
 
         // For YouTube thumbnails, we can skip browser rendering
-        if target_url != entry_id.url {
+        if target_url != *entry_id.url {
             log::info!("YouTube thumbnail verified, skipping browser rendering");
             return Ok(Some(format!("YouTube video: {}", entry_id.title)));
         }
