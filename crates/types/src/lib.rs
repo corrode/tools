@@ -634,29 +634,89 @@ impl SearchResult {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
     /// Total number of indexed entries (articles + videos).
-    pub total_articles: i64,
-    /// Average entry size in characters.
-    pub avg_article_size: i64,
-    /// Total characters across all entries.
+    pub total_entries: i64,
+    /// Earliest indexed entry date (across all content types).
+    pub earliest_date: Option<NaiveDate>,
+    /// Latest indexed entry date (across all content types).
+    pub latest_date: Option<NaiveDate>,
+    /// Total unique domains (across all content types).
+    pub total_unique_domains: i64,
+    /// Article-specific statistics.
+    pub articles: ArticleStats,
+    /// Video-specific statistics.
+    pub videos: VideoStats,
+}
+
+/// Statistics specific to articles.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ArticleStats {
+    /// Total number of articles.
+    pub total: i64,
+    /// Average article size in characters.
+    pub avg_size_chars: i64,
+    /// Total characters across all articles.
     pub total_characters: i64,
+    /// Average word count per article.
+    pub avg_word_count: i64,
+    /// Total words across all articles.
+    pub total_words: i64,
+    /// Articles per year.
+    pub per_year: Vec<YearStats>,
+    /// Articles per month.
+    pub per_month: Vec<MonthStats>,
     /// Categories and their counts.
     pub categories: Vec<CategoryStats>,
-    /// Entries per year.
-    pub articles_per_year: Vec<YearStats>,
-    /// Entries per month.
-    pub articles_per_month: Vec<MonthStats>,
-    /// Earliest indexed entry date.
-    pub earliest_date: Option<NaiveDate>,
-    /// Latest indexed entry date.
-    pub latest_date: Option<NaiveDate>,
     /// Top domains by year.
     pub top_domains_by_year: Vec<YearlyDomainStats>,
     /// Top keywords by year.
     pub top_keywords_by_year: Vec<YearlyKeywordStats>,
-    /// Total unique domains.
-    pub total_unique_domains: i64,
     /// Most prolific domain overall.
     pub top_domain_overall: Option<DomainStats>,
+}
+
+/// Statistics specific to videos.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VideoStats {
+    /// Total number of videos.
+    pub total: i64,
+    /// Total duration of all videos in seconds.
+    pub total_duration_seconds: i64,
+    /// Median video duration in seconds.
+    pub median_duration_seconds: i64,
+    /// Longest video.
+    pub longest_video: Option<VideoDurationRecord>,
+    /// Shortest video.
+    pub shortest_video: Option<VideoDurationRecord>,
+    /// Videos per year.
+    pub per_year: Vec<YearStats>,
+    /// Videos per month.
+    pub per_month: Vec<MonthStats>,
+    /// Categories and their counts.
+    pub categories: Vec<CategoryStats>,
+    /// Top channels (domains) for videos.
+    pub top_channels: Vec<ChannelStats>,
+}
+
+/// A record of a video with its duration (for longest/shortest tracking).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoDurationRecord {
+    /// Video title.
+    pub title: String,
+    /// Video URL.
+    pub url: String,
+    /// Duration in seconds.
+    pub duration_seconds: i64,
+}
+
+/// Statistics for a video channel/source.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelStats {
+    /// Channel or domain name.
+    pub channel: String,
+    /// Number of videos from this channel.
+    pub video_count: i64,
+    /// Total duration of videos from this channel in seconds.
+    pub total_duration_seconds: i64,
 }
 
 /// Category statistics.

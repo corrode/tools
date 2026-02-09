@@ -74,10 +74,17 @@
 use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{Pool, QueryBuilder, Row, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::{
+    Pool, QueryBuilder, Row, Sqlite,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+};
 use std::path::Path;
+use std::str::FromStr;
 use types::Url;
-use types::{CategoryStats, ContentType, NewArticle, NewVideo, SearchResult, Stats, YearStats};
+use types::{
+    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, NewVideo, SearchResult,
+    Stats, VideoDurationRecord, VideoStats, YearStats,
+};
 
 /// Manages storage and retrieval of search entries
 pub struct Repository {
@@ -104,11 +111,19 @@ impl Repository {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
         log::info!("Opening database at: {database_url}");
 
+        let options = SqliteConnectOptions::from_str(&database_url)?.pragma("trusted_schema", "1");
+
         let pool = SqlitePoolOptions::new()
             .max_connections(20)
-            .connect(&database_url)
+            .connect_with(options)
             .await
             .context("Failed to connect to SQLite database")?;
+
+        // Verify trusted_schema is enabled
+        let trusted: i32 = sqlx::query_scalar("PRAGMA trusted_schema")
+            .fetch_one(&pool)
+            .await?;
+        log::debug!("trusted_schema = {}", trusted);
 
         let repo = Self { pool };
         repo.init_db().await?;
@@ -291,146 +306,6 @@ impl Repository {
 
     /// Gets comprehensive statistics about the indexed content
     pub async fn get_stats(&self) -> Result<Stats> {
-        // Get total entries from both tables
-        let articles_overview = sqlx::query(
-            "SELECT COUNT(*) as total, SUM(LENGTH(text)) as total_chars, AVG(LENGTH(text)) as avg_size FROM articles",
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        let videos_overview = sqlx::query(
-            "SELECT COUNT(*) as total, SUM(LENGTH(text)) as total_chars, AVG(LENGTH(text)) as avg_size FROM videos",
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        let articles_count: i64 = articles_overview.get("total");
-        let videos_count: i64 = videos_overview.get("total");
-        let total_articles = articles_count + videos_count;
-
-        let articles_chars: i64 = articles_overview
-            .get::<Option<i64>, _>("total_chars")
-            .unwrap_or(0);
-        let videos_chars: i64 = videos_overview
-            .get::<Option<i64>, _>("total_chars")
-            .unwrap_or(0);
-        let total_characters = articles_chars + videos_chars;
-
-        let avg_article_size = if total_articles > 0 {
-            total_characters / total_articles
-        } else {
-            0
-        };
-
-        // Get category stats from both tables
-        let category_rows = sqlx::query(
-            r#"
-            SELECT category, COUNT(*) as count FROM (
-                SELECT category FROM articles
-                UNION ALL
-                SELECT category FROM videos
-            ) GROUP BY category ORDER BY count DESC
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let mut categories: Vec<CategoryStats> = category_rows
-            .into_iter()
-            .map(|row| CategoryStats {
-                category: row.get("category"),
-                count: row.get("count"),
-                percentage: 0,
-            })
-            .collect();
-
-        // Calculate percentages relative to max
-        if let Some(max_count) = categories.first().map(|c| c.count) {
-            for cat in &mut categories {
-                cat.percentage = if max_count > 0 {
-                    (cat.count * 100) / max_count
-                } else {
-                    0
-                };
-            }
-        }
-
-        // Get year stats from both tables
-        let year_rows = sqlx::query(
-            r#"
-            SELECT year, COUNT(*) as count FROM (
-                SELECT CAST(strftime('%Y', date) as INTEGER) as year FROM articles
-                UNION ALL
-                SELECT CAST(strftime('%Y', date) as INTEGER) as year FROM videos
-            ) GROUP BY year ORDER BY year
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let mut articles_per_year: Vec<YearStats> = year_rows
-            .into_iter()
-            .map(|row| YearStats {
-                year: row.get("year"),
-                count: row.get("count"),
-                percentage: 0,
-            })
-            .collect();
-
-        // Calculate percentages relative to max
-        if let Some(max_count) = articles_per_year.iter().map(|y| y.count).max() {
-            for year in &mut articles_per_year {
-                year.percentage = if max_count > 0 {
-                    (year.count * 100) / max_count
-                } else {
-                    0
-                };
-            }
-        }
-
-        // Get month stats
-        let month_rows = sqlx::query(
-            r#"
-            SELECT year_month, year, month, COUNT(*) as count FROM (
-                SELECT 
-                    strftime('%Y-%m', date) as year_month,
-                    CAST(strftime('%Y', date) as INTEGER) as year,
-                    CAST(strftime('%m', date) as INTEGER) as month
-                FROM articles
-                UNION ALL
-                SELECT 
-                    strftime('%Y-%m', date) as year_month,
-                    CAST(strftime('%Y', date) as INTEGER) as year,
-                    CAST(strftime('%m', date) as INTEGER) as month
-                FROM videos
-            ) GROUP BY year_month ORDER BY year_month
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let mut articles_per_month: Vec<types::MonthStats> = month_rows
-            .into_iter()
-            .map(|row| types::MonthStats {
-                year_month: row.get("year_month"),
-                year: row.get("year"),
-                month: row.get("month"),
-                count: row.get("count"),
-                percentage: 0,
-            })
-            .collect();
-
-        // Calculate percentages relative to max
-        if let Some(max_count) = articles_per_month.iter().map(|m| m.count).max() {
-            for month in &mut articles_per_month {
-                month.percentage = if max_count > 0 {
-                    (month.count * 100) / max_count
-                } else {
-                    0
-                };
-            }
-        }
-
         // Get date range from both tables
         let date_range = sqlx::query(
             r#"
@@ -452,75 +327,7 @@ impl Repository {
             .get::<Option<String>, _>("latest")
             .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
 
-        // Get domain stats by year
-        let domain_rows = sqlx::query(
-            r#"
-            SELECT 
-                year,
-                domain,
-                COUNT(*) as count
-            FROM (
-                SELECT 
-                    CAST(strftime('%Y', date) as INTEGER) as year,
-                    CASE 
-                        WHEN url LIKE '%://%' THEN 
-                            SUBSTR(
-                                SUBSTR(url, INSTR(url, '://') + 3),
-                                1,
-                                CASE 
-                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
-                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
-                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
-                                END
-                            )
-                        ELSE url
-                    END as domain
-                FROM articles
-                UNION ALL
-                SELECT 
-                    CAST(strftime('%Y', date) as INTEGER) as year,
-                    CASE 
-                        WHEN url LIKE '%://%' THEN 
-                            SUBSTR(
-                                SUBSTR(url, INSTR(url, '://') + 3),
-                                1,
-                                CASE 
-                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
-                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
-                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
-                                END
-                            )
-                        ELSE url
-                    END as domain
-                FROM videos
-            )
-            GROUP BY year, domain
-            ORDER BY year, count DESC
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // Group domains by year (top 10 per year)
-        let mut domains_by_year: std::collections::HashMap<i32, Vec<types::DomainStats>> =
-            std::collections::HashMap::new();
-        for row in domain_rows {
-            let year: i32 = row.get("year");
-            let domain: String = row.get("domain");
-            let count: i64 = row.get("count");
-
-            let entry = domains_by_year.entry(year).or_default();
-            if entry.len() < 10 {
-                entry.push(types::DomainStats { domain, count });
-            }
-        }
-
-        let top_domains_by_year: Vec<types::YearlyDomainStats> = domains_by_year
-            .into_iter()
-            .map(|(year, domains)| types::YearlyDomainStats { year, domains })
-            .collect();
-
-        // Get unique domain count
+        // Get unique domain count (across all content)
         let unique_domains = sqlx::query(
             r#"
             SELECT COUNT(DISTINCT domain) as count FROM (
@@ -563,42 +370,198 @@ impl Repository {
 
         let total_unique_domains: i64 = unique_domains.get("count");
 
-        // Get top domain overall
+        let article_stats = self.get_article_stats().await?;
+        let video_stats = self.get_video_stats().await?;
+
+        let total_entries = article_stats.total + video_stats.total;
+
+        Ok(Stats {
+            total_entries,
+            earliest_date,
+            latest_date,
+            total_unique_domains,
+            articles: article_stats,
+            videos: video_stats,
+        })
+    }
+
+    /// Gets article-specific statistics
+    async fn get_article_stats(&self) -> Result<ArticleStats> {
+        // Basic counts
+        let overview = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(LENGTH(text)), 0) as total_chars,
+                COALESCE(AVG(LENGTH(text)), 0) as avg_size,
+                COALESCE(SUM(word_count), 0) as total_words,
+                COALESCE(AVG(word_count), 0) as avg_words
+            FROM articles
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let total: i64 = overview.get("total");
+        let total_characters: i64 = overview.get("total_chars");
+        let avg_size_chars: i64 = overview.get::<f64, _>("avg_size") as i64;
+        let total_words: i64 = overview.get("total_words");
+        let avg_word_count: i64 = overview.get::<f64, _>("avg_words") as i64;
+
+        // Categories
+        let category_rows = sqlx::query(
+            "SELECT category, COUNT(*) as count FROM articles GROUP BY category ORDER BY count DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut categories: Vec<CategoryStats> = category_rows
+            .into_iter()
+            .map(|row| CategoryStats {
+                category: row.get("category"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = categories.first().map(|c| c.count) {
+            for cat in &mut categories {
+                cat.percentage = if max_count > 0 {
+                    (cat.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Per year
+        let year_rows = sqlx::query(
+            r#"
+            SELECT CAST(strftime('%Y', date) as INTEGER) as year, COUNT(*) as count
+            FROM articles GROUP BY year ORDER BY year
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut per_year: Vec<YearStats> = year_rows
+            .into_iter()
+            .map(|row| YearStats {
+                year: row.get("year"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = per_year.iter().map(|y| y.count).max() {
+            for year in &mut per_year {
+                year.percentage = if max_count > 0 {
+                    (year.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Per month
+        let month_rows = sqlx::query(
+            r#"
+            SELECT 
+                strftime('%Y-%m', date) as year_month,
+                CAST(strftime('%Y', date) as INTEGER) as year,
+                CAST(strftime('%m', date) as INTEGER) as month,
+                COUNT(*) as count
+            FROM articles GROUP BY year_month ORDER BY year_month
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut per_month: Vec<types::MonthStats> = month_rows
+            .into_iter()
+            .map(|row| types::MonthStats {
+                year_month: row.get("year_month"),
+                year: row.get("year"),
+                month: row.get("month"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = per_month.iter().map(|m| m.count).max() {
+            for month in &mut per_month {
+                month.percentage = if max_count > 0 {
+                    (month.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Top domains by year
+        let domain_rows = sqlx::query(
+            r#"
+            SELECT 
+                CAST(strftime('%Y', date) as INTEGER) as year,
+                CASE 
+                    WHEN url LIKE '%://%' THEN 
+                        SUBSTR(
+                            SUBSTR(url, INSTR(url, '://') + 3),
+                            1,
+                            CASE 
+                                WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                            END
+                        )
+                    ELSE url
+                END as domain,
+                COUNT(*) as count
+            FROM articles
+            GROUP BY year, domain
+            ORDER BY year, count DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut domains_by_year: std::collections::HashMap<i32, Vec<types::DomainStats>> =
+            std::collections::HashMap::new();
+        for row in domain_rows {
+            let year: i32 = row.get("year");
+            let domain: String = row.get("domain");
+            let count: i64 = row.get("count");
+
+            let entry = domains_by_year.entry(year).or_default();
+            if entry.len() < 10 {
+                entry.push(types::DomainStats { domain, count });
+            }
+        }
+
+        let top_domains_by_year: Vec<types::YearlyDomainStats> = domains_by_year
+            .into_iter()
+            .map(|(year, domains)| types::YearlyDomainStats { year, domains })
+            .collect();
+
+        // Top domain overall
         let top_domain = sqlx::query(
             r#"
-            SELECT domain, COUNT(*) as count FROM (
-                SELECT 
-                    CASE 
-                        WHEN url LIKE '%://%' THEN 
-                            SUBSTR(
-                                SUBSTR(url, INSTR(url, '://') + 3),
-                                1,
-                                CASE 
-                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
-                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
-                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
-                                END
-                            )
-                        ELSE url
-                    END as domain
-                FROM articles
-                UNION ALL
-                SELECT 
-                    CASE 
-                        WHEN url LIKE '%://%' THEN 
-                            SUBSTR(
-                                SUBSTR(url, INSTR(url, '://') + 3),
-                                1,
-                                CASE 
-                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
-                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
-                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
-                                END
-                            )
-                        ELSE url
-                    END as domain
-                FROM videos
-            )
+            SELECT 
+                CASE 
+                    WHEN url LIKE '%://%' THEN 
+                        SUBSTR(
+                            SUBSTR(url, INSTR(url, '://') + 3),
+                            1,
+                            CASE 
+                                WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                            END
+                        )
+                    ELSE url
+                END as domain,
+                COUNT(*) as count
+            FROM articles
             GROUP BY domain
             ORDER BY count DESC
             LIMIT 1
@@ -612,22 +575,246 @@ impl Repository {
             count: row.get("count"),
         });
 
-        // Keywords by year (placeholder - would need more sophisticated text analysis)
+        // Keywords by year (placeholder)
         let top_keywords_by_year: Vec<types::YearlyKeywordStats> = Vec::new();
 
-        Ok(Stats {
-            total_articles,
-            avg_article_size,
+        Ok(ArticleStats {
+            total,
+            avg_size_chars,
             total_characters,
+            avg_word_count,
+            total_words,
+            per_year,
+            per_month,
             categories,
-            articles_per_year,
-            articles_per_month,
-            earliest_date,
-            latest_date,
             top_domains_by_year,
             top_keywords_by_year,
-            total_unique_domains,
             top_domain_overall,
+        })
+    }
+
+    /// Gets video-specific statistics
+    async fn get_video_stats(&self) -> Result<VideoStats> {
+        // Basic counts and duration stats
+        let overview = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(duration_seconds), 0) as total_duration,
+                COALESCE(AVG(duration_seconds), 0) as avg_duration
+            FROM videos
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let total: i64 = overview.get("total");
+        let total_duration_seconds: i64 = overview.get("total_duration");
+
+        // Median duration (SQLite doesn't have a built-in median, so we compute it)
+        // Only consider videos with non-null duration
+        let videos_with_duration: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM videos WHERE duration_seconds IS NOT NULL AND duration_seconds > 0",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let median_duration_seconds = if videos_with_duration > 0 {
+            let median_row = sqlx::query(
+                r#"
+                SELECT duration_seconds FROM videos
+                WHERE duration_seconds IS NOT NULL AND duration_seconds > 0
+                ORDER BY duration_seconds
+                LIMIT 1 OFFSET ?
+                "#,
+            )
+            .bind(videos_with_duration / 2)
+            .fetch_optional(&self.pool)
+            .await?;
+
+            median_row
+                .map(|r| r.get::<i64, _>("duration_seconds"))
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+        // Longest video
+        let longest = sqlx::query(
+            r#"
+            SELECT title, url, duration_seconds
+            FROM videos
+            ORDER BY duration_seconds DESC
+            LIMIT 1
+            "#,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let longest_video = longest.map(|row| VideoDurationRecord {
+            title: row.get("title"),
+            url: row.get("url"),
+            duration_seconds: row.get("duration_seconds"),
+        });
+
+        // Shortest video (excluding 0-duration)
+        let shortest = sqlx::query(
+            r#"
+            SELECT title, url, duration_seconds
+            FROM videos
+            WHERE duration_seconds > 0
+            ORDER BY duration_seconds ASC
+            LIMIT 1
+            "#,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let shortest_video = shortest.map(|row| VideoDurationRecord {
+            title: row.get("title"),
+            url: row.get("url"),
+            duration_seconds: row.get("duration_seconds"),
+        });
+
+        // Categories
+        let category_rows = sqlx::query(
+            "SELECT category, COUNT(*) as count FROM videos GROUP BY category ORDER BY count DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut categories: Vec<CategoryStats> = category_rows
+            .into_iter()
+            .map(|row| CategoryStats {
+                category: row.get("category"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = categories.first().map(|c| c.count) {
+            for cat in &mut categories {
+                cat.percentage = if max_count > 0 {
+                    (cat.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Per year
+        let year_rows = sqlx::query(
+            r#"
+            SELECT CAST(strftime('%Y', date) as INTEGER) as year, COUNT(*) as count
+            FROM videos GROUP BY year ORDER BY year
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut per_year: Vec<YearStats> = year_rows
+            .into_iter()
+            .map(|row| YearStats {
+                year: row.get("year"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = per_year.iter().map(|y| y.count).max() {
+            for year in &mut per_year {
+                year.percentage = if max_count > 0 {
+                    (year.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Per month
+        let month_rows = sqlx::query(
+            r#"
+            SELECT 
+                strftime('%Y-%m', date) as year_month,
+                CAST(strftime('%Y', date) as INTEGER) as year,
+                CAST(strftime('%m', date) as INTEGER) as month,
+                COUNT(*) as count
+            FROM videos GROUP BY year_month ORDER BY year_month
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut per_month: Vec<types::MonthStats> = month_rows
+            .into_iter()
+            .map(|row| types::MonthStats {
+                year_month: row.get("year_month"),
+                year: row.get("year"),
+                month: row.get("month"),
+                count: row.get("count"),
+                percentage: 0,
+            })
+            .collect();
+
+        if let Some(max_count) = per_month.iter().map(|m| m.count).max() {
+            for month in &mut per_month {
+                month.percentage = if max_count > 0 {
+                    (month.count * 100) / max_count
+                } else {
+                    0
+                };
+            }
+        }
+
+        // Top channels (domains with video count and total duration)
+        // Normalize YouTube URL variants (youtu.be, m.youtube.com, youtube.com -> www.youtube.com)
+        let channel_rows = sqlx::query(
+            r#"
+            SELECT 
+                CASE 
+                    WHEN url LIKE '%youtu.be%' OR url LIKE '%youtube.com%' THEN 'youtube.com'
+                    WHEN url LIKE '%://%' THEN 
+                        SUBSTR(
+                            SUBSTR(url, INSTR(url, '://') + 3),
+                            1,
+                            CASE 
+                                WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                            END
+                        )
+                    ELSE url
+                END as channel,
+                COUNT(*) as video_count,
+                COALESCE(SUM(duration_seconds), 0) as total_duration
+            FROM videos
+            GROUP BY channel
+            ORDER BY video_count DESC
+            LIMIT 10
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let top_channels: Vec<ChannelStats> = channel_rows
+            .into_iter()
+            .map(|row| ChannelStats {
+                channel: row.get("channel"),
+                video_count: row.get("video_count"),
+                total_duration_seconds: row.get("total_duration"),
+            })
+            .collect();
+
+        Ok(VideoStats {
+            total,
+            total_duration_seconds,
+            median_duration_seconds,
+            longest_video,
+            shortest_video,
+            per_year,
+            per_month,
+            categories,
+            top_channels,
         })
     }
 
