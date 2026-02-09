@@ -11,7 +11,6 @@ mod handlers;
 use axum::{Router, routing::get};
 use storage::Repository;
 use tower_http::services::ServeDir;
-pub use types::Entry;
 
 use std::sync::Arc;
 use tokio::signal;

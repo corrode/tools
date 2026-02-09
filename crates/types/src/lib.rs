@@ -1,9 +1,10 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_crate_level_docs)]
+
 //! # Rust Search Types
 //!
-//! This crate provides common types used across the Rust Search project. It
-//! includes structures for TWiR entries, search results, and other shared data.
-//!
-//! The types are used by the importer, crawler, storage, and server modules.
+//! Shared types used across the search system, including crawler
+//! payloads, repository models, and view-layer helpers.
 
 pub mod search_result;
 
@@ -11,11 +12,12 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
-use sqlx::{Database, Decode, Encode, FromRow, Sqlite, Type};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Database, Decode, Encode, FromRow, Row, Sqlite, Type};
 use std::fmt;
 use strum::Display;
 
-/// Newtype wrapper around url::URL to satisfy sqlx FromRow
+/// Newtype wrapper around `url::Url` with `sqlx` support.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Url(url::Url);
@@ -49,30 +51,21 @@ impl Decode<'_, Sqlite> for Url {
 }
 
 impl Url {
-    /// Parse a string into a URL
-    ///
-    /// # Errors
-    /// Returns an error if the string is not a valid URL
+    /// Parses the string into a `Url`.
     pub fn parse(input: &str) -> Result<Self, url::ParseError> {
         url::Url::parse(input).map(Self)
     }
 
-    /// Returns the URL as a string slice
+    /// Returns the inner string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
 
-    /// Returns the host string if present
+    /// Returns the host if one exists.
     #[must_use]
     pub fn host_str(&self) -> Option<&str> {
         self.0.host_str()
-    }
-
-    /// Returns the URL scheme (e.g., "http" or "https")
-    #[must_use]
-    pub fn scheme(&self) -> &str {
-        self.0.scheme()
     }
 }
 
@@ -83,8 +76,8 @@ impl fmt::Display for Url {
 }
 
 impl From<url::Url> for Url {
-    fn from(url: url::Url) -> Self {
-        Self(url)
+    fn from(value: url::Url) -> Self {
+        Self(value)
     }
 }
 
@@ -96,67 +89,65 @@ impl std::ops::Deref for Url {
     }
 }
 
-/// Content type filter for search results
+/// Top-level content filters used by the UI/API.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ContentType {
-    /// All content types (default)
+    /// All content types (default).
     #[default]
     All,
-    /// Articles, blog posts, and written content
+    /// Articles and other written content.
     Articles,
-    /// Video content (YouTube, etc.)
+    /// Videos and other multimedia.
     Video,
 }
 
-/// Duration representation for content
-/// - For articles: estimated reading time in minutes
-/// - For videos: actual duration in seconds
+/// Duration abstraction used for display.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Duration {
-    /// Estimated reading time for articles (in minutes)
+    /// Estimated reading time (minutes).
     ReadingTime(u32),
-    /// Video duration (in seconds)
+    /// Video duration (seconds).
     Video(u32),
 }
 
 impl Duration {
-    /// Creates a reading time duration from word count (assuming 200 words per minute)
+    /// Creates a reading-time duration from a word count (200 wpm heuristic).
     #[must_use]
     pub fn from_word_count(words: usize) -> Self {
         let minutes = (words / 200).max(1) as u32;
         Self::ReadingTime(minutes)
     }
 
-    /// Creates a video duration from seconds
+    /// Creates a duration from seconds.
     #[must_use]
     pub fn from_seconds(seconds: u32) -> Self {
         Self::Video(seconds)
     }
 
-    /// Parses ISO 8601 duration format (e.g., "PT1H2M3S" -> 3723 seconds)
+    /// Parses ISO 8601 durations (e.g. `PT1H2M3S`).
     #[must_use]
     pub fn parse_iso8601(duration: &str) -> Option<Self> {
         let duration = duration.strip_prefix("PT")?;
 
         let mut seconds = 0u32;
-        let mut current_num = String::new();
+        let mut buf = String::new();
 
         for ch in duration.chars() {
             match ch {
-                '0'..='9' => current_num.push(ch),
+                '0'..='9' => buf.push(ch),
                 'H' => {
-                    seconds += current_num.parse::<u32>().unwrap_or(0) * 3600;
-                    current_num.clear();
+                    seconds += buf.parse::<u32>().unwrap_or(0) * 3600;
+                    buf.clear();
                 }
                 'M' => {
-                    seconds += current_num.parse::<u32>().unwrap_or(0) * 60;
-                    current_num.clear();
+                    seconds += buf.parse::<u32>().unwrap_or(0) * 60;
+                    buf.clear();
                 }
                 'S' => {
-                    seconds += current_num.parse::<u32>().unwrap_or(0);
-                    current_num.clear();
+                    seconds += buf.parse::<u32>().unwrap_or(0);
+                    buf.clear();
                 }
                 _ => {}
             }
@@ -185,136 +176,411 @@ impl fmt::Display for Duration {
     }
 }
 
-/// Get the base data directory
+/// Returns the base data directory.
 pub fn get_data_dir() -> String {
     std::env::var("DATA_DIR").unwrap_or_else(|_| "data".to_string())
 }
 
-/// Path to the SQLite database file
+/// Returns the path to the SQLite database file.
 pub fn get_search_index_path() -> String {
-    std::env::var("SEARCH_INDEX_PATH")
-        .unwrap_or_else(|_| format!("{dir}/index.db", dir = get_data_dir()))
+    std::env::var("SEARCH_INDEX_PATH").unwrap_or_else(|_| format!("{}/index.db", get_data_dir()))
 }
 
-/// Entry identifier with metadata
+/// Common metadata shared by articles and videos.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct EntryId {
-    /// Title of the article
+pub struct Metadata {
+    /// Title.
     pub title: String,
-    /// URL of the article
+    /// URL.
     pub url: Url,
-    /// Category of the article
+    /// Category label.
     pub category: String,
-    /// Publication date of the article
+    /// Publication date.
     pub date: NaiveDate,
 }
 
-impl std::fmt::Display for EntryId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Metadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let encoded = urlencoding::encode(self.url.as_str());
-        write!(f, "{date}-{encoded}", date = self.date)
+        write!(f, "{}-{encoded}", self.date)
     }
 }
 
-/// Complete TWiR entry with content
+/// Article row stored in the `articles` table.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Entry {
-    /// Identifier and metadata
+pub struct Article {
+    /// Primary key.
+    pub id: i64,
+    /// Common metadata fields.
     #[sqlx(flatten)]
-    pub id: EntryId,
-    /// Full text content of the article
+    pub metadata: Metadata,
+    /// Optional text content.
     pub text: Option<String>,
-    /// Optional thumbnail URL (relative or absolute)
-    pub thumbnail_url: Option<String>,
-    /// Reference identifier (e.g. "RFC #123", "TWiR #456")
+    /// Optional reference (RFC number, TWiR issue, etc.).
     pub reference: Option<String>,
-    /// Duration in seconds (for videos)
-    pub duration_seconds: Option<i64>,
+    /// Stored word count used for reading-time estimates.
+    pub word_count: Option<i64>,
 }
 
-/// Quote of the Week
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Quote {
-    /// The quote text
-    pub text: String,
-    /// The author of the quote
-    pub author: String,
-    /// Optional URL for the quote attribution
-    pub url: Option<Url>,
-    /// Date of the TWiR issue containing the quote
-    pub date: NaiveDate,
-}
-
-/// Search result with relevance information and highlighted content
-#[derive(Debug, FromRow)]
-pub struct SearchResult {
-    /// Entry matching the search query
-    #[sqlx(flatten)]
-    pub entry: Entry,
-    /// Relevance score from FTS5
-    pub rank: f64,
-    /// Highlighted excerpt containing the search terms
-    pub snippet: Option<String>,
-}
-
-impl SearchResult {
-    /// Returns the hostname from the URL in a displayable format
-    pub fn host_str(&self) -> Option<&str> {
-        self.entry.id.url.host_str()
-    }
-
-    /// Returns the word count of the article
-    pub fn word_count(&self) -> usize {
-        self.entry
-            .text
+impl Article {
+    /// Returns the best-effort word count for the article.
+    #[must_use]
+    pub fn estimated_word_count(&self) -> usize {
+        if let Some(count) = self.word_count {
+            return count.max(0) as usize;
+        }
+        self.text
             .as_ref()
             .map(|text| text.split_whitespace().count())
             .unwrap_or(0)
     }
 
-    /// Returns the duration for this content
-    /// - For videos: actual video duration (if available)
-    /// - For articles: estimated reading time based on word count
+    /// Returns the title.
     #[must_use]
-    pub fn duration(&self) -> Option<Duration> {
-        if let Some(seconds) = self.entry.duration_seconds {
-            // Video with known duration
-            Some(Duration::Video(seconds as u32))
-        } else if self.is_video() {
-            // Video without duration data
-            None
-        } else {
-            // Article - calculate reading time
-            Some(Duration::from_word_count(self.word_count()))
+    pub fn title(&self) -> &str {
+        &self.metadata.title
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.metadata.date
+    }
+}
+
+impl Video {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.metadata.title
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.metadata.date
+    }
+}
+
+/// Payload used when inserting or updating an article.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewArticle {
+    /// Common metadata fields.
+    pub metadata: Metadata,
+    /// Optional text content.
+    pub text: Option<String>,
+    /// Optional reference string.
+    pub reference: Option<String>,
+    /// Precomputed word count (optional).
+    pub word_count: Option<i64>,
+}
+
+/// Video row stored in the `videos` table.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Video {
+    /// Primary key.
+    pub id: i64,
+    /// Common metadata fields.
+    #[sqlx(flatten)]
+    pub metadata: Metadata,
+    /// Optional transcript/description.
+    pub text: Option<String>,
+    /// Optional thumbnail URL.
+    pub thumbnail_url: Option<String>,
+    /// Duration in seconds, if known.
+    pub duration_seconds: Option<i64>,
+}
+
+/// Payload used when inserting or updating a video.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewVideo {
+    /// Common metadata fields.
+    pub metadata: Metadata,
+    /// Transcript/description.
+    pub text: Option<String>,
+    /// Thumbnail URL.
+    pub thumbnail_url: Option<String>,
+    /// Duration in seconds.
+    pub duration_seconds: Option<i64>,
+}
+
+/// Quote of the Week.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Quote {
+    /// Quote text.
+    pub text: String,
+    /// Author attribution.
+    pub author: String,
+    /// Optional URL for attribution.
+    pub url: Option<Url>,
+    /// Date of the associated TWiR issue.
+    pub date: NaiveDate,
+}
+
+/// Unified search entry produced by queries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SearchEntry {
+    /// Article result.
+    Article(Article),
+    /// Video result.
+    Video(Video),
+}
+
+impl SearchEntry {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        match self {
+            Self::Article(article) => article.title(),
+            Self::Video(video) => video.title(),
         }
     }
 
-    /// Returns true if this result is a video (YouTube)
-    // TODO: This isn't great or even accurate. We don't support other video
-    // platforms yet, but we should at least check for Vimeo, Twitch, etc.
+    /// Returns the URL.
     #[must_use]
-    pub fn is_video(&self) -> bool {
-        let host = self.host_str();
-        matches!(host, Some("youtube.com" | "www.youtube.com" | "youtu.be"))
+    pub fn url(&self) -> &Url {
+        match self {
+            Self::Article(article) => article.url(),
+            Self::Video(video) => video.url(),
+        }
     }
 
-    /// Returns the thumbnail URL for this result (if available)
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        match self {
+            Self::Article(article) => article.category(),
+            Self::Video(video) => video.category(),
+        }
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        match self {
+            Self::Article(article) => article.date(),
+            Self::Video(video) => video.date(),
+        }
+    }
+
+    /// Returns the text content if available.
+    #[must_use]
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            Self::Article(article) => article.text.as_deref(),
+            Self::Video(video) => video.text.as_deref(),
+        }
+    }
+
+    /// Returns the host string from the URL.
+    #[must_use]
+    pub fn host_str(&self) -> Option<&str> {
+        self.url().host_str()
+    }
+
+    /// Returns the content type (Article or Video).
+    #[must_use]
+    pub fn content_type(&self) -> ContentType {
+        match self {
+            Self::Article(_) => ContentType::Articles,
+            Self::Video(_) => ContentType::Video,
+        }
+    }
+
+    /// Returns the reference string (e.g., RFC number) if available.
+    #[must_use]
+    pub fn reference(&self) -> Option<&str> {
+        match self {
+            Self::Article(article) => article.reference.as_deref(),
+            Self::Video(_) => None,
+        }
+    }
+
+    /// Returns the thumbnail URL if available.
     #[must_use]
     pub fn thumbnail_url(&self) -> Option<&str> {
-        self.entry.thumbnail_url.as_deref()
+        match self {
+            Self::Article(_) => None,
+            Self::Video(video) => video.thumbnail_url.as_deref(),
+        }
     }
 
-    /// Returns formatted reference for display (e.g., "TWiR #541", "RFC #123")
+    /// Returns the duration in seconds if available (for videos).
+    #[must_use]
+    pub fn duration_seconds(&self) -> Option<i64> {
+        match self {
+            Self::Article(_) => None,
+            Self::Video(video) => video.duration_seconds,
+        }
+    }
+
+    /// Returns the word count (for articles).
+    #[must_use]
+    pub fn word_count(&self) -> usize {
+        match self {
+            Self::Article(article) => article.estimated_word_count(),
+            Self::Video(_) => 0,
+        }
+    }
+}
+
+/// Search result row returned by the repository.
+#[derive(Debug, Clone)]
+pub struct SearchResult {
+    /// Entry payload.
+    pub entry: SearchEntry,
+    /// FTS ranking score.
+    pub rank: f64,
+    /// Highlight snippet.
+    pub snippet: Option<String>,
+}
+
+impl<'r> FromRow<'r, SqliteRow> for SearchResult {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, sqlx::Error> {
+        let content_type: String = row.try_get("content_type")?;
+        let rank = row.try_get("rank")?;
+        let snippet = row.try_get("snippet")?;
+
+        let entry = match content_type.as_str() {
+            "article" => SearchEntry::Article(Article {
+                id: row.try_get("id")?,
+                metadata: Metadata {
+                    title: row.try_get("title")?,
+                    url: row.try_get("url")?,
+                    category: row.try_get("category")?,
+                    date: row.try_get("date")?,
+                },
+                text: row.try_get("text")?,
+                reference: row.try_get("reference")?,
+                word_count: row.try_get("word_count")?,
+            }),
+            "video" => SearchEntry::Video(Video {
+                id: row.try_get("id")?,
+                metadata: Metadata {
+                    title: row.try_get("title")?,
+                    url: row.try_get("url")?,
+                    category: row.try_get("category")?,
+                    date: row.try_get("date")?,
+                },
+                text: row.try_get("text")?,
+                thumbnail_url: row.try_get("thumbnail_url")?,
+                duration_seconds: row.try_get("duration_seconds")?,
+            }),
+            other => {
+                let err: BoxDynError = format!("unknown content_type: {other}").into();
+                return Err(sqlx::Error::Decode(err));
+            }
+        };
+
+        Ok(Self {
+            entry,
+            rank,
+            snippet,
+        })
+    }
+}
+
+impl SearchResult {
+    /// Host helper.
+    #[must_use]
+    pub fn host_str(&self) -> Option<&str> {
+        self.entry.host_str()
+    }
+
+    /// URL helper.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        self.entry.url()
+    }
+
+    /// Title helper.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        self.entry.title()
+    }
+
+    /// Category helper.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        self.entry.category()
+    }
+
+    /// Date helper.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.entry.date()
+    }
+
+    /// Word-count helper.
+    #[must_use]
+    pub fn word_count(&self) -> usize {
+        self.entry.word_count()
+    }
+
+    /// Duration helper.
+    #[must_use]
+    pub fn duration(&self) -> Option<Duration> {
+        match &self.entry {
+            SearchEntry::Video(video) => video
+                .duration_seconds
+                .map(|seconds| Duration::Video(seconds.max(0) as u32)),
+            SearchEntry::Article(article) => {
+                Some(Duration::from_word_count(article.estimated_word_count()))
+            }
+        }
+    }
+
+    /// Returns true if this result is a video.
+    #[must_use]
+    pub fn is_video(&self) -> bool {
+        matches!(self.entry, SearchEntry::Video(_))
+    }
+
+    /// Thumbnail helper.
+    #[must_use]
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.entry.thumbnail_url()
+    }
+
+    /// Reference helper.
     pub fn formatted_reference(&self) -> Option<&str> {
-        self.entry.reference.as_deref()
+        self.entry.reference()
     }
 
-    /// Returns the icon SVG for this result
-    /// Prefers domain-specific icons, falls back to category icons
+    /// Content-type helper.
+    #[must_use]
+    pub fn content_type(&self) -> ContentType {
+        self.entry.content_type()
+    }
+
+    /// Icon helper used by the UI.
     pub fn icon_svg(&self) -> &'static str {
         let host = self.host_str();
 
-        // Check for domain-specific icons first
         match host {
             Some("news.ycombinator.com") => {
                 r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><path d="M12 6.5l-4 7.5h2v4h4v-4h2z"/></svg>"#
@@ -330,7 +596,7 @@ impl SearchResult {
             }
             _ => {
                 // Fall back to category icon
-                match self.entry.id.category.as_str() {
+                match self.entry.category() {
                     "News & Blog Posts" => {
                         r#"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/></svg>"#
                     }
@@ -364,105 +630,105 @@ impl SearchResult {
     }
 }
 
-/// Statistics about the indexed content
+/// Statistics about the indexed content.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
-    /// Total number of indexed articles
+    /// Total number of indexed entries (articles + videos).
     pub total_articles: i64,
-    /// Average article size in characters
+    /// Average entry size in characters.
     pub avg_article_size: i64,
-    /// Total characters across all articles
+    /// Total characters across all entries.
     pub total_characters: i64,
-    /// Categories and their counts
+    /// Categories and their counts.
     pub categories: Vec<CategoryStats>,
-    /// Articles per year
+    /// Entries per year.
     pub articles_per_year: Vec<YearStats>,
-    /// Articles per month
+    /// Entries per month.
     pub articles_per_month: Vec<MonthStats>,
-    /// Earliest indexed article date
+    /// Earliest indexed entry date.
     pub earliest_date: Option<NaiveDate>,
-    /// Latest indexed article date
+    /// Latest indexed entry date.
     pub latest_date: Option<NaiveDate>,
-    /// Top domains by year
+    /// Top domains by year.
     pub top_domains_by_year: Vec<YearlyDomainStats>,
-    /// Top keywords by year
+    /// Top keywords by year.
     pub top_keywords_by_year: Vec<YearlyKeywordStats>,
-    /// Total unique domains
+    /// Total unique domains.
     pub total_unique_domains: i64,
-    /// Most prolific domain overall
+    /// Most prolific domain overall.
     pub top_domain_overall: Option<DomainStats>,
 }
 
-/// Category statistics
+/// Category statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryStats {
-    /// Category name
+    /// Category name.
     pub category: String,
-    /// Number of articles in this category
+    /// Number of entries in this category.
     pub count: i64,
-    /// Percentage relative to max category (for progress bar)
+    /// Percentage relative to max category (for progress bar).
     pub percentage: i64,
 }
 
-/// Year statistics
+/// Year statistics.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct YearStats {
-    /// Year
+    /// Year.
     pub year: i32,
-    /// Number of articles in this year
+    /// Number of entries in this year.
     pub count: i64,
-    /// Percentage relative to max year (for progress bar)
+    /// Percentage relative to max year (for progress bar).
     pub percentage: i64,
 }
 
-/// Month statistics (year-month breakdown)
+/// Month statistics (year-month breakdown).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MonthStats {
-    /// Year-month label (e.g., "2024-01")
+    /// Year-month label (e.g., "2024-01").
     pub year_month: String,
-    /// Year
+    /// Year.
     pub year: i32,
-    /// Month
+    /// Month.
     pub month: i32,
-    /// Number of articles in this month
+    /// Number of entries in this month.
     pub count: i64,
-    /// Percentage relative to max month (for bar chart)
+    /// Percentage relative to max month (for bar chart).
     pub percentage: i64,
 }
 
-/// Domain statistics
+/// Domain statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainStats {
-    /// Domain name
+    /// Domain name.
     pub domain: String,
-    /// Number of articles from this domain
+    /// Number of entries from this domain.
     pub count: i64,
 }
 
-/// Top domains by year
+/// Top domains by year.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct YearlyDomainStats {
-    /// Year
+    /// Year.
     pub year: i32,
-    /// Top domains for this year
+    /// Top domains for this year.
     pub domains: Vec<DomainStats>,
 }
 
-/// Keyword statistics
+/// Keyword statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeywordStats {
-    /// Keyword
+    /// Keyword.
     pub keyword: String,
-    /// Frequency count
+    /// Frequency count.
     pub count: i64,
 }
 
-/// Top keywords by year
+/// Top keywords by year.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct YearlyKeywordStats {
-    /// Year
+    /// Year.
     pub year: i32,
-    /// Top keywords for this year
+    /// Top keywords for this year.
     pub keywords: Vec<KeywordStats>,
 }
 

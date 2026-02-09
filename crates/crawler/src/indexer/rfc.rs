@@ -12,7 +12,7 @@ use regex::Regex;
 use reqwest::header;
 use serde::Deserialize;
 use storage::Repository;
-use types::{Entry, EntryId, Url};
+use types::{Metadata, NewArticle, Url};
 
 /// GitHub API URL for the RFCs folder
 const GH_RFCS_FOLDER_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/contents/text";
@@ -201,22 +201,23 @@ impl Indexer for Rfc {
 
             let title = title_opt.unwrap_or_else(|| self.clean_title(&file.name));
 
-            let entry_id = EntryId {
+            let metadata = Metadata {
                 title: title.clone(),
                 url: url.clone(),
                 category: "RFC".to_string(),
                 date,
             };
 
-            let entry = Entry {
-                id: entry_id,
+            let word_count = content.split_whitespace().count() as i64;
+
+            let article = NewArticle {
+                metadata,
                 text: Some(content),
-                thumbnail_url: None,
                 reference,
-                duration_seconds: None,
+                word_count: Some(word_count),
             };
 
-            if let Err(e) = repo.insert_entry(&entry).await {
+            if let Err(e) = repo.insert_article(&article).await {
                 warn!("Failed to insert RFC {title}: {e}");
             } else {
                 info!("Indexed RFC: {title}");

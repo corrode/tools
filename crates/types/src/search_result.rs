@@ -3,7 +3,7 @@
 //! These types are optimized for template rendering, converting from the
 //! database-layer `SearchResult` type.
 
-use crate::SearchResult;
+use crate::{SearchEntry, SearchResult};
 
 /// Video search result for display in templates.
 #[derive(Debug, Clone)]
@@ -51,15 +51,19 @@ impl From<SearchResult> for Video {
     fn from(result: SearchResult) -> Self {
         let duration = result.duration().map(|d| d.to_string());
         let domain = result.host_str().unwrap_or("youtube.com").to_string();
+        let SearchResult { entry, snippet, .. } = result;
+        let SearchEntry::Video(video) = entry else {
+            panic!("expected video result for Video view");
+        };
 
         Self {
-            title: result.entry.id.title.clone(),
-            url: result.entry.id.url.to_string(),
-            thumbnail_url: result.entry.thumbnail_url.clone(),
+            title: video.title().to_string(),
+            url: video.url().to_string(),
+            thumbnail_url: video.thumbnail_url.clone(),
             duration,
-            date: result.entry.id.date.to_string(),
+            date: video.date().to_string(),
             domain,
-            snippet: result.snippet,
+            snippet,
         }
     }
 }
@@ -72,17 +76,21 @@ impl From<SearchResult> for Article {
             .unwrap_or_else(|| "~1 min read".to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
         let icon_svg = result.icon_svg();
+        let SearchResult { entry, snippet, .. } = result;
+        let SearchEntry::Article(article) = entry else {
+            panic!("expected article result for Article view");
+        };
 
         Self {
-            title: result.entry.id.title.clone(),
-            url: result.entry.id.url.to_string(),
-            date: result.entry.id.date.to_string(),
+            title: article.title().to_string(),
+            url: article.url().to_string(),
+            date: article.date().to_string(),
             domain,
-            category: result.entry.id.category.clone(),
-            reference: result.entry.reference.clone(),
+            category: article.category().to_string(),
+            reference: article.reference,
             reading_time,
             icon_svg,
-            snippet: result.snippet,
+            snippet,
         }
     }
 }
