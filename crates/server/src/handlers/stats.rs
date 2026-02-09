@@ -40,12 +40,13 @@ pub(crate) async fn stats(
 
 fn generate_chart(stats: &Stats) -> String {
     let x_data: Vec<String> = stats
-        .articles_per_month
+        .articles
+        .per_month
         .iter()
         .map(|m| m.year_month.clone())
         .collect();
 
-    let y_data: Vec<i64> = stats.articles_per_month.iter().map(|m| m.count).collect();
+    let y_data: Vec<i64> = stats.articles.per_month.iter().map(|m| m.count).collect();
 
     let chart = Chart::new()
         .title(

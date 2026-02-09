@@ -2,20 +2,25 @@
 //!
 //! This fetches RFC files from the rust-lang/rfcs GitHub repository, and
 //! extracts metadata such as title, date, and tags from the markdown files.
+//!
+//! Set the `GITHUB_TOKEN` environment variable to avoid rate limits.
 
 use super::Indexer;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::header;
 use serde::Deserialize;
 use storage::Repository;
-use types::{Entry, EntryId, Url};
+use types::{Metadata, NewArticle, Url};
 
 /// GitHub API URL for the RFCs folder
 const GH_RFCS_FOLDER_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/contents/text";
+
+/// GitHub API URL for commits on a specific file
+const GH_COMMITS_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/commits";
 
 #[derive(Debug, Deserialize)]
 struct GithubFile {
@@ -23,6 +28,21 @@ struct GithubFile {
     download_url: Option<String>,
     #[serde(rename = "type")]
     file_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GithubCommit {
+    commit: CommitInfo,
+}
+
+#[derive(Debug, Deserialize)]
+struct CommitInfo {
+    author: CommitAuthor,
+}
+
+#[derive(Debug, Deserialize)]
+struct CommitAuthor {
+    date: DateTime<Utc>,
 }
 
 /// Indexer for Rust RFCs
@@ -46,6 +66,16 @@ impl Rfc {
             header::USER_AGENT,
             header::HeaderValue::from_static("corrode-search-crawler"),
         );
+
+        // Add GitHub token if available for higher rate limits
+        if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+            if let Ok(auth_value) = header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                headers.insert(header::AUTHORIZATION, auth_value);
+                info!("Using GITHUB_TOKEN for authentication");
+            }
+        } else {
+            warn!("GITHUB_TOKEN not set - GitHub API rate limits will apply");
+        }
 
         let client = reqwest::Client::builder()
             .default_headers(headers)
@@ -73,24 +103,66 @@ impl Rfc {
 
     async fn fetch_file_list(&self) -> Result<Vec<GithubFile>> {
         let response = self.client.get(GH_RFCS_FOLDER_URL).send().await?;
-        let files: Vec<GithubFile> = response.json().await?;
+
+        // Check for error status codes before parsing
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            if status.as_u16() == 403 && body.contains("rate limit") {
+                anyhow::bail!(
+                    "GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable to increase limits.\nResponse: {}",
+                    body
+                );
+            }
+            anyhow::bail!("GitHub API error ({}): {}", status, body);
+        }
+
+        let files: Vec<GithubFile> = response
+            .json()
+            .await
+            .context("Failed to parse GitHub API response as file list")?;
+
         Ok(files
             .into_iter()
             .filter(|f| f.file_type == "file" && f.name.ends_with(".md"))
             .collect())
     }
 
-    fn parse_metadata(&self, content: &str) -> (Option<NaiveDate>, Option<String>) {
+    async fn fetch_first_commit_date(&self, filename: &str) -> Option<NaiveDate> {
+        let url = format!("{}?path=text/{}", GH_COMMITS_URL, filename);
+        let response = self.client.get(&url).send().await.ok()?;
+
+        // Check for success before parsing
+        if !response.status().is_success() {
+            debug!(
+                "Failed to fetch commit history for {}: {}",
+                filename,
+                response.status()
+            );
+            return None;
+        }
+
+        let commits: Vec<GithubCommit> = response.json().await.ok()?;
+        // Get the last commit (oldest/first) in the list
+        let first_commit = commits.last()?;
+        Some(first_commit.commit.author.date.date_naive())
+    }
+
+    /// Parses RFC metadata and returns (date, title, content_without_metadata)
+    fn parse_metadata(&self, content: &str) -> (Option<NaiveDate>, Option<String>, String) {
         let mut date = None;
         let mut title = None;
+        let mut first_header = None;
+        let mut content_start_line = 0;
 
-        for line in content.lines() {
-            let line = line.trim();
-            if line.is_empty() {
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.is_empty() {
                 continue;
             }
 
-            if let Some(rest) = line.strip_prefix("- ") {
+            if let Some(rest) = trimmed.strip_prefix("- ") {
                 if let Some((key, value)) = rest.split_once(':') {
                     let key = key.trim();
                     let value = value.trim();
@@ -102,18 +174,48 @@ impl Rfc {
                             }
                         }
                         "Feature Name" => {
-                            title = Some(value.to_string());
+                            // Ignore N/A or empty feature names
+                            if !value.is_empty()
+                                && !value.eq_ignore_ascii_case("n/a")
+                                && !value.eq_ignore_ascii_case("none")
+                            {
+                                title = Some(value.to_string());
+                            }
                         }
                         _ => {}
                     }
                 }
-            } else if line.starts_with('#') {
-                // Header found, stop parsing metadata
+            } else if trimmed.starts_with('#') {
+                // Any markdown header marks the end of metadata
+                content_start_line = line_num;
+
+                // Capture first header as fallback title (strip all leading #'s and whitespace)
+                if first_header.is_none() {
+                    let header = trimmed.trim_start_matches('#').trim();
+                    // Skip generic headers like "Summary"
+                    if !header.eq_ignore_ascii_case("summary")
+                        && !header.eq_ignore_ascii_case("motivation")
+                    {
+                        first_header = Some(header.to_string());
+                    }
+                }
                 break;
             }
         }
 
-        (date, title)
+        // Use first header as fallback if no feature name found
+        if title.is_none() {
+            title = first_header;
+        }
+
+        // Extract content without the metadata header
+        let clean_content: String = content
+            .lines()
+            .skip(content_start_line)
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        (date, title, clean_content)
     }
 
     fn clean_title(&self, filename: &str) -> String {
@@ -186,7 +288,7 @@ impl Indexer for Rfc {
                 }
             };
 
-            let (date_opt, title_opt) = self.parse_metadata(&content);
+            let (date_opt, title_opt, clean_content) = self.parse_metadata(&content);
 
             let mut reference = None;
 
@@ -197,27 +299,44 @@ impl Indexer for Rfc {
                 reference = Some(format!("RFC #{}", num));
             }
 
-            let date = date_opt.unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap());
+            // Try to get date from document, otherwise fetch from GitHub commit history
+            let date = match date_opt {
+                Some(d) => d,
+                None => {
+                    info!(
+                        "No date in document, fetching commit date for {}",
+                        file.name
+                    );
+                    match self.fetch_first_commit_date(&file.name).await {
+                        Some(d) => d,
+                        None => {
+                            warn!("Could not determine date for RFC {}, skipping", file.name);
+                            continue;
+                        }
+                    }
+                }
+            };
 
             let title = title_opt.unwrap_or_else(|| self.clean_title(&file.name));
 
-            let entry_id = EntryId {
+            let metadata = Metadata {
                 title: title.clone(),
                 url: url.clone(),
                 category: "RFC".to_string(),
                 date,
             };
 
-            let entry = Entry {
-                id: entry_id,
-                text: Some(content),
-                thumbnail_url: None,
+            let word_count = clean_content.split_whitespace().count() as i64;
+
+            let article = NewArticle {
+                metadata,
+                text: clean_content,
                 reference,
-                duration_seconds: None,
+                word_count,
             };
 
-            if let Err(e) = repo.insert_entry(&entry).await {
-                warn!("Failed to insert RFC {title}: {e}");
+            if let Err(e) = repo.insert_article(&article).await {
+                warn!("Failed to insert RFC {title}: {e:?}");
             } else {
                 info!("Indexed RFC: {title}");
             }

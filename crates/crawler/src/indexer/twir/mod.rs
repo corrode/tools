@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use log::info;
 use std::fs;
 use storage::Repository;
-use types::{Entry, Url};
+use types::{NewArticle, Url};
 
 mod parser;
 use parser::TwirParser;
@@ -278,15 +278,15 @@ impl Indexer for Twir {
                 match crawl_result {
                     Ok(Some(text)) => {
                         let reference = issue_number.map(|num| format!("TWiR #{}", num));
+                        let word_count = text.split_whitespace().count() as i64;
 
-                        let entry = Entry {
-                            id: id.clone(),
-                            text: Some(text),
-                            thumbnail_url: None,
+                        let article = NewArticle {
+                            metadata: id.clone(),
+                            text,
                             reference,
-                            duration_seconds: None,
+                            word_count,
                         };
-                        if let Err(e) = repo.insert_entry(&entry).await {
+                        if let Err(e) = repo.insert_article(&article).await {
                             log::error!("Failed to store entry {}: {e}", id.url);
                         } else {
                             info!("Successfully stored entry: {}", id.url);

@@ -10,7 +10,7 @@ use std::env;
 use std::path::PathBuf;
 use storage::Repository;
 use tokio::fs;
-use types::{Duration, Entry, EntryId, Url};
+use types::{Duration, Metadata, NewVideo, Url};
 use ytt::YouTubeTranscript;
 
 #[derive(Debug, Default)]
@@ -244,7 +244,7 @@ impl Indexer for Youtube {
                     }
                 };
 
-                let entry_id = EntryId {
+                let metadata = Metadata {
                     title: title.to_string(),
                     url: url.clone(),
                     category: "Video".to_string(),
@@ -269,15 +269,14 @@ impl Indexer for Youtube {
                 // Fetch video duration
                 let duration_seconds = self.fetch_video_duration(video_id).await;
 
-                let entry = Entry {
-                    reference: None,
-                    id: entry_id,
-                    text: Some(content),
+                let video = NewVideo {
+                    metadata,
+                    text: content,
                     thumbnail_url,
                     duration_seconds,
                 };
 
-                if let Err(e) = repo.insert_entry(&entry).await {
+                if let Err(e) = repo.insert_video(&video).await {
                     warn!("Failed to insert video entry {video_id}: {e}");
                 } else {
                     info!("Indexed video: {title}");

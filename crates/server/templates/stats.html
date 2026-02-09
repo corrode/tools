@@ -36,29 +36,11 @@
                 </div>
             </header>
 
-            <!-- Overview Stats -->
+            <!-- Global Overview Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value">{{ stats.total_articles }}</div>
-                    <div class="stat-label">Total Articles</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-value">
-                        {% if stats.avg_article_size > 1000 %} {{
-                        stats.avg_article_size / 1000 }}K {% else %} {{
-                        stats.avg_article_size }} {% endif %}
-                    </div>
-                    <div class="stat-label">Avg Article Size (chars)</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-value">
-                        {% if stats.total_characters > 1000000 %} {{
-                        stats.total_characters / 1000000 }}M {% else %} {{
-                        stats.total_characters / 1000 }}K {% endif %}
-                    </div>
-                    <div class="stat-label">Total Characters</div>
+                    <div class="stat-value">{{ stats.total_entries }}</div>
+                    <div class="stat-label">Total Entries</div>
                 </div>
 
                 <div class="stat-card">
@@ -77,15 +59,123 @@
                     </div>
                     <div class="stat-label">Unique Domains</div>
                 </div>
+            </div>
 
-                <div class="stat-card">
-                    <div class="stat-value">
-                        {% if let Some(top) = stats.top_domain_overall %} {{
-                        top.count }} {% else %} 0 {% endif %}
+            <!-- Article Stats -->
+            <div class="section">
+                <h2 class="section-title">Articles</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.articles.total }}</div>
+                        <div class="stat-label">Total Articles</div>
                     </div>
-                    <div class="stat-label">
-                        {% if let Some(top) = stats.top_domain_overall %} {{
-                        top.domain }} {% else %} Top Domain {% endif %}
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if stats.articles.avg_size_chars > 1000 %} {{
+                            stats.articles.avg_size_chars / 1000 }}K {% else %}
+                            {{ stats.articles.avg_size_chars }} {% endif %}
+                        </div>
+                        <div class="stat-label">Avg Size (chars)</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if stats.articles.total_characters > 1000000 %}
+                            {{ stats.articles.total_characters / 1000000 }}M {%
+                            else %} {{ stats.articles.total_characters / 1000
+                            }}K {% endif %}
+                        </div>
+                        <div class="stat-label">Total Characters</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {{ stats.articles.avg_word_count }}
+                        </div>
+                        <div class="stat-label">Avg Word Count</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if stats.articles.total_words > 1000000 %} {{
+                            stats.articles.total_words / 1000000 }}M {% else %}
+                            {{ stats.articles.total_words / 1000 }}K {% endif %}
+                        </div>
+                        <div class="stat-label">Total Words</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if let Some(top) =
+                            stats.articles.top_domain_overall %} {{ top.count }}
+                            {% else %} 0 {% endif %}
+                        </div>
+                        <div class="stat-label">
+                            {% if let Some(top) =
+                            stats.articles.top_domain_overall %} {{ top.domain
+                            }} {% else %} Top Domain {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Stats -->
+            <div class="section">
+                <h2 class="section-title">Videos</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.videos.total }}</div>
+                        <div class="stat-label">Total Videos</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {{ stats.videos.total_duration_seconds / 3600 }}h
+                        </div>
+                        <div class="stat-label">Total Duration</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {{ stats.videos.median_duration_seconds / 60 }}m
+                        </div>
+                        <div class="stat-label">Median Duration</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if let Some(longest) = stats.videos.longest_video
+                            %} {{ longest.duration_seconds / 60 }}m {% else %}
+                            N/A {% endif %}
+                        </div>
+                        <div class="stat-label">
+                            {% if let Some(longest) = stats.videos.longest_video
+                            %} Longest {% else %} Longest {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if let Some(shortest) =
+                            stats.videos.shortest_video %} {{
+                            shortest.duration_seconds / 60 }}m {% else %} N/A {%
+                            endif %}
+                        </div>
+                        <div class="stat-label">Shortest</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            {% if let Some(top) =
+                            stats.videos.top_channels.first() %} {{
+                            top.video_count }} {% else %} 0 {% endif %}
+                        </div>
+                        <div class="stat-label">
+                            {% if let Some(top) =
+                            stats.videos.top_channels.first() %} {{ top.channel
+                            }} {% else %} Top Channel {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,7 +231,7 @@
                     </button>
                 </div>
                 <div class="category-list">
-                    {% for category in stats.categories %}
+                    {% for category in stats.articles.categories %}
                     <div
                         class="category-item"
                         data-category-index="{{ loop.index0 }}"
@@ -198,10 +288,10 @@
                 });
             </script>
 
-            <!-- Top Domains by Year -->
+            <!-- Top Domains by Year (Articles) -->
             <div class="section">
-                <h2 class="section-title">Top Domains by Year</h2>
-                {% for yearly_domains in stats.top_domains_by_year %}
+                <h2 class="section-title">Top Domains by Year (Articles)</h2>
+                {% for yearly_domains in stats.articles.top_domains_by_year %}
                 <div class="year-section">
                     <h3 class="year-subsection-title">
                         {{ yearly_domains.year }}
@@ -228,10 +318,36 @@
                 {% endfor %}
             </div>
 
+            <!-- Top Channels (Videos) -->
+            <div class="section">
+                <h2 class="section-title">Top Video Channels</h2>
+                <div class="domain-list">
+                    {% for channel in stats.videos.top_channels %}
+                    <a
+                        href="/search?q=site:{{ channel.channel }}&content-type=video&sort-by=relevance"
+                        target="_blank"
+                        class="domain-item"
+                    >
+                        <span class="domain-name">
+                            <span
+                                class="domain-icon"
+                                data-domain="{{ channel.channel }}"
+                            ></span>
+                            {{ channel.channel }}
+                        </span>
+                        <span class="domain-count"
+                            >{{ channel.video_count }} videos ({{
+                            channel.total_duration_seconds / 3600 }}h)</span
+                        >
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
             <!-- Top Keywords by Year -->
             <div class="section">
                 <h2 class="section-title">Top Keywords by Year</h2>
-                {% for yearly_keywords in stats.top_keywords_by_year %}
+                {% for yearly_keywords in stats.articles.top_keywords_by_year %}
                 <div class="year-section">
                     <h3 class="year-subsection-title">
                         {{ yearly_keywords.year }}

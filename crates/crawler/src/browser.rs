@@ -3,7 +3,7 @@
 use super::cookies::COOKIE_BANNER_SELECTORS;
 use super::paths;
 use super::sanitizer::Sanitizer;
-use types::EntryId;
+use types::Metadata;
 
 use anyhow::{Result, bail};
 use headless_chrome::{
@@ -84,12 +84,12 @@ impl Browser {
     }
 
     /// Crawls a webpage and returns its text content
-    pub async fn crawl(&self, entry_id: &EntryId) -> Result<Option<String>> {
-        log::info!("Crawling {}", entry_id.url);
+    pub async fn crawl(&self, metadata: &Metadata) -> anyhow::Result<Option<String>> {
+        log::info!("Crawling {}", metadata.url);
 
         // Rewrite YouTube URLs to thumbnail URLs to avoid cookie banners
         let target_url =
-            Self::rewrite_youtube_url(&entry_id.url).unwrap_or_else(|| (*entry_id.url).clone());
+            Self::rewrite_youtube_url(&metadata.url).unwrap_or_else(|| (*metadata.url).clone());
 
         log::info!("Rewritten YouTube URL to thumbnail: {target_url}");
 
@@ -101,29 +101,29 @@ impl Browser {
 
         let response = client.get(target_url.as_str()).send().await?;
         if response.status() == 403 || response.status() == 404 || response.status() == 410 {
-            bail!("404: Not Found or moved {}", entry_id.url);
+            bail!("404: Not Found or moved {}", metadata.url);
         }
 
         // Exclude server errors (5xx)
         if response.status().is_server_error() {
-            bail!("5xx: Server error {}", entry_id.url);
+            bail!("5xx: Server error {}", metadata.url);
         }
 
         // For YouTube thumbnails, we can skip browser rendering
-        if target_url != *entry_id.url {
+        if target_url != *metadata.url {
             log::info!("YouTube thumbnail verified, skipping browser rendering");
-            return Ok(Some(format!("YouTube video: {}", entry_id.title)));
+            return Ok(Some(format!("YouTube video: {}", metadata.title)));
         }
 
         let tab = self.inner.new_tab()?;
         tab.set_default_timeout(time::Duration::from_secs(30));
 
-        log::debug!("Navigating to URL: {}", entry_id.url);
-        tab.navigate_to(entry_id.url.as_str())?;
+        log::debug!("Navigating to URL: {}", metadata.url);
+        tab.navigate_to(metadata.url.as_str())?;
 
         log::debug!("Waiting for navigation to complete (30s timeout)...");
         if let Err(e) = tab.wait_until_navigated() {
-            log::error!("Navigation timeout or error for {}: {e}", entry_id.url);
+            log::error!("Navigation timeout or error for {}: {e}", metadata.url);
             bail!("Navigation failed: {e}");
         }
         log::debug!("Navigation completed successfully");
@@ -135,7 +135,7 @@ impl Browser {
 
         // Save raw HTML if flag is enabled
         if self.debug {
-            self.save_raw_html(&html, entry_id)?;
+            self.save_raw_html(&html, metadata)?;
         }
 
         // Sanitize HTML and extract plain text content
@@ -145,7 +145,7 @@ impl Browser {
         let text = Some(text);
 
         if self.debug {
-            self.take_screenshot(&tab, entry_id)?;
+            self.take_screenshot(&tab, metadata)?;
         }
         tab.close(true)?;
 
@@ -153,15 +153,15 @@ impl Browser {
             .as_ref()
             .is_some_and(|t| t.contains("Verifying you are human"))
         {
-            bail!("Captcha detected: {}", entry_id.url);
+            bail!("Captcha detected: {}", metadata.url);
         }
 
         Ok(text)
     }
 
     /// Takes a screenshot of the current page
-    fn take_screenshot(&self, tab: &Tab, entry_id: &EntryId) -> Result<()> {
-        let screenshot_path = format!("{}/{entry_id}.jpg", *paths::SCREENSHOT_PATH);
+    fn take_screenshot(&self, tab: &Tab, metadata: &Metadata) -> Result<()> {
+        let screenshot_path = format!("{}/{metadata}.jpg", *paths::SCREENSHOT_PATH);
         log::info!("Creating screenshot {screenshot_path}");
         let screenshot =
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
@@ -171,8 +171,8 @@ impl Browser {
     }
 
     /// Saves raw HTML to disk for future analysis
-    fn save_raw_html(&self, html: &str, entry_id: &EntryId) -> Result<()> {
-        let html_path = format!("{}/{entry_id}.html", *paths::HTML_PATH);
+    fn save_raw_html(&self, html: &str, metadata: &Metadata) -> Result<()> {
+        let html_path = format!("{}/{metadata}.html", *paths::HTML_PATH);
         log::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
         log::debug!("Raw HTML saved successfully");

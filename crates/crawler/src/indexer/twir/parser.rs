@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use types::{EntryId, Quote, Url};
+use types::{Metadata, Quote, Url};
 
 /// This Week in Rust configuration
 const TWIR_GITHUB_OWNER: &str = "rust-lang";
@@ -14,7 +14,7 @@ const TWIR_DATE_FORMATS: [&str; 2] = ["%Y-%m-%d", "%Y-%m-%d %H:%M"];
 /// Result of parsing a TWiR file
 pub struct ParseResult {
     /// Extracted entries
-    pub entries: Vec<EntryId>,
+    pub entries: Vec<Metadata>,
     /// Extracted quotes
     pub quotes: Vec<Quote>,
     /// Issue number
@@ -238,8 +238,8 @@ impl TwirParser {
         quotes
     }
 
-    /// Converts Markdown content to EntryId structs
-    fn content_to_entry_ids(&self, content: &str, date: NaiveDate) -> Vec<EntryId> {
+    /// Converts Markdown content to Metadata structs
+    fn content_to_entry_ids(&self, content: &str, date: NaiveDate) -> Vec<Metadata> {
         let mut entries = Vec::new();
         let mut current_category = String::new();
         let mut current_title = String::new();
@@ -265,7 +265,7 @@ impl TwirParser {
                         .contains("quote of the week")
                         && let Ok(url) = Url::parse(&current_url)
                     {
-                        entries.push(EntryId {
+                        entries.push(Metadata {
                             title: current_title.clone(),
                             url,
                             category: current_category.clone(),
