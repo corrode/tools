@@ -59,7 +59,7 @@ impl From<SearchResult> for Video {
         Self {
             title: video.title().to_string(),
             url: video.url().to_string(),
-            thumbnail_url: video.thumbnail_url.clone(),
+            thumbnail_url: video.thumbnail_url().map(|s| s.to_string()),
             duration,
             date: video.date().to_string(),
             domain,
@@ -87,7 +87,7 @@ impl From<SearchResult> for Article {
             date: article.date().to_string(),
             domain,
             category: article.category().to_string(),
-            reference: article.reference,
+            reference: article.reference().map(|s| s.to_string()),
             reading_time,
             icon_svg,
             snippet,

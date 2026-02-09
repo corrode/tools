@@ -271,7 +271,7 @@ impl Indexer for Youtube {
 
                 let video = NewVideo {
                     metadata,
-                    text: Some(content),
+                    text: content,
                     thumbnail_url,
                     duration_seconds,
                 };

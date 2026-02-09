@@ -330,9 +330,9 @@ impl Indexer for Rfc {
 
             let article = NewArticle {
                 metadata,
-                text: Some(clean_content),
+                text: clean_content,
                 reference,
-                word_count: Some(word_count),
+                word_count,
             };
 
             if let Err(e) = repo.insert_article(&article).await {

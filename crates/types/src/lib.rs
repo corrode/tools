@@ -206,97 +206,89 @@ impl fmt::Display for Metadata {
     }
 }
 
+/// Article-specific data fields (shared between Article and NewArticle).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ArticleData {
+    /// Common metadata fields.
+    #[sqlx(flatten)]
+    pub metadata: Metadata,
+    /// Full text content for indexing.
+    pub text: String,
+    /// Optional reference (RFC number, TWiR issue, etc.).
+    pub reference: Option<String>,
+    /// Word count used for reading-time estimates.
+    pub word_count: i64,
+}
+
 /// Article row stored in the `articles` table.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Article {
     /// Primary key.
     pub id: i64,
-    /// Common metadata fields.
+    /// Article data fields.
     #[sqlx(flatten)]
-    pub metadata: Metadata,
-    /// Optional text content.
-    pub text: Option<String>,
-    /// Optional reference (RFC number, TWiR issue, etc.).
-    pub reference: Option<String>,
-    /// Stored word count used for reading-time estimates.
-    pub word_count: Option<i64>,
-}
-
-impl Article {
-    /// Returns the best-effort word count for the article.
-    #[must_use]
-    pub fn estimated_word_count(&self) -> usize {
-        if let Some(count) = self.word_count {
-            return count.max(0) as usize;
-        }
-        self.text
-            .as_ref()
-            .map(|text| text.split_whitespace().count())
-            .unwrap_or(0)
-    }
-
-    /// Returns the title.
-    #[must_use]
-    pub fn title(&self) -> &str {
-        &self.metadata.title
-    }
-
-    /// Returns the URL.
-    #[must_use]
-    pub fn url(&self) -> &Url {
-        &self.metadata.url
-    }
-
-    /// Returns the category.
-    #[must_use]
-    pub fn category(&self) -> &str {
-        &self.metadata.category
-    }
-
-    /// Returns the publication date.
-    #[must_use]
-    pub fn date(&self) -> NaiveDate {
-        self.metadata.date
-    }
-}
-
-impl Video {
-    /// Returns the title.
-    #[must_use]
-    pub fn title(&self) -> &str {
-        &self.metadata.title
-    }
-
-    /// Returns the URL.
-    #[must_use]
-    pub fn url(&self) -> &Url {
-        &self.metadata.url
-    }
-
-    /// Returns the category.
-    #[must_use]
-    pub fn category(&self) -> &str {
-        &self.metadata.category
-    }
-
-    /// Returns the publication date.
-    #[must_use]
-    pub fn date(&self) -> NaiveDate {
-        self.metadata.date
-    }
+    pub data: ArticleData,
 }
 
 /// Payload used when inserting or updating an article.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewArticle {
+pub type NewArticle = ArticleData;
+
+impl Article {
+    /// Returns the word count for the article.
+    #[must_use]
+    pub fn word_count(&self) -> usize {
+        self.data.word_count.max(0) as usize
+    }
+
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.data.metadata.title
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.data.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.data.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.data.metadata.date
+    }
+
+    /// Returns the text content.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.data.text
+    }
+
+    /// Returns the reference.
+    #[must_use]
+    pub fn reference(&self) -> Option<&str> {
+        self.data.reference.as_deref()
+    }
+}
+
+/// Video-specific data fields (shared between Video and NewVideo).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct VideoData {
     /// Common metadata fields.
+    #[sqlx(flatten)]
     pub metadata: Metadata,
-    /// Optional text content.
-    pub text: Option<String>,
-    /// Optional reference string.
-    pub reference: Option<String>,
-    /// Precomputed word count (optional).
-    pub word_count: Option<i64>,
+    /// Transcript/description for indexing.
+    pub text: String,
+    /// Optional thumbnail URL.
+    pub thumbnail_url: Option<String>,
+    /// Duration in seconds, if known.
+    pub duration_seconds: Option<i64>,
 }
 
 /// Video row stored in the `videos` table.
@@ -304,28 +296,56 @@ pub struct NewArticle {
 pub struct Video {
     /// Primary key.
     pub id: i64,
-    /// Common metadata fields.
+    /// Video data fields.
     #[sqlx(flatten)]
-    pub metadata: Metadata,
-    /// Optional transcript/description.
-    pub text: Option<String>,
-    /// Optional thumbnail URL.
-    pub thumbnail_url: Option<String>,
-    /// Duration in seconds, if known.
-    pub duration_seconds: Option<i64>,
+    pub data: VideoData,
 }
 
 /// Payload used when inserting or updating a video.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewVideo {
-    /// Common metadata fields.
-    pub metadata: Metadata,
-    /// Transcript/description.
-    pub text: Option<String>,
-    /// Thumbnail URL.
-    pub thumbnail_url: Option<String>,
-    /// Duration in seconds.
-    pub duration_seconds: Option<i64>,
+pub type NewVideo = VideoData;
+
+impl Video {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.data.metadata.title
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.data.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.data.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.data.metadata.date
+    }
+
+    /// Returns the text content.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.data.text
+    }
+
+    /// Returns the thumbnail URL.
+    #[must_use]
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.data.thumbnail_url.as_deref()
+    }
+
+    /// Returns the duration in seconds.
+    #[must_use]
+    pub fn duration_seconds(&self) -> Option<i64> {
+        self.data.duration_seconds
+    }
 }
 
 /// Quote of the Week.
@@ -387,12 +407,12 @@ impl SearchEntry {
         }
     }
 
-    /// Returns the text content if available.
+    /// Returns the text content.
     #[must_use]
-    pub fn text(&self) -> Option<&str> {
+    pub fn text(&self) -> &str {
         match self {
-            Self::Article(article) => article.text.as_deref(),
-            Self::Video(video) => video.text.as_deref(),
+            Self::Article(article) => article.text(),
+            Self::Video(video) => video.text(),
         }
     }
 
@@ -415,7 +435,7 @@ impl SearchEntry {
     #[must_use]
     pub fn reference(&self) -> Option<&str> {
         match self {
-            Self::Article(article) => article.reference.as_deref(),
+            Self::Article(article) => article.reference(),
             Self::Video(_) => None,
         }
     }
@@ -425,7 +445,7 @@ impl SearchEntry {
     pub fn thumbnail_url(&self) -> Option<&str> {
         match self {
             Self::Article(_) => None,
-            Self::Video(video) => video.thumbnail_url.as_deref(),
+            Self::Video(video) => video.thumbnail_url(),
         }
     }
 
@@ -434,7 +454,7 @@ impl SearchEntry {
     pub fn duration_seconds(&self) -> Option<i64> {
         match self {
             Self::Article(_) => None,
-            Self::Video(video) => video.duration_seconds,
+            Self::Video(video) => video.duration_seconds(),
         }
     }
 
@@ -442,7 +462,7 @@ impl SearchEntry {
     #[must_use]
     pub fn word_count(&self) -> usize {
         match self {
-            Self::Article(article) => article.estimated_word_count(),
+            Self::Article(article) => article.word_count(),
             Self::Video(_) => 0,
         }
     }
@@ -468,27 +488,35 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
         let entry = match content_type.as_str() {
             "article" => SearchEntry::Article(Article {
                 id: row.try_get("id")?,
-                metadata: Metadata {
-                    title: row.try_get("title")?,
-                    url: row.try_get("url")?,
-                    category: row.try_get("category")?,
-                    date: row.try_get("date")?,
+                data: ArticleData {
+                    metadata: Metadata {
+                        title: row.try_get("title")?,
+                        url: row.try_get("url")?,
+                        category: row.try_get("category")?,
+                        date: row.try_get("date")?,
+                    },
+                    text: row
+                        .try_get::<Option<String>, _>("text")?
+                        .unwrap_or_default(),
+                    reference: row.try_get("reference")?,
+                    word_count: row.try_get::<Option<i64>, _>("word_count")?.unwrap_or(0),
                 },
-                text: row.try_get("text")?,
-                reference: row.try_get("reference")?,
-                word_count: row.try_get("word_count")?,
             }),
             "video" => SearchEntry::Video(Video {
                 id: row.try_get("id")?,
-                metadata: Metadata {
-                    title: row.try_get("title")?,
-                    url: row.try_get("url")?,
-                    category: row.try_get("category")?,
-                    date: row.try_get("date")?,
+                data: VideoData {
+                    metadata: Metadata {
+                        title: row.try_get("title")?,
+                        url: row.try_get("url")?,
+                        category: row.try_get("category")?,
+                        date: row.try_get("date")?,
+                    },
+                    text: row
+                        .try_get::<Option<String>, _>("text")?
+                        .unwrap_or_default(),
+                    thumbnail_url: row.try_get("thumbnail_url")?,
+                    duration_seconds: row.try_get("duration_seconds")?,
                 },
-                text: row.try_get("text")?,
-                thumbnail_url: row.try_get("thumbnail_url")?,
-                duration_seconds: row.try_get("duration_seconds")?,
             }),
             other => {
                 let err: BoxDynError = format!("unknown content_type: {other}").into();
@@ -546,11 +574,9 @@ impl SearchResult {
     pub fn duration(&self) -> Option<Duration> {
         match &self.entry {
             SearchEntry::Video(video) => video
-                .duration_seconds
-                .map(|seconds| Duration::Video(seconds.max(0) as u32)),
-            SearchEntry::Article(article) => {
-                Some(Duration::from_word_count(article.estimated_word_count()))
-            }
+                .duration_seconds()
+                .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
+            SearchEntry::Article(article) => Some(Duration::from_word_count(article.word_count())),
         }
     }
 

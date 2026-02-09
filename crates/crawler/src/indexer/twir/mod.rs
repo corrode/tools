@@ -282,9 +282,9 @@ impl Indexer for Twir {
 
                         let article = NewArticle {
                             metadata: id.clone(),
-                            text: Some(text),
+                            text,
                             reference,
-                            word_count: Some(word_count),
+                            word_count,
                         };
                         if let Err(e) = repo.insert_article(&article).await {
                             log::error!("Failed to store entry {}: {e}", id.url);
