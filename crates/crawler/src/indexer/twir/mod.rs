@@ -2,6 +2,7 @@ use super::Indexer;
 use crate::{browser::Browser, paths};
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::NaiveDate;
 use log::info;
 use std::fs;
 use storage::Repository;
@@ -9,6 +10,16 @@ use types::{NewArticle, Url};
 
 mod parser;
 use parser::TwirParser;
+
+/// Stats collected during indexing
+#[derive(Debug, Default)]
+struct TwirStats {
+    articles_processed: usize,
+    articles_skipped: usize,
+    articles_failed: usize,
+    quotes_processed: usize,
+    files_processed: usize,
+}
 
 /// Indexer for "This Week in Rust" newsletter
 pub struct Twir {
@@ -59,8 +70,17 @@ impl Twir {
         self
     }
 
+    /// Extracts date from filename if it matches YYYY-MM-DD pattern
+    fn extract_date_from_filename(filename: &str) -> Option<NaiveDate> {
+        if filename.len() >= 10 {
+            NaiveDate::parse_from_str(&filename[0..10], "%Y-%m-%d").ok()
+        } else {
+            None
+        }
+    }
+
     /// Determines if a URL should be processed
-    fn should_process_url(&self, url: &Url) -> bool {
+    fn should_process_url(url: &Url) -> bool {
         let supported_protocols = ["http", "https"];
         if !supported_protocols
             .iter()
@@ -81,7 +101,6 @@ impl Twir {
             "vimeo.com",
             "bsky.app",
             "mastodon.social",
-            "irc.mozilla.org",
             "mibbit.com",
             // TWiR infrastructure
             "this-week-in-rust.org",
@@ -95,12 +114,47 @@ impl Twir {
             "luma.com",
             "lu.ma",
             "eventbrite.com",
+            "eventbrite.fr",
             "calagator.org",
             // Job/recruiting platforms
             "smartrecruiters.com",
             "bamboohr.com",
+            "careers.mozilla.org",
+            // Dead Mozilla infrastructure
+            "mail.mozilla.org",
+            "irc.mozilla.org",
+            "etherpad.mozilla.org",
+            "air.mozilla.org",
+            "badges.mozilla.org",
+            // Dead/defunct domains
+            "thread.gmane.org",
+            "blog.gmane.org",
+            "rustlog.octayn.net",
+            "opensourcebridge.org",
+            "rust-ci.org",
+            "hiho.io",
+            "llvm.lyngvig.org",
+            "hydrocodedesign.com",
+            "metajack.im",
+            "cosmic.mearie.org",
+            "cmr.github.io",
+            "pcwalton.github.io",
+            "adridu59.github.io",
+            "adrientetar.legtux.org",
+            "tombebbington.github.io",
+            "michaelwoerister.github.io",
+            "alan-andrade.github.io",
+            "rustbyexample.github.io",
+            "joshldavis.com",
+            "spin.atomicobject.com",
+            "catamorphism.org",
+            "foocafe.org",
             // Other
             "google.com/calendar",
+            "docs.google.com",
+            "wikipedia.org",
+            "en.wikipedia.org",
+            "crates.io",
         ];
 
         if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
@@ -137,6 +191,7 @@ impl Indexer for Twir {
     async fn index(&mut self, repo: &Repository) -> Result<()> {
         info!("Fetching TWiR entries...");
         let entries = self.parser.fetch_twir_entries().await?;
+        let mut stats = TwirStats::default();
 
         // Determine start date logic
         let start_date_str = if self.overwrite {
@@ -157,7 +212,10 @@ impl Indexer for Twir {
             }
         };
 
-        let mut resume_crawling = start_date_str.is_none();
+        // Parse start date for proper date comparison
+        let start_date = start_date_str
+            .as_ref()
+            .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
         for item in entries {
             let Some(file_name) = item["name"].as_str() else {
@@ -167,15 +225,16 @@ impl Indexer for Twir {
                 continue;
             };
 
-            // Check resume logic
-            if !resume_crawling && let Some(ref start_date) = start_date_str {
-                // Check if this file matches or is after the start date
-                // File names are like "2013-06-29-this-week-in-rust.md"
-                if file_name.len() >= 10 && &file_name[0..10] >= start_date.as_str() {
-                    info!("Reached checkpoint file: {file_name}, resuming crawling");
-                    resume_crawling = true;
-                } else {
-                    info!("Skipping file before checkpoint: {file_name}");
+            // Extract date from filename - skip files without valid date patterns
+            let Some(file_date) = Self::extract_date_from_filename(file_name) else {
+                log::debug!("Skipping file without date pattern: {file_name}");
+                continue;
+            };
+
+            // Check resume logic - skip files before the checkpoint date
+            if let Some(ref checkpoint) = start_date {
+                if file_date < *checkpoint {
+                    log::debug!("Skipping file before checkpoint: {file_name}");
                     continue;
                 }
             }
@@ -204,6 +263,8 @@ impl Indexer for Twir {
 
             let issue_number = parse_result.issue_number;
 
+            stats.files_processed += 1;
+
             // Process Quotes
             for quote in parse_result.quotes {
                 if self.dry_run {
@@ -214,17 +275,27 @@ impl Indexer for Twir {
                     );
                 } else if let Err(e) = repo.insert_quote(&quote).await {
                     log::warn!("Failed to insert quote: {e}");
+                } else {
+                    stats.quotes_processed += 1;
                 }
             }
 
             // Process Links
-            for id in parse_result.entries {
-                if !self.should_process_url(&id.url) {
+            for mut id in parse_result.entries {
+                // Rewrite URLs that have moved to new domains
+                let rewritten_url = Browser::rewrite_url(&id.url);
+                if rewritten_url != *id.url {
+                    log::info!("Rewrote URL: {} -> {}", id.url, rewritten_url);
+                    id.url = rewritten_url.into();
+                }
+
+                if !Self::should_process_url(&id.url) {
                     continue;
                 }
 
                 if repo.url_exists(&id.url).await? {
                     log::debug!("Skipping already crawled URL: {}", id.url);
+                    stats.articles_skipped += 1;
                     continue;
                 }
 
@@ -251,7 +322,7 @@ impl Indexer for Twir {
                 log::info!("Crawling URL: {}", id.url);
 
                 // Crawl with retry logic for closed connections
-                let crawl_result = self.browser.crawl(&id).await;
+                let crawl_result = self.browser.crawl(&id);
                 let crawl_result = if let Err(ref e) = crawl_result {
                     let err_msg = e.to_string();
                     if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
@@ -259,7 +330,7 @@ impl Indexer for Twir {
                         match Browser::new(self.debug) {
                             Ok(b) => {
                                 self.browser = b;
-                                self.browser.crawl(&id).await
+                                self.browser.crawl(&id)
                             }
                             Err(recreate_err) => {
                                 log::error!(
@@ -288,19 +359,30 @@ impl Indexer for Twir {
                         };
                         if let Err(e) = repo.insert_article(&article).await {
                             log::error!("Failed to store entry {}: {e}", id.url);
+                            stats.articles_failed += 1;
                         } else {
                             info!("Successfully stored entry: {}", id.url);
+                            stats.articles_processed += 1;
                         }
                     }
                     Ok(None) => {
                         log::warn!("No text content extracted for {}", id.url);
+                        stats.articles_failed += 1;
                     }
                     Err(e) => {
                         log::warn!("Failed to crawl {}: {e}", id.url);
+                        stats.articles_failed += 1;
                     }
                 }
             }
         }
+
+        info!("TWiR indexing complete:");
+        info!("  Files processed: {}", stats.files_processed);
+        info!("  Articles processed: {}", stats.articles_processed);
+        info!("  Articles skipped (existing): {}", stats.articles_skipped);
+        info!("  Articles failed: {}", stats.articles_failed);
+        info!("  Quotes processed: {}", stats.quotes_processed);
 
         Ok(())
     }

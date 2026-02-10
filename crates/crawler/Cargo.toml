@@ -3,6 +3,7 @@ name = "crawler"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+default-run = "crawler"
 
 [dependencies]
 types = { workspace = true }
