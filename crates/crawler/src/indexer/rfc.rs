@@ -13,8 +13,21 @@ use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::header;
 use serde::Deserialize;
+use std::sync::LazyLock;
 use storage::Repository;
 use types::{Metadata, NewArticle, Url};
+
+/// Regex to strip leading RFC number from filename (e.g., "0001-foo" -> "foo")
+static RFC_NUMBER_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+-").unwrap());
+
+/// Stats collected during indexing
+#[derive(Debug, Default)]
+struct RfcStats {
+    processed: usize,
+    skipped_existing: usize,
+    skipped_no_date: usize,
+    failed: usize,
+}
 
 /// GitHub API URL for the RFCs folder
 const GH_RFCS_FOLDER_URL: &str = "https://api.github.com/repos/rust-lang/rfcs/contents/text";
@@ -149,7 +162,7 @@ impl Rfc {
     }
 
     /// Parses RFC metadata and returns (date, title, content_without_metadata)
-    fn parse_metadata(&self, content: &str) -> (Option<NaiveDate>, Option<String>, String) {
+    fn parse_metadata(content: &str) -> (Option<NaiveDate>, Option<String>, String) {
         let mut date = None;
         let mut title = None;
         let mut first_header = None;
@@ -218,12 +231,10 @@ impl Rfc {
         (date, title, clean_content)
     }
 
-    fn clean_title(&self, filename: &str) -> String {
+    fn clean_title(filename: &str) -> String {
         let name = filename.strip_suffix(".md").unwrap_or(filename);
         // Remove leading numbers and dash: 0001-foo -> foo
-        // Using unwrap is safe because regex is static valid
-        let re = Regex::new(r"^\d+-").unwrap();
-        let name = re.replace(name, "");
+        let name = RFC_NUMBER_REGEX.replace(name, "");
 
         // Replace dashes with spaces
         let name = name.replace('-', " ");
@@ -256,6 +267,8 @@ impl Indexer for Rfc {
         let files = self.fetch_file_list().await?;
         info!("Found {} RFC files.", files.len());
 
+        let mut stats = RfcStats::default();
+
         for file in files {
             let url_str = format!(
                 "https://github.com/rust-lang/rfcs/blob/master/text/{}",
@@ -265,6 +278,7 @@ impl Indexer for Rfc {
 
             if !self.overwrite && repo.url_exists(&url).await? {
                 debug!("Skipping existing RFC: {}", file.name);
+                stats.skipped_existing += 1;
                 continue;
             }
 
@@ -288,7 +302,14 @@ impl Indexer for Rfc {
                 }
             };
 
-            let (date_opt, title_opt, clean_content) = self.parse_metadata(&content);
+            let (date_opt, title_opt, clean_content) = Self::parse_metadata(&content);
+
+            // Skip if content is empty (parsing failed or empty file)
+            if clean_content.trim().is_empty() {
+                warn!("Empty content for RFC {}, skipping", file.name);
+                stats.failed += 1;
+                continue;
+            }
 
             let mut reference = None;
 
@@ -311,13 +332,14 @@ impl Indexer for Rfc {
                         Some(d) => d,
                         None => {
                             warn!("Could not determine date for RFC {}, skipping", file.name);
+                            stats.skipped_no_date += 1;
                             continue;
                         }
                     }
                 }
             };
 
-            let title = title_opt.unwrap_or_else(|| self.clean_title(&file.name));
+            let title = title_opt.unwrap_or_else(|| Self::clean_title(&file.name));
 
             let metadata = Metadata {
                 title: title.clone(),
@@ -337,10 +359,18 @@ impl Indexer for Rfc {
 
             if let Err(e) = repo.insert_article(&article).await {
                 warn!("Failed to insert RFC {title}: {e:?}");
+                stats.failed += 1;
             } else {
                 info!("Indexed RFC: {title}");
+                stats.processed += 1;
             }
         }
+
+        info!("RFC indexing complete:");
+        info!("  Processed: {}", stats.processed);
+        info!("  Skipped (existing): {}", stats.skipped_existing);
+        info!("  Skipped (no date): {}", stats.skipped_no_date);
+        info!("  Failed: {}", stats.failed);
 
         Ok(())
     }
