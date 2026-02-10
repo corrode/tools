@@ -232,11 +232,11 @@ impl Indexer for Twir {
             };
 
             // Check resume logic - skip files before the checkpoint date
-            if let Some(ref checkpoint) = start_date {
-                if file_date < *checkpoint {
-                    log::debug!("Skipping file before checkpoint: {file_name}");
-                    continue;
-                }
+            if let Some(ref checkpoint) = start_date
+                && file_date < *checkpoint
+            {
+                log::debug!("Skipping file before checkpoint: {file_name}");
+                continue;
             }
 
             info!("Processing file: {file_name}");

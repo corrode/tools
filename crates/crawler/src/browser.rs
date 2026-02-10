@@ -101,13 +101,12 @@ impl Browser {
     /// This is public so callers can rewrite URLs before passing to crawl.
     pub fn rewrite_url(url: &url::Url) -> url::Url {
         // Check domain rewrite map
-        if let Some(host) = url.host_str() {
-            if let Some(new_prefix) = URL_REWRITES.get(host) {
-                if let Ok(new_url) = url::Url::parse(&format!("{}{}", new_prefix, url.path())) {
-                    log::debug!("Rewrote {} -> {}", url, new_url);
-                    return new_url;
-                }
-            }
+        if let Some(host) = url.host_str()
+            && let Some(new_prefix) = URL_REWRITES.get(host)
+            && let Ok(new_url) = url::Url::parse(&format!("{}{}", new_prefix, url.path()))
+        {
+            log::debug!("Rewrote {} -> {}", url, new_url);
+            return new_url;
         }
 
         // YouTube URLs -> thumbnail to avoid cookie banners
