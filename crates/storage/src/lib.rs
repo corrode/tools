@@ -538,10 +538,11 @@ impl Repository {
             }
         }
 
-        let top_domains_by_year: Vec<types::YearlyDomainStats> = domains_by_year
+        let mut top_domains_by_year: Vec<types::YearlyDomainStats> = domains_by_year
             .into_iter()
             .map(|(year, domains)| types::YearlyDomainStats { year, domains })
             .collect();
+        top_domains_by_year.sort_by(|a, b| b.year.cmp(&a.year));
 
         // Top domain overall
         let top_domain = sqlx::query(
@@ -575,9 +576,6 @@ impl Repository {
             count: row.get("count"),
         });
 
-        // Keywords by year (placeholder)
-        let top_keywords_by_year: Vec<types::YearlyKeywordStats> = Vec::new();
-
         Ok(ArticleStats {
             total,
             avg_size_chars,
@@ -588,7 +586,6 @@ impl Repository {
             per_month,
             categories,
             top_domains_by_year,
-            top_keywords_by_year,
             top_domain_overall,
         })
     }

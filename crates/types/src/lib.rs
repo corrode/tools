@@ -694,8 +694,6 @@ pub struct ArticleStats {
     pub categories: Vec<CategoryStats>,
     /// Top domains by year.
     pub top_domains_by_year: Vec<YearlyDomainStats>,
-    /// Top keywords by year.
-    pub top_keywords_by_year: Vec<YearlyKeywordStats>,
     /// Most prolific domain overall.
     pub top_domain_overall: Option<DomainStats>,
 }
