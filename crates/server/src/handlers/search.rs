@@ -4,11 +4,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::Html,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use storage::Repository;
+use storage::{Repository, SearchRequest};
 use types::ContentType;
+use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Video};
 
 #[derive(Clone)]
@@ -24,7 +24,7 @@ struct SearchTemplate {
     videos: Vec<Video>,
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
-    total_results: i64,
+    results_count: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
@@ -43,7 +43,7 @@ struct ResultsTemplate {
     videos: Vec<Video>,
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
-    total_results: i64,
+    results_count: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
@@ -55,77 +55,22 @@ struct ResultsTemplate {
     pub quote: Option<DisplayQuote>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct SearchParams {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    q: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    start_year: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    end_year: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sort_by: Option<String>,
-    /// Content type filter: "articles", "video", or "podcast"
-    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
-    content_type: Option<ContentType>,
-    #[serde(skip_serializing)]
-    page: Option<u32>,
-}
-
-#[derive(Serialize)]
-struct UrlQuery<'a> {
-    #[serde(flatten)]
-    params: &'a SearchParams,
-    page: u32,
-}
-
-impl SearchParams {
-    fn build_url(&self, page: u32) -> String {
-        let query = UrlQuery { params: self, page };
-
-        match serde_urlencoded::to_string(&query) {
-            Ok(qs) => format!("/search?{qs}"),
-            Err(_) => "/search".to_string(),
-        }
-    }
-}
-
 /// Handler for searching the posts
 pub(crate) async fn search(
     headers: HeaderMap,
-    Query(params): Query<SearchParams>,
+    Query(raw_params): Query<RawParams>,
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, StatusCode> {
+    let defaults = SearchDefaults::new(1900, 2050);
+    let params =
+        Params::try_from((raw_params.clone(), defaults)).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     // Check if query is provided and not empty/whitespace-only
-    let (raw_results, total_results) = if let Some(query) = &params.q {
-        if query.trim().is_empty() {
-            (vec![], 0)
-        } else {
-            let results = repo
-                .search(
-                    query,
-                    params.start_year,
-                    params.end_year,
-                    params.sort_by.as_deref(),
-                    params.content_type,
-                    params.page,
-                )
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-            let total = repo
-                .count_search_results(
-                    query,
-                    params.start_year,
-                    params.end_year,
-                    params.content_type,
-                )
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-            (results, total)
-        }
+    let (raw_results, total_results) = if params.has_query_terms() || params.has_filters() {
+        let request = SearchRequest { params: &params };
+        repo.search(&request)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     } else {
         (vec![], 0)
     };
@@ -156,17 +101,17 @@ pub(crate) async fn search(
         }
     }
 
-    let current_page = params.page.unwrap_or(1).max(1);
+    let current_page = params.page;
     let has_more = results_count == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {
-        Some(params.build_url(current_page - 1))
+        Some(raw_params.build_url(current_page - 1))
     } else {
         None
     };
 
     let next_page_href = if has_more {
-        Some(params.build_url(current_page + 1))
+        Some(raw_params.build_url(current_page + 1))
     } else {
         None
     };
@@ -186,15 +131,15 @@ pub(crate) async fn search(
 
     if headers.contains_key("hx-request") {
         let template = ResultsTemplate {
-            query: params.q,
+            query: raw_params.q,
             videos,
             articles,
             podcasts,
-            total_results,
-            start_year: params.start_year,
-            end_year: params.end_year,
-            sort_by: params.sort_by.clone(),
-            content_type: params.content_type,
+            results_count: total_results,
+            start_year: raw_params.start_year,
+            end_year: raw_params.end_year,
+            sort_by: raw_params.sort_by.map(|s| s.to_string()),
+            content_type: raw_params.content_type,
             start_index,
             end_index,
             prev_page_href,
@@ -208,15 +153,15 @@ pub(crate) async fn search(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
     } else {
         let template = SearchTemplate {
-            query: params.q,
+            query: raw_params.q,
             videos,
             articles,
             podcasts,
-            total_results,
-            start_year: params.start_year,
-            end_year: params.end_year,
-            sort_by: params.sort_by,
-            content_type: params.content_type,
+            results_count: total_results,
+            start_year: raw_params.start_year,
+            end_year: raw_params.end_year,
+            sort_by: raw_params.sort_by.map(|s| s.to_string()),
+            content_type: raw_params.content_type,
             start_index,
             end_index,
             prev_page_href,

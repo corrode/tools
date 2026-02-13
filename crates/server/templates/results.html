@@ -161,7 +161,7 @@
     </div>
 
     <!-- Pagination -->
-    {% if total_results > 0 %}
+    {% if results_count > 0 %}
     <div class="pagination">
         {% if let Some(prev) = prev_page_href %}
         <a
@@ -180,7 +180,7 @@
         {% endif %}
 
         <span class="pagination-info">
-            Showing {{ start_index }}-{{ end_index }} of {{ total_results }}
+            Showing {{ start_index }}-{{ end_index }} of {{ results_count }}
             results
         </span>
 

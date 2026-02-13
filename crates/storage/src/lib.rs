@@ -75,13 +75,14 @@ use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::{
-    Pool, QueryBuilder, Row, Sqlite,
+    FromRow, Pool, QueryBuilder, Row, Sqlite,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
 use std::path::Path;
 use std::str::FromStr;
 use types::NewPodcastEpisode;
 use types::Url;
+use types::params::{Params, SortOrder};
 use types::{
     ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, NewVideo, SearchResult,
     Stats, VideoDurationRecord, VideoStats, YearStats,
@@ -93,14 +94,10 @@ pub struct Repository {
 }
 
 /// Configuration for search queries, bundling all search parameters
-struct SearchConfig<'a> {
-    escaped_query: &'a str,
-    has_search_terms: bool,
-    site_filter: &'a Option<String>,
-    start_year: Option<i32>,
-    end_year: Option<i32>,
-    sort_by: Option<&'a str>,
-    offset: u32,
+#[derive(Debug, Clone)]
+pub struct SearchRequest<'a> {
+    /// The search parameters used for filtering and ranking results.
+    pub params: &'a Params,
 }
 
 impl Repository {
@@ -867,349 +864,73 @@ impl Repository {
         })
     }
 
-    /// Parses a search query, extracting site: operators
-    fn parse_query(query: &str) -> (Vec<String>, Option<String>) {
-        let mut search_terms = Vec::new();
-        let mut site_filter = None;
+    /// Searches for entries matching the given query
+    pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
+        let page_num = request.params.page.max(1);
+        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
 
-        let mut chars = query.chars().peekable();
-        while let Some(c) = chars.next() {
-            match c {
-                ' ' => continue,
-                '"' => {
-                    // Quoted phrase
-                    let mut phrase = String::new();
-                    for c in chars.by_ref() {
-                        if c == '"' {
-                            break;
-                        }
-                        phrase.push(c);
-                    }
-                    if !phrase.is_empty() {
-                        search_terms.push(phrase);
-                    }
-                }
-                _ => {
-                    // Regular word or site: operator
-                    let mut word = String::from(c);
-                    while let Some(&c) = chars.peek() {
-                        if c == ' ' || c == '"' {
-                            break;
-                        }
-                        word.push(chars.next().unwrap());
-                    }
+        match request.params.content_type {
+            Some(ContentType::Articles) => self.search_articles(request, offset).await,
+            Some(ContentType::Video) => self.search_videos(request, offset).await,
+            Some(ContentType::Podcast) => self.search_podcasts(request, offset).await,
+            None => self.search_all(request, offset).await,
+        }
+    }
 
-                    if let Some(site) = word.strip_prefix("site:") {
-                        site_filter = Some(site.to_string());
-                    } else if !word.is_empty() {
-                        search_terms.push(word);
-                    }
-                }
-            }
+    fn apply_generic_filters(
+        &self,
+        query: &mut QueryBuilder<'_, Sqlite>,
+        params: &Params,
+        alias: &str,
+    ) {
+        if let Some(site) = params.site_filter() {
+            query.push(format!(" AND {alias}.url LIKE "));
+            query.push_bind(format!("%{}%", site.as_str()));
         }
 
-        (search_terms, site_filter)
+        query.push(format!(" AND {alias}.date >= "));
+        query.push_bind(format!("{}-01-01", params.start_year));
+
+        query.push(format!(" AND {alias}.date <= "));
+        query.push_bind(format!("{}-12-31", params.end_year));
     }
 
-    /// Counts total matching results for a search query (without pagination)
-    pub async fn count_search_results(
+    async fn search_articles(
         &self,
-        query: &str,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-        content_type: Option<ContentType>,
-    ) -> Result<i64> {
-        let (search_terms, site_filter) = Self::parse_query(query);
-        let has_search_terms = !search_terms.is_empty();
-
-        let escaped_query = if has_search_terms {
-            search_terms
-                .iter()
-                .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
-                .collect::<Vec<_>>()
-                .join(" AND ")
-        } else {
-            String::new()
-        };
-
-        let count = match content_type {
-            Some(ContentType::Articles) => {
-                self.count_articles(
-                    &escaped_query,
-                    has_search_terms,
-                    &site_filter,
-                    start_year,
-                    end_year,
-                )
-                .await?
-            }
-            Some(ContentType::Video) => {
-                self.count_videos(
-                    &escaped_query,
-                    has_search_terms,
-                    &site_filter,
-                    start_year,
-                    end_year,
-                )
-                .await?
-            }
-            Some(ContentType::Podcast) => {
-                self.count_podcasts(
-                    &escaped_query,
-                    has_search_terms,
-                    &site_filter,
-                    start_year,
-                    end_year,
-                )
-                .await?
-            }
-            None => {
-                let articles = self
-                    .count_articles(
-                        &escaped_query,
-                        has_search_terms,
-                        &site_filter,
-                        start_year,
-                        end_year,
-                    )
-                    .await?;
-                let videos = self
-                    .count_videos(
-                        &escaped_query,
-                        has_search_terms,
-                        &site_filter,
-                        start_year,
-                        end_year,
-                    )
-                    .await?;
-                let podcasts = self
-                    .count_podcasts(
-                        &escaped_query,
-                        has_search_terms,
-                        &site_filter,
-                        start_year,
-                        end_year,
-                    )
-                    .await?;
-                articles + videos + podcasts
-            }
-        };
-
-        Ok(count)
-    }
-
-    async fn count_articles(
-        &self,
-        escaped_query: &str,
-        has_search_terms: bool,
-        site_filter: &Option<String>,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-    ) -> Result<i64> {
-        let mut query = if has_search_terms {
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        // 1. Get Count
+        let mut count_query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(
                 r#"
-                SELECT COUNT(*) as total
-                FROM articles_fts
+                SELECT COUNT(*) FROM articles_fts
                 JOIN articles a ON articles_fts.rowid = a.id
                 WHERE articles_fts MATCH "#,
             );
-            q.push_bind(escaped_query);
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) as total
-                FROM articles a
-                WHERE 1=1"#,
-            )
-        };
-
-        if let Some(site) = site_filter {
-            query.push(" AND a.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = start_year {
-            query.push(" AND a.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = end_year {
-            query.push(" AND a.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
-
-        let row = query.build().fetch_one(&self.pool).await?;
-        Ok(row.get("total"))
-    }
-
-    async fn count_videos(
-        &self,
-        escaped_query: &str,
-        has_search_terms: bool,
-        site_filter: &Option<String>,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-    ) -> Result<i64> {
-        let mut query = if has_search_terms {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) as total
-                FROM videos_fts
-                JOIN videos v ON videos_fts.rowid = v.id
-                WHERE videos_fts MATCH "#,
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
             );
-            q.push_bind(escaped_query);
             q
         } else {
-            QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) as total
-                FROM videos v
-                WHERE 1=1"#,
-            )
+            QueryBuilder::new(r#"SELECT COUNT(*) FROM articles a WHERE 1=1"#)
         };
 
-        if let Some(site) = site_filter {
-            query.push(" AND v.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = start_year {
-            query.push(" AND v.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = end_year {
-            query.push(" AND v.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
+        self.apply_generic_filters(&mut count_query, request.params, "a");
 
-        let row = query.build().fetch_one(&self.pool).await?;
-        Ok(row.get("total"))
-    }
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
 
-    async fn count_podcasts(
-        &self,
-        escaped_query: &str,
-        has_search_terms: bool,
-        site_filter: &Option<String>,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-    ) -> Result<i64> {
-        let mut query = if has_search_terms {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) as total
-                FROM podcast_episodes_fts
-                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
-                WHERE podcast_episodes_fts MATCH "#,
-            );
-            q.push_bind(escaped_query);
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) as total
-                FROM podcast_episodes p
-                WHERE 1=1"#,
-            )
-        };
-
-        if let Some(site) = site_filter {
-            query.push(" AND p.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = start_year {
-            query.push(" AND p.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = end_year {
-            query.push(" AND p.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
-
-        let row = query.build().fetch_one(&self.pool).await?;
-        Ok(row.get("total"))
-    }
-
-    /// Searches for entries matching the given query
-    pub async fn search(
-        &self,
-        query: &str,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-        sort_by: Option<&str>,
-        content_type: Option<ContentType>,
-        page: Option<u32>,
-    ) -> Result<Vec<SearchResult>> {
-        let (search_terms, site_filter) = Self::parse_query(query);
-        let has_search_terms = !search_terms.is_empty();
-
-        let escaped_query = if has_search_terms {
-            search_terms
-                .iter()
-                .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
-                .collect::<Vec<_>>()
-                .join(" AND ")
-        } else {
-            String::new()
-        };
-
-        let page_num = page.unwrap_or(1).max(1);
-        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
-
-        match content_type {
-            Some(ContentType::Articles) => {
-                let config = SearchConfig {
-                    escaped_query: &escaped_query,
-                    has_search_terms,
-                    site_filter: &site_filter,
-                    start_year,
-                    end_year,
-                    sort_by,
-                    offset,
-                };
-                self.search_articles(&config).await
-            }
-            Some(ContentType::Video) => {
-                let config = SearchConfig {
-                    escaped_query: &escaped_query,
-                    has_search_terms,
-                    site_filter: &site_filter,
-                    start_year,
-                    end_year,
-                    sort_by,
-                    offset,
-                };
-                self.search_videos(&config).await
-            }
-            Some(ContentType::Podcast) => {
-                let config = SearchConfig {
-                    escaped_query: &escaped_query,
-                    has_search_terms,
-                    site_filter: &site_filter,
-                    start_year,
-                    end_year,
-                    sort_by,
-                    offset,
-                };
-                self.search_podcasts(&config).await
-            }
-            None => {
-                let config = SearchConfig {
-                    escaped_query: &escaped_query,
-                    has_search_terms,
-                    site_filter: &site_filter,
-                    start_year,
-                    end_year,
-                    sort_by,
-                    offset,
-                };
-                self.search_all(&config).await
-            }
-        }
-    }
-
-    async fn search_articles(&self, config: &SearchConfig<'_>) -> Result<Vec<SearchResult>> {
-        let mut query = if config.has_search_terms {
+        // 2. Get Results
+        let mut query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT
@@ -1223,7 +944,14 @@ impl Repository {
                 JOIN articles a ON articles_fts.rowid = a.id
                 WHERE articles_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
             q
         } else {
             QueryBuilder::new(
@@ -1240,36 +968,65 @@ impl Repository {
             )
         };
 
-        if let Some(site) = config.site_filter {
-            query.push(" AND a.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = config.start_year {
-            query.push(" AND a.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = config.end_year {
-            query.push(" AND a.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
+        self.apply_generic_filters(&mut query, request.params, "a");
 
-        match config.sort_by {
-            Some("date-desc") => query.push(" ORDER BY a.date DESC"),
-            Some("date-asc") => query.push(" ORDER BY a.date ASC"),
+        match request.params.sort_by {
+            SortOrder::DateDesc => query.push(" ORDER BY a.date DESC"),
+            SortOrder::DateAsc => query.push(" ORDER BY a.date ASC"),
             _ => query.push(" ORDER BY rank"),
         };
 
         query.push(" LIMIT ");
         query.push_bind(Self::RESULTS_PER_PAGE as i64);
         query.push(" OFFSET ");
-        query.push_bind(config.offset as i64);
+        query.push_bind(offset as i64);
 
-        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
-        Ok(results)
+        let rows = query.build().fetch_all(&self.pool).await?;
+        let mut results = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            results.push(SearchResult::from_row(&row)?);
+        }
+
+        Ok((results, total_count))
     }
 
-    async fn search_videos(&self, config: &SearchConfig<'_>) -> Result<Vec<SearchResult>> {
-        let mut query = if config.has_search_terms {
+    async fn search_videos(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        // 1. Get Count
+        let mut count_query = if request.params.has_query_terms() {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT COUNT(*) FROM videos_fts
+                JOIN videos v ON videos_fts.rowid = v.id
+                WHERE videos_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+            q
+        } else {
+            QueryBuilder::new(r#"SELECT COUNT(*) FROM videos v WHERE 1=1"#)
+        };
+
+        self.apply_generic_filters(&mut count_query, request.params, "v");
+
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
+
+        // 2. Get Results
+        let mut query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT
@@ -1283,7 +1040,14 @@ impl Repository {
                 JOIN videos v ON videos_fts.rowid = v.id
                 WHERE videos_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
             q
         } else {
             QueryBuilder::new(
@@ -1300,36 +1064,65 @@ impl Repository {
             )
         };
 
-        if let Some(site) = config.site_filter {
-            query.push(" AND v.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = config.start_year {
-            query.push(" AND v.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = config.end_year {
-            query.push(" AND v.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
+        self.apply_generic_filters(&mut query, request.params, "v");
 
-        match config.sort_by {
-            Some("date-desc") => query.push(" ORDER BY v.date DESC"),
-            Some("date-asc") => query.push(" ORDER BY v.date ASC"),
+        match request.params.sort_by {
+            SortOrder::DateDesc => query.push(" ORDER BY v.date DESC"),
+            SortOrder::DateAsc => query.push(" ORDER BY v.date ASC"),
             _ => query.push(" ORDER BY rank"),
         };
 
         query.push(" LIMIT ");
         query.push_bind(Self::RESULTS_PER_PAGE as i64);
         query.push(" OFFSET ");
-        query.push_bind(config.offset as i64);
+        query.push_bind(offset as i64);
 
-        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
-        Ok(results)
+        let rows = query.build().fetch_all(&self.pool).await?;
+        let mut results = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            results.push(SearchResult::from_row(&row)?);
+        }
+
+        Ok((results, total_count))
     }
 
-    async fn search_podcasts(&self, config: &SearchConfig<'_>) -> Result<Vec<SearchResult>> {
-        let mut query = if config.has_search_terms {
+    async fn search_podcasts(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        // 1. Get Count
+        let mut count_query = if request.params.has_query_terms() {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT COUNT(*) FROM podcast_episodes_fts
+                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+                WHERE podcast_episodes_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+            q
+        } else {
+            QueryBuilder::new(r#"SELECT COUNT(*) FROM podcast_episodes p WHERE 1=1"#)
+        };
+
+        self.apply_generic_filters(&mut count_query, request.params, "p");
+
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
+
+        // 2. Get Results
+        let mut query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT
@@ -1346,7 +1139,14 @@ impl Repository {
                 JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
                 WHERE podcast_episodes_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
             q
         } else {
             QueryBuilder::new(
@@ -1363,32 +1163,27 @@ impl Repository {
             )
         };
 
-        if let Some(site) = config.site_filter {
-            query.push(" AND p.url LIKE ");
-            query.push_bind(format!("%{site}%"));
-        }
-        if let Some(start) = config.start_year {
-            query.push(" AND p.date >= ");
-            query.push_bind(format!("{start}-01-01"));
-        }
-        if let Some(end) = config.end_year {
-            query.push(" AND p.date <= ");
-            query.push_bind(format!("{end}-12-31"));
-        }
+        self.apply_generic_filters(&mut query, request.params, "p");
 
-        match config.sort_by {
-            Some("date-desc") => query.push(" ORDER BY p.date DESC"),
-            Some("date-asc") => query.push(" ORDER BY p.date ASC"),
+        match request.params.sort_by {
+            SortOrder::DateDesc => query.push(" ORDER BY p.date DESC"),
+            SortOrder::DateAsc => query.push(" ORDER BY p.date ASC"),
             _ => query.push(" ORDER BY rank"),
         };
 
         query.push(" LIMIT ");
         query.push_bind(Self::RESULTS_PER_PAGE as i64);
         query.push(" OFFSET ");
-        query.push_bind(config.offset as i64);
+        query.push_bind(offset as i64);
 
-        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
-        Ok(results)
+        let rows = query.build().fetch_all(&self.pool).await?;
+        let mut results = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            results.push(SearchResult::from_row(&row)?);
+        }
+
+        Ok((results, total_count))
     }
 
     /// Searches articles, videos, and podcasts, merging results by BM25 rank.
@@ -1413,29 +1208,126 @@ impl Repository {
     ///
     /// This way each FTS query uses Top-N optimization (fast), and we only sort
     /// 40 rows instead of potentially thousands.
-    async fn search_all(&self, config: &SearchConfig<'_>) -> Result<Vec<SearchResult>> {
+    async fn search_all(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
         // We need to fetch enough results from each table to satisfy pagination.
         // For page N with 20 results per page, we need offset + limit results.
-        let inner_limit = config.offset as i64 + Self::RESULTS_PER_PAGE as i64;
+        let inner_limit = offset as i64 + Self::RESULTS_PER_PAGE as i64;
 
         // Determine sort order for inner queries
-        let (inner_order, outer_order) = match config.sort_by {
-            Some("date-desc") => ("ORDER BY a.date DESC", "ORDER BY date DESC"),
-            Some("date-asc") => ("ORDER BY a.date ASC", "ORDER BY date ASC"),
+        let (inner_order, outer_order) = match request.params.sort_by {
+            SortOrder::DateDesc => ("ORDER BY a.date DESC", "ORDER BY date DESC"),
+            SortOrder::DateAsc => ("ORDER BY a.date ASC", "ORDER BY date ASC"),
             _ => ("ORDER BY rank", "ORDER BY rank"),
         };
-        let (inner_order_v, _) = match config.sort_by {
-            Some("date-desc") => ("ORDER BY v.date DESC", ""),
-            Some("date-asc") => ("ORDER BY v.date ASC", ""),
+        let (inner_order_v, _) = match request.params.sort_by {
+            SortOrder::DateDesc => ("ORDER BY v.date DESC", ""),
+            SortOrder::DateAsc => ("ORDER BY v.date ASC", ""),
             _ => ("ORDER BY rank", ""),
         };
-        let (inner_order_p, _) = match config.sort_by {
-            Some("date-desc") => ("ORDER BY p.date DESC", ""),
-            Some("date-asc") => ("ORDER BY p.date ASC", ""),
+        let (inner_order_p, _) = match request.params.sort_by {
+            SortOrder::DateDesc => ("ORDER BY p.date DESC", ""),
+            SortOrder::DateAsc => ("ORDER BY p.date ASC", ""),
             _ => ("ORDER BY rank", ""),
         };
 
-        let mut query = if config.has_search_terms {
+        // Separate query to count total results
+        let mut count_query = if request.params.has_query_terms() {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT SUM(count) FROM (
+                    SELECT COUNT(*) as count FROM articles_fts
+                    JOIN articles a ON articles_fts.rowid = a.id
+                    WHERE articles_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "a");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM videos_fts
+                    JOIN videos v ON videos_fts.rowid = v.id
+                    WHERE videos_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "v");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM podcast_episodes_fts
+                    JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+                    WHERE podcast_episodes_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "p");
+
+            q.push(")");
+            q
+        } else {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT SUM(count) FROM (
+                    SELECT COUNT(*) as count FROM articles a WHERE 1=1"#,
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "a");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM videos v WHERE 1=1"#,
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "v");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM podcast_episodes p WHERE 1=1"#,
+            );
+
+            self.apply_generic_filters(&mut q, request.params, "p");
+
+            q.push(")");
+            q
+        };
+
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
+
+        let mut query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT * FROM (
@@ -1454,21 +1346,17 @@ impl Repository {
                         JOIN articles a ON articles_fts.rowid = a.id
                         WHERE articles_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
 
             // Add article filters
-            if let Some(site) = config.site_filter {
-                q.push(" AND a.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND a.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND a.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "a");
 
             // Push down ORDER BY and LIMIT for Top-N optimization
             q.push(" ");
@@ -1494,21 +1382,17 @@ impl Repository {
                         JOIN videos v ON videos_fts.rowid = v.id
                         WHERE videos_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
 
             // Add video filters
-            if let Some(site) = config.site_filter {
-                q.push(" AND v.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND v.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND v.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "v");
 
             // Push down ORDER BY and LIMIT for Top-N optimization
             q.push(" ");
@@ -1537,21 +1421,17 @@ impl Repository {
                         JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
                         WHERE podcast_episodes_fts MATCH "#,
             );
-            q.push_bind(config.escaped_query);
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
 
             // Add podcast filters
-            if let Some(site) = config.site_filter {
-                q.push(" AND p.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND p.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND p.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "p");
 
             // Push down ORDER BY and LIMIT for Top-N optimization
             q.push(" ");
@@ -1581,18 +1461,7 @@ impl Repository {
                         WHERE 1=1"#,
             );
 
-            if let Some(site) = config.site_filter {
-                q.push(" AND a.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND a.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND a.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "a");
 
             // Push down ORDER BY and LIMIT
             q.push(" ");
@@ -1618,18 +1487,7 @@ impl Repository {
                         WHERE 1=1"#,
             );
 
-            if let Some(site) = config.site_filter {
-                q.push(" AND v.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND v.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND v.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "v");
 
             // Push down ORDER BY and LIMIT
             q.push(" ");
@@ -1655,18 +1513,7 @@ impl Repository {
                         WHERE 1=1"#,
             );
 
-            if let Some(site) = config.site_filter {
-                q.push(" AND p.url LIKE ");
-                q.push_bind(format!("%{site}%"));
-            }
-            if let Some(start) = config.start_year {
-                q.push(" AND p.date >= ");
-                q.push_bind(format!("{start}-01-01"));
-            }
-            if let Some(end) = config.end_year {
-                q.push(" AND p.date <= ");
-                q.push_bind(format!("{end}-12-31"));
-            }
+            self.apply_generic_filters(&mut q, request.params, "p");
 
             // Push down ORDER BY and LIMIT
             q.push(" ");
@@ -1686,42 +1533,9 @@ impl Repository {
         query.push(" LIMIT ");
         query.push_bind(Self::RESULTS_PER_PAGE as i64);
         query.push(" OFFSET ");
-        query.push_bind(config.offset as i64);
+        query.push_bind(offset as i64);
 
         let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
-        Ok(results)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_query_with_site() {
-        let (terms, site) = Repository::parse_query("rust site:github.com");
-        assert_eq!(terms, vec!["rust"]);
-        assert_eq!(site, Some("github.com".to_string()));
-    }
-
-    #[test]
-    fn test_parse_query_site_only() {
-        let (terms, site) = Repository::parse_query("site:example.com");
-        assert!(terms.is_empty());
-        assert_eq!(site, Some("example.com".to_string()));
-    }
-
-    #[test]
-    fn test_parse_query_no_site() {
-        let (terms, site) = Repository::parse_query("rust async await");
-        assert_eq!(terms, vec!["rust", "async", "await"]);
-        assert_eq!(site, None);
-    }
-
-    #[test]
-    fn test_parse_query_multiple_terms_with_site() {
-        let (terms, site) = Repository::parse_query("error handling site:doc.rust-lang.org");
-        assert_eq!(terms, vec!["error", "handling"]);
-        assert_eq!(site, Some("doc.rust-lang.org".to_string()));
+        Ok((results, total_count))
     }
 }
