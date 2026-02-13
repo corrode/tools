@@ -286,11 +286,12 @@ impl Params {
 
     /// Returns the site filter if present.
     pub fn site_filter(&self) -> Option<&SiteFilter> {
-        self.site.as_ref().or_else(|| {
-            self.filters.iter().find_map(|filter| match filter {
-                SearchFilter::Site(site) => Some(site),
+        self.filters
+            .iter()
+            .map(|filter| match filter {
+                SearchFilter::Site(site) => site,
             })
-        })
+            .next()
     }
 
     /// Returns an escaped FTS query string if there are terms.
@@ -324,9 +325,12 @@ impl TryFrom<(RawParams, SearchDefaults)> for Params {
             _ => (Vec::new(), Vec::new()),
         };
 
-        let site = filters.iter().find_map(|filter| match filter {
-            SearchFilter::Site(site) => Some(site.clone()),
-        });
+        let site = filters
+            .iter()
+            .map(|filter| match filter {
+                SearchFilter::Site(site) => site.clone(),
+            })
+            .next();
 
         let start_year = params.start_year.unwrap_or(defaults.default_start_year);
         let end_year = params.end_year.unwrap_or(defaults.default_end_year);
