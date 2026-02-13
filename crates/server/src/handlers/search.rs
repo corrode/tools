@@ -66,7 +66,7 @@ pub(crate) async fn search(
         Params::try_from((raw_params.clone(), defaults)).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // Check if query is provided and not empty/whitespace-only
-    let (raw_results, total_results) = if params.has_query_terms() || params.has_filters() {
+    let (raw_results, results_count) = if params.has_query_terms() || params.has_filters() {
         let request = SearchRequest { params: &params };
         repo.search(&request)
             .await
@@ -76,7 +76,7 @@ pub(crate) async fn search(
     };
 
     // Partition results into videos and articles
-    let results_count = raw_results.len();
+    let page_count = raw_results.len();
     let mut videos = Vec::new();
     let mut articles = Vec::new();
     let mut podcasts = Vec::new();
@@ -102,7 +102,7 @@ pub(crate) async fn search(
     }
 
     let current_page = params.page;
-    let has_more = results_count == Repository::RESULTS_PER_PAGE as usize;
+    let has_more = page_count == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {
         Some(raw_params.build_url(current_page - 1))
@@ -117,7 +117,7 @@ pub(crate) async fn search(
     };
 
     let start_index = ((current_page - 1) * Repository::RESULTS_PER_PAGE + 1) as i64;
-    let end_index = start_index + results_count as i64 - 1;
+    let end_index = start_index + page_count as i64 - 1;
 
     // Select random quote
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
@@ -135,7 +135,7 @@ pub(crate) async fn search(
             videos,
             articles,
             podcasts,
-            results_count: total_results,
+            results_count,
             start_year: raw_params.start_year,
             end_year: raw_params.end_year,
             sort_by: raw_params.sort_by.map(|s| s.to_string()),
@@ -157,7 +157,7 @@ pub(crate) async fn search(
             videos,
             articles,
             podcasts,
-            results_count: total_results,
+            results_count,
             start_year: raw_params.start_year,
             end_year: raw_params.end_year,
             sort_by: raw_params.sort_by.map(|s| s.to_string()),
