@@ -19,6 +19,7 @@ pretty_env_logger = { workspace = true }
 pulldown-cmark = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
 strum = { workspace = true }
 tokio = { workspace = true }
 tower-http = { workspace = true }

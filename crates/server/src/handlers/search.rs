@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::Html,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use storage::Repository;
@@ -55,44 +55,40 @@ struct ResultsTemplate {
     pub quote: Option<DisplayQuote>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct SearchParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
     q: Option<String>,
-    #[serde(rename = "start-year")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     start_year: Option<i32>,
-    #[serde(rename = "end-year")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     end_year: Option<i32>,
-    #[serde(rename = "sort-by")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     sort_by: Option<String>,
     /// Content type filter: "articles", "video", or "podcast"
-    #[serde(rename = "type", default)]
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     content_type: Option<ContentType>,
+    #[serde(skip_serializing)]
     page: Option<u32>,
 }
 
-fn build_url(params: &SearchParams, page: u32) -> String {
-    let mut url = String::from("/search?");
-    let mut serializer = url::form_urlencoded::Serializer::new(&mut url);
+#[derive(Serialize)]
+struct UrlQuery<'a> {
+    #[serde(flatten)]
+    params: &'a SearchParams,
+    page: u32,
+}
 
-    if let Some(q) = &params.q {
-        serializer.append_pair("q", q);
-    }
-    if let Some(start_year) = params.start_year {
-        serializer.append_pair("start-year", &start_year.to_string());
-    }
-    if let Some(end_year) = params.end_year {
-        serializer.append_pair("end-year", &end_year.to_string());
-    }
-    if let Some(sort_by) = &params.sort_by {
-        serializer.append_pair("sort-by", sort_by);
-    }
-    if let Some(content_type) = params.content_type {
-        serializer.append_pair("type", &content_type.to_string());
-    }
-    serializer.append_pair("page", &page.to_string());
+impl SearchParams {
+    fn build_url(&self, page: u32) -> String {
+        let query = UrlQuery { params: self, page };
 
-    serializer.finish();
-    url
+        match serde_urlencoded::to_string(&query) {
+            Ok(qs) => format!("/search?{qs}"),
+            Err(_) => "/search".to_string(),
+        }
+    }
 }
 
 /// Handler for searching the posts
@@ -164,13 +160,13 @@ pub(crate) async fn search(
     let has_more = results_count == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {
-        Some(build_url(&params, current_page - 1))
+        Some(params.build_url(current_page - 1))
     } else {
         None
     };
 
     let next_page_href = if has_more {
-        Some(build_url(&params, current_page + 1))
+        Some(params.build_url(current_page + 1))
     } else {
         None
     };

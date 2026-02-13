@@ -90,7 +90,7 @@ impl std::ops::Deref for Url {
 }
 
 /// Top-level content filters used by the UI/API.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Display)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ContentType {
