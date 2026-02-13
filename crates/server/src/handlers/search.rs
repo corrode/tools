@@ -8,8 +8,8 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 use storage::Repository;
-use types::search_result::{Article, Video};
-use types::{ContentType, SearchResult};
+use types::ContentType;
+use types::search_result::{Article, Podcast, Video};
 
 #[derive(Clone)]
 pub struct DisplayQuote {
@@ -23,11 +23,12 @@ struct SearchTemplate {
     query: Option<String>,
     videos: Vec<Video>,
     articles: Vec<Article>,
+    podcasts: Vec<Podcast>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
-    content_type: ContentType,
+    content_type: Option<ContentType>,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -41,11 +42,12 @@ struct ResultsTemplate {
     query: Option<String>,
     videos: Vec<Video>,
     articles: Vec<Article>,
+    podcasts: Vec<Podcast>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
-    content_type: ContentType,
+    content_type: Option<ContentType>,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -62,9 +64,9 @@ pub struct SearchParams {
     end_year: Option<i32>,
     #[serde(rename = "sort-by")]
     sort_by: Option<String>,
-    /// Content type filter: "all" (default), "articles", or "video"
+    /// Content type filter: "articles", "video", or "podcast"
     #[serde(rename = "type", default)]
-    content_type: ContentType,
+    content_type: Option<ContentType>,
     page: Option<u32>,
 }
 
@@ -84,8 +86,8 @@ fn build_url(params: &SearchParams, page: u32) -> String {
     if let Some(sort_by) = &params.sort_by {
         serializer.append_pair("sort-by", sort_by);
     }
-    if params.content_type != ContentType::All {
-        serializer.append_pair("type", &params.content_type.to_string());
+    if let Some(content_type) = params.content_type {
+        serializer.append_pair("type", &content_type.to_string());
     }
     serializer.append_pair("page", &page.to_string());
 
@@ -134,10 +136,29 @@ pub(crate) async fn search(
 
     // Partition results into videos and articles
     let results_count = raw_results.len();
-    let (video_results, article_results): (Vec<_>, Vec<_>) =
-        raw_results.into_iter().partition(SearchResult::is_video);
-    let videos: Vec<Video> = video_results.into_iter().map(Into::into).collect();
-    let articles: Vec<Article> = article_results.into_iter().map(Into::into).collect();
+    let mut videos = Vec::new();
+    let mut articles = Vec::new();
+    let mut podcasts = Vec::new();
+
+    for result in raw_results {
+        match result.content_type() {
+            ContentType::Podcast => {
+                if let Ok(podcast) = Podcast::try_from(result) {
+                    podcasts.push(podcast);
+                }
+            }
+            ContentType::Video => {
+                if let Ok(video) = Video::try_from(result) {
+                    videos.push(video);
+                }
+            }
+            ContentType::Articles => {
+                if let Ok(article) = Article::try_from(result) {
+                    articles.push(article);
+                }
+            }
+        }
+    }
 
     let current_page = params.page.unwrap_or(1).max(1);
     let has_more = results_count == Repository::RESULTS_PER_PAGE as usize;
@@ -172,6 +193,7 @@ pub(crate) async fn search(
             query: params.q,
             videos,
             articles,
+            podcasts,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,
@@ -193,6 +215,7 @@ pub(crate) async fn search(
             query: params.q,
             videos,
             articles,
+            podcasts,
             total_results,
             start_year: params.start_year,
             end_year: params.end_year,

@@ -102,7 +102,7 @@
                 </div>
 
                 <!-- Hidden input for content type filter -->
-                <input type="hidden" id="content-type" name="type" value="{{ content_type }}" />
+                <input type="hidden" id="content-type" {% if let Some(content_type) = content_type %}name="type" value="{{ content_type }}"{% endif %} />
 
                 <input type="checkbox" id="filter-toggle" class="filter-toggle-checkbox" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}checked{% endif %} />
                 <label for="filter-toggle" class="filter-button" style='{% if query.as_deref().unwrap_or("").is_empty() %}display: none;{% endif %}'>

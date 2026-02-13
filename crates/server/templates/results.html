@@ -4,42 +4,73 @@
     <nav class="search-tabs" role="tablist" aria-label="Content type">
         <a
             href="?q={{ q }}"
-            class="tab {% if content_type == types::ContentType::All %}tab-active{% endif %}"
+            class="tab {% if content_type.is_none() %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == types::ContentType::All %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type.is_none() %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
-            onclick="document.getElementById('content-type').value = 'all'"
+            onclick="
+                document.getElementById('content-type').removeAttribute('name');
+                document.getElementById('content-type').value = '';
+            "
         >
             All
         </a>
         <a
             href="?q={{ q }}&type=articles"
-            class="tab {% if content_type == types::ContentType::Articles %}tab-active{% endif %}"
+            class="tab {% if content_type == Some(types::ContentType::Articles) %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == types::ContentType::Articles %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type == Some(types::ContentType::Articles) %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}&type=articles"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
-            onclick="document.getElementById('content-type').value = 'articles'"
+            onclick="
+                document
+                    .getElementById('content-type')
+                    .setAttribute('name', 'type');
+                document.getElementById('content-type').value = 'articles';
+            "
         >
             Articles
         </a>
         <a
             href="?q={{ q }}&type=video"
-            class="tab {% if content_type == types::ContentType::Video %}tab-active{% endif %}"
+            class="tab {% if content_type == Some(types::ContentType::Video) %}tab-active{% endif %}"
             role="tab"
-            aria-selected="{% if content_type == types::ContentType::Video %}true{% else %}false{% endif %}"
+            aria-selected="{% if content_type == Some(types::ContentType::Video) %}true{% else %}false{% endif %}"
             hx-get="/search?q={{ q }}&type=video"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
-            onclick="document.getElementById('content-type').value = 'video'"
+            onclick="
+                document
+                    .getElementById('content-type')
+                    .setAttribute('name', 'type');
+                document.getElementById('content-type').value = 'video';
+            "
         >
             Videos
+        </a>
+        <a
+            href="?q={{ q }}&type=podcast"
+            class="tab {% if content_type == Some(types::ContentType::Podcast) %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == Some(types::ContentType::Podcast) %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=podcast"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="
+                document
+                    .getElementById('content-type')
+                    .setAttribute('name', 'type');
+                document.getElementById('content-type').value = 'podcast';
+            "
+        >
+            Podcasts
         </a>
     </nav>
     {% endif %}
@@ -115,16 +146,18 @@
                 Clear all
             </button>
         </div>
-        {% endif %} {% if videos.is_empty() && articles.is_empty() %}
+        {% endif %} {% if videos.is_empty() && articles.is_empty() &&
+        podcasts.is_empty() %}
         <div class="result-item">
             <div class="result-title">No results found</div>
             <div class="result-snippet">
                 Try adjusting your search terms or filters.
             </div>
         </div>
-        {% else %} {% for video in videos %} {% include "result/video.html" %}
-        {% endfor %} {% for article in articles %} {% include
-        "result/article.html" %} {% endfor %} {% endif %}
+        {% else %} {% for podcast in podcasts %} {% include
+        "result/podcast.html" %} {% endfor %} {% for video in videos %} {%
+        include "result/video.html" %} {% endfor %} {% for article in articles
+        %} {% include "result/article.html" %} {% endfor %} {% endif %}
     </div>
 
     <!-- Pagination -->

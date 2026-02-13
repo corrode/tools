@@ -1,0 +1,88 @@
+<div class="result-item result-item-podcast">
+    <a
+        href="{{ podcast.url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="podcast-thumbnail-link"
+    >
+        <div class="podcast-thumbnail-wrapper">
+            {% if let Some(thumb) = podcast.thumbnail_url %}
+            <img
+                src="{{ thumb }}"
+                alt="{{ podcast.title }}"
+                class="podcast-thumbnail"
+            />
+            {% else %}
+            <div class="podcast-thumbnail podcast-thumbnail-placeholder">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1v-8H6a6 6 0 1 1 12 0h-1v8h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9z"
+                    />
+                </svg>
+            </div>
+            {% endif %}
+        </div>
+        <div class="podcast-play-overlay">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+        </div>
+        {% if let Some(duration) = podcast.duration %}
+        <span class="podcast-duration">{{ duration }}</span>
+        {% endif %}
+    </a>
+    <div class="result-content">
+        <div class="result-title">
+            <a
+                href="{{ podcast.url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {{ podcast.title }}
+            </a>
+        </div>
+        <div class="podcast-byline">
+            <span class="podcast-byline-item"
+                >Show: {{ podcast.podcast_name }}</span
+            >
+            <span class="podcast-byline-item"
+                >Episode: {{ podcast.episode_name }}</span
+            >
+        </div>
+        {% if let Some(snippet) = podcast.snippet %}
+        <div class="result-snippet">{{ snippet|safe }}</div>
+        {% else if let Some(summary) = podcast.summary %}
+        <div class="result-snippet">{{ summary }}</div>
+        {% endif %}
+        <div class="result-meta">
+            <span class="meta-item">
+                <span class="domain-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="2" />
+                        <path d="M4.93 4.93a10 10 0 0 1 14.14 0" />
+                        <path d="M7.76 7.76a6 6 0 0 1 8.48 0" />
+                        <path d="M16.24 16.24a6 6 0 0 1-8.48 0" />
+                        <path d="M19.07 19.07a10 10 0 0 1-14.14 0" />
+                    </svg>
+                </span>
+                <span class="domain">{{ podcast.podcast_name }}</span>
+            </span>
+            <span class="meta-item">
+                <span class="domain">{{ podcast.domain }}</span>
+            </span>
+            <span class="meta-item">Podcast</span>
+            <span class="meta-item">{{ podcast.date }}</span>
+            {% if let Some(duration) = podcast.duration %}
+            <span class="meta-item">{{ duration }}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>

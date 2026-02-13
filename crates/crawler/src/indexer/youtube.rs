@@ -48,18 +48,6 @@ impl Youtube {
         }
     }
 
-    /// Set overwrite mode
-    pub fn with_overwrite(mut self, overwrite: bool) -> Self {
-        self.overwrite = overwrite;
-        self
-    }
-
-    /// Set static directory for thumbnails
-    pub fn with_static_dir(mut self, static_dir: PathBuf) -> Self {
-        self.static_dir = static_dir;
-        self
-    }
-
     async fn fetch_playlist_items(
         &self,
         page_token: Option<String>,

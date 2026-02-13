@@ -77,7 +77,7 @@ impl Rfc {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::USER_AGENT,
-            header::HeaderValue::from_static("corrode-search-crawler"),
+            header::HeaderValue::from_static("corrode/search crawler"),
         );
 
         // Add GitHub token if available for higher rate limits
@@ -100,18 +100,6 @@ impl Rfc {
             dry_run: false,
             overwrite: false,
         }
-    }
-
-    /// Set dry run mode
-    pub fn with_dry_run(mut self, dry_run: bool) -> Self {
-        self.dry_run = dry_run;
-        self
-    }
-
-    /// Set overwrite mode
-    pub fn with_overwrite(mut self, overwrite: bool) -> Self {
-        self.overwrite = overwrite;
-        self
     }
 
     async fn fetch_file_list(&self) -> Result<Vec<GithubFile>> {

@@ -28,6 +28,9 @@ tokio = { workspace = true }
 url = { workspace = true }
 dotenvy = "0.15.7"
 ytt = "1.1.0"
+feedparser-rs = "0.4.3"
+vtt = "1.0"
+tempfile.workspace = true
 
 [dev-dependencies]
 tempfile = { workspace = true }

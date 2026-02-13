@@ -80,6 +80,7 @@ use sqlx::{
 };
 use std::path::Path;
 use std::str::FromStr;
+use types::NewPodcastEpisode;
 use types::Url;
 use types::{
     ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, NewVideo, SearchResult,
@@ -257,7 +258,55 @@ impl Repository {
         Ok(video_id)
     }
 
-    /// Checks if a URL already exists in the database (articles or videos)
+    /// Inserts a new podcast episode
+    pub async fn insert_podcast_episode(&self, episode: &NewPodcastEpisode) -> Result<i64> {
+        log::debug!("Inserting podcast episode: {}", episode.metadata.url);
+
+        let date_str = episode.metadata.date.format("%Y-%m-%d").to_string();
+        let url_str = episode.metadata.url.as_str();
+
+        let episode_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO podcast_episodes(
+                podcast_name,
+                episode_name,
+                date,
+                duration_seconds,
+                summary,
+                url,
+                thumbnail_url,
+                transcript
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                podcast_name = excluded.podcast_name,
+                episode_name = excluded.episode_name,
+                date = excluded.date,
+                duration_seconds = excluded.duration_seconds,
+                summary = excluded.summary,
+                thumbnail_url = excluded.thumbnail_url,
+                transcript = CASE
+                    WHEN length(excluded.transcript) = 0 THEN podcast_episodes.transcript
+                    ELSE excluded.transcript
+                END
+            RETURNING id
+            "#,
+        )
+        .bind(&episode.podcast_name)
+        .bind(&episode.episode_name)
+        .bind(&date_str)
+        .bind(episode.duration_seconds)
+        .bind(&episode.summary)
+        .bind(url_str)
+        .bind(&episode.thumbnail_url)
+        .bind(&episode.transcript)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(episode_id)
+    }
+
+    /// Checks if a URL already exists in the database (articles, videos, or podcasts)
     pub async fn url_exists(&self, url: &Url) -> Result<bool> {
         let url_str = url.as_str();
 
@@ -266,9 +315,12 @@ impl Repository {
             SELECT 1 FROM articles WHERE url = ?
             UNION ALL
             SELECT 1 FROM videos WHERE url = ?
+            UNION ALL
+            SELECT 1 FROM podcast_episodes WHERE url = ?
             LIMIT 1
             "#,
         )
+        .bind(url_str)
         .bind(url_str)
         .bind(url_str)
         .fetch_optional(&self.pool)
@@ -865,7 +917,7 @@ impl Repository {
         query: &str,
         start_year: Option<i32>,
         end_year: Option<i32>,
-        content_type: ContentType,
+        content_type: Option<ContentType>,
     ) -> Result<i64> {
         let (search_terms, site_filter) = Self::parse_query(query);
         let has_search_terms = !search_terms.is_empty();
@@ -881,7 +933,7 @@ impl Repository {
         };
 
         let count = match content_type {
-            ContentType::Articles => {
+            Some(ContentType::Articles) => {
                 self.count_articles(
                     &escaped_query,
                     has_search_terms,
@@ -891,7 +943,7 @@ impl Repository {
                 )
                 .await?
             }
-            ContentType::Video => {
+            Some(ContentType::Video) => {
                 self.count_videos(
                     &escaped_query,
                     has_search_terms,
@@ -901,7 +953,17 @@ impl Repository {
                 )
                 .await?
             }
-            ContentType::All => {
+            Some(ContentType::Podcast) => {
+                self.count_podcasts(
+                    &escaped_query,
+                    has_search_terms,
+                    &site_filter,
+                    start_year,
+                    end_year,
+                )
+                .await?
+            }
+            None => {
                 let articles = self
                     .count_articles(
                         &escaped_query,
@@ -920,7 +982,16 @@ impl Repository {
                         end_year,
                     )
                     .await?;
-                articles + videos
+                let podcasts = self
+                    .count_podcasts(
+                        &escaped_query,
+                        has_search_terms,
+                        &site_filter,
+                        start_year,
+                        end_year,
+                    )
+                    .await?;
+                articles + videos + podcasts
             }
         };
 
@@ -1015,6 +1086,50 @@ impl Repository {
         Ok(row.get("total"))
     }
 
+    async fn count_podcasts(
+        &self,
+        escaped_query: &str,
+        has_search_terms: bool,
+        site_filter: &Option<String>,
+        start_year: Option<i32>,
+        end_year: Option<i32>,
+    ) -> Result<i64> {
+        let mut query = if has_search_terms {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT COUNT(*) as total
+                FROM podcast_episodes_fts
+                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+                WHERE podcast_episodes_fts MATCH "#,
+            );
+            q.push_bind(escaped_query);
+            q
+        } else {
+            QueryBuilder::new(
+                r#"
+                SELECT COUNT(*) as total
+                FROM podcast_episodes p
+                WHERE 1=1"#,
+            )
+        };
+
+        if let Some(site) = site_filter {
+            query.push(" AND p.url LIKE ");
+            query.push_bind(format!("%{site}%"));
+        }
+        if let Some(start) = start_year {
+            query.push(" AND p.date >= ");
+            query.push_bind(format!("{start}-01-01"));
+        }
+        if let Some(end) = end_year {
+            query.push(" AND p.date <= ");
+            query.push_bind(format!("{end}-12-31"));
+        }
+
+        let row = query.build().fetch_one(&self.pool).await?;
+        Ok(row.get("total"))
+    }
+
     /// Searches for entries matching the given query
     pub async fn search(
         &self,
@@ -1022,7 +1137,7 @@ impl Repository {
         start_year: Option<i32>,
         end_year: Option<i32>,
         sort_by: Option<&str>,
-        content_type: ContentType,
+        content_type: Option<ContentType>,
         page: Option<u32>,
     ) -> Result<Vec<SearchResult>> {
         let (search_terms, site_filter) = Self::parse_query(query);
@@ -1042,7 +1157,7 @@ impl Repository {
         let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
 
         match content_type {
-            ContentType::Articles => {
+            Some(ContentType::Articles) => {
                 let config = SearchConfig {
                     escaped_query: &escaped_query,
                     has_search_terms,
@@ -1054,7 +1169,7 @@ impl Repository {
                 };
                 self.search_articles(&config).await
             }
-            ContentType::Video => {
+            Some(ContentType::Video) => {
                 let config = SearchConfig {
                     escaped_query: &escaped_query,
                     has_search_terms,
@@ -1066,7 +1181,19 @@ impl Repository {
                 };
                 self.search_videos(&config).await
             }
-            ContentType::All => {
+            Some(ContentType::Podcast) => {
+                let config = SearchConfig {
+                    escaped_query: &escaped_query,
+                    has_search_terms,
+                    site_filter: &site_filter,
+                    start_year,
+                    end_year,
+                    sort_by,
+                    offset,
+                };
+                self.search_podcasts(&config).await
+            }
+            None => {
                 let config = SearchConfig {
                     escaped_query: &escaped_query,
                     has_search_terms,
@@ -1201,7 +1328,70 @@ impl Repository {
         Ok(results)
     }
 
-    /// Searches both articles and videos, merging results by BM25 rank.
+    async fn search_podcasts(&self, config: &SearchConfig<'_>) -> Result<Vec<SearchResult>> {
+        let mut query = if config.has_search_terms {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT
+                    'podcast' as content_type,
+                    p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
+                    p.podcast_name, p.episode_name,
+                    p.summary, p.thumbnail_url, p.duration_seconds, p.transcript,
+                    rank,
+                    CASE
+                        WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
+                        ELSE snippet(podcast_episodes_fts, 2, '<mark>', '</mark>', '...', 50)
+                    END as snippet
+                FROM podcast_episodes_fts
+                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+                WHERE podcast_episodes_fts MATCH "#,
+            );
+            q.push_bind(config.escaped_query);
+            q
+        } else {
+            QueryBuilder::new(
+                r#"
+                SELECT
+                    'podcast' as content_type,
+                    p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
+                    p.podcast_name, p.episode_name,
+                    p.summary, p.thumbnail_url, p.duration_seconds, p.transcript,
+                    0.0 as rank,
+                    NULL as snippet
+                FROM podcast_episodes p
+                WHERE 1=1"#,
+            )
+        };
+
+        if let Some(site) = config.site_filter {
+            query.push(" AND p.url LIKE ");
+            query.push_bind(format!("%{site}%"));
+        }
+        if let Some(start) = config.start_year {
+            query.push(" AND p.date >= ");
+            query.push_bind(format!("{start}-01-01"));
+        }
+        if let Some(end) = config.end_year {
+            query.push(" AND p.date <= ");
+            query.push_bind(format!("{end}-12-31"));
+        }
+
+        match config.sort_by {
+            Some("date-desc") => query.push(" ORDER BY p.date DESC"),
+            Some("date-asc") => query.push(" ORDER BY p.date ASC"),
+            _ => query.push(" ORDER BY rank"),
+        };
+
+        query.push(" LIMIT ");
+        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push(" OFFSET ");
+        query.push_bind(config.offset as i64);
+
+        let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
+        Ok(results)
+    }
+
+    /// Searches articles, videos, and podcasts, merging results by BM25 rank.
     ///
     /// # Performance: Top-N Optimization
     ///
@@ -1239,6 +1429,11 @@ impl Repository {
             Some("date-asc") => ("ORDER BY v.date ASC", ""),
             _ => ("ORDER BY rank", ""),
         };
+        let (inner_order_p, _) = match config.sort_by {
+            Some("date-desc") => ("ORDER BY p.date DESC", ""),
+            Some("date-asc") => ("ORDER BY p.date ASC", ""),
+            _ => ("ORDER BY rank", ""),
+        };
 
         let mut query = if config.has_search_terms {
             let mut q = QueryBuilder::new(
@@ -1247,8 +1442,11 @@ impl Repository {
                     SELECT * FROM (
                         SELECT
                             'article' as content_type,
-                            a.id, a.title, a.url, a.category, a.date, a.text,
+                            a.id, a.title, a.url, a.category, a.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            a.text,
                             a.reference, a.word_count,
+                            NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
                             rank,
                             snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
@@ -1284,8 +1482,11 @@ impl Repository {
                     SELECT * FROM (
                         SELECT
                             'video' as content_type,
-                            v.id, v.title, v.url, v.category, v.date, v.text,
+                            v.id, v.title, v.url, v.category, v.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            v.text,
                             NULL as reference, NULL as word_count,
+                            NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
                             rank,
                             snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
@@ -1315,6 +1516,49 @@ impl Repository {
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'podcast' as content_type,
+                            p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
+                            p.podcast_name, p.episode_name,
+                            p.transcript,
+                            NULL as reference, NULL as word_count,
+                            p.summary, p.transcript,
+                            p.thumbnail_url, p.duration_seconds,
+                            rank,
+                            CASE
+                                WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
+                                ELSE snippet(podcast_episodes_fts, 2, '<mark>', '</mark>', '...', 50)
+                            END as snippet
+                        FROM podcast_episodes_fts
+                        JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+                        WHERE podcast_episodes_fts MATCH "#,
+            );
+            q.push_bind(config.escaped_query);
+
+            // Add podcast filters
+            if let Some(site) = config.site_filter {
+                q.push(" AND p.url LIKE ");
+                q.push_bind(format!("%{site}%"));
+            }
+            if let Some(start) = config.start_year {
+                q.push(" AND p.date >= ");
+                q.push_bind(format!("{start}-01-01"));
+            }
+            if let Some(end) = config.end_year {
+                q.push(" AND p.date <= ");
+                q.push_bind(format!("{end}-12-31"));
+            }
+
+            // Push down ORDER BY and LIMIT for Top-N optimization
+            q.push(" ");
+            q.push(inner_order_p);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
             q.push("))");
             q
         } else {
@@ -1325,8 +1569,11 @@ impl Repository {
                     SELECT * FROM (
                         SELECT
                             'article' as content_type,
-                            a.id, a.title, a.url, a.category, a.date, a.text,
+                            a.id, a.title, a.url, a.category, a.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            a.text,
                             a.reference, a.word_count,
+                            NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
                             0.0 as rank,
                             NULL as snippet
@@ -1359,8 +1606,11 @@ impl Repository {
                     SELECT * FROM (
                         SELECT
                             'video' as content_type,
-                            v.id, v.title, v.url, v.category, v.date, v.text,
+                            v.id, v.title, v.url, v.category, v.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            v.text,
                             NULL as reference, NULL as word_count,
+                            NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
                             0.0 as rank,
                             NULL as snippet
@@ -1384,6 +1634,43 @@ impl Repository {
             // Push down ORDER BY and LIMIT
             q.push(" ");
             q.push(inner_order_v);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'podcast' as content_type,
+                            p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
+                            p.podcast_name, p.episode_name,
+                            p.transcript,
+                            NULL as reference, NULL as word_count,
+                            p.summary, p.transcript,
+                            p.thumbnail_url, p.duration_seconds,
+                            0.0 as rank,
+                            NULL as snippet
+                        FROM podcast_episodes p
+                        WHERE 1=1"#,
+            );
+
+            if let Some(site) = config.site_filter {
+                q.push(" AND p.url LIKE ");
+                q.push_bind(format!("%{site}%"));
+            }
+            if let Some(start) = config.start_year {
+                q.push(" AND p.date >= ");
+                q.push_bind(format!("{start}-01-01"));
+            }
+            if let Some(end) = config.end_year {
+                q.push(" AND p.date <= ");
+                q.push_bind(format!("{end}-12-31"));
+            }
+
+            // Push down ORDER BY and LIMIT
+            q.push(" ");
+            q.push(inner_order_p);
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 

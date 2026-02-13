@@ -90,17 +90,16 @@ impl std::ops::Deref for Url {
 }
 
 /// Top-level content filters used by the UI/API.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Display)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ContentType {
-    /// All content types (default).
-    #[default]
-    All,
     /// Articles and other written content.
     Articles,
     /// Videos and other multimedia.
     Video,
+    /// Podcast episodes and other audio content.
+    Podcast,
 }
 
 /// Duration abstraction used for display.
@@ -304,6 +303,111 @@ pub struct Video {
 /// Payload used when inserting or updating a video.
 pub type NewVideo = VideoData;
 
+/// Podcast episode-specific data fields (shared between PodcastEpisode and NewPodcastEpisode).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PodcastEpisodeData {
+    /// Common metadata fields
+    #[sqlx(flatten)]
+    pub metadata: Metadata,
+    /// Podcast/show name
+    pub podcast_name: String,
+    /// Episode name (distinct from podcast/show name)
+    pub episode_name: String,
+    /// Episode summary/description for indexing
+    pub summary: String,
+    /// Optional thumbnail URL
+    pub thumbnail_url: Option<String>,
+    /// Duration in seconds, if known
+    pub duration_seconds: Option<i64>,
+    /// Transcript text for indexing
+    pub transcript: String,
+}
+
+/// Podcast Episode row stored in the `podcast_episodes` table.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PodcastEpisode {
+    /// Primary key.
+    pub id: i64,
+    /// Podcast episode data fields.
+    #[sqlx(flatten)]
+    pub data: PodcastEpisodeData,
+}
+
+/// Payload used when inserting or updating a podcast episode.
+pub type NewPodcastEpisode = PodcastEpisodeData;
+
+impl PodcastEpisode {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.data.metadata.title
+    }
+
+    /// Returns the podcast/show name.
+    #[must_use]
+    pub fn podcast_name(&self) -> &str {
+        &self.data.podcast_name
+    }
+
+    /// Returns the episode name.
+    #[must_use]
+    pub fn episode_name(&self) -> &str {
+        &self.data.episode_name
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.data.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.data.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.data.metadata.date
+    }
+
+    /// Returns the summary.
+    #[must_use]
+    pub fn summary(&self) -> &str {
+        &self.data.summary
+    }
+
+    /// Returns the transcript text.
+    #[must_use]
+    pub fn transcript(&self) -> &str {
+        &self.data.transcript
+    }
+
+    /// Returns the text content, preferring transcript and falling back to summary.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        if self.data.transcript.is_empty() {
+            &self.data.summary
+        } else {
+            &self.data.transcript
+        }
+    }
+
+    /// Returns the thumbnail URL.
+    #[must_use]
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.data.thumbnail_url.as_deref()
+    }
+
+    /// Returns the duration in seconds.
+    #[must_use]
+    pub fn duration_seconds(&self) -> Option<i64> {
+        self.data.duration_seconds
+    }
+}
+
 impl Video {
     /// Returns the title.
     #[must_use]
@@ -368,6 +472,8 @@ pub enum SearchEntry {
     Article(Article),
     /// Video result.
     Video(Video),
+    /// Podcast episode result.
+    Podcast(PodcastEpisode),
 }
 
 impl SearchEntry {
@@ -377,6 +483,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.title(),
             Self::Video(video) => video.title(),
+            Self::Podcast(podcast) => podcast.title(),
         }
     }
 
@@ -386,6 +493,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.url(),
             Self::Video(video) => video.url(),
+            Self::Podcast(podcast) => podcast.url(),
         }
     }
 
@@ -395,6 +503,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.category(),
             Self::Video(video) => video.category(),
+            Self::Podcast(podcast) => podcast.category(),
         }
     }
 
@@ -404,6 +513,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.date(),
             Self::Video(video) => video.date(),
+            Self::Podcast(podcast) => podcast.date(),
         }
     }
 
@@ -413,6 +523,16 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.text(),
             Self::Video(video) => video.text(),
+            Self::Podcast(podcast) => podcast.text(),
+        }
+    }
+
+    /// Returns the summary, when available.
+    #[must_use]
+    pub fn summary(&self) -> Option<&str> {
+        match self {
+            Self::Podcast(podcast) => Some(podcast.summary()),
+            _ => None,
         }
     }
 
@@ -428,6 +548,7 @@ impl SearchEntry {
         match self {
             Self::Article(_) => ContentType::Articles,
             Self::Video(_) => ContentType::Video,
+            Self::Podcast(_) => ContentType::Podcast,
         }
     }
 
@@ -437,6 +558,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.reference(),
             Self::Video(_) => None,
+            Self::Podcast(_) => None,
         }
     }
 
@@ -446,6 +568,7 @@ impl SearchEntry {
         match self {
             Self::Article(_) => None,
             Self::Video(video) => video.thumbnail_url(),
+            Self::Podcast(podcast) => podcast.thumbnail_url(),
         }
     }
 
@@ -455,6 +578,7 @@ impl SearchEntry {
         match self {
             Self::Article(_) => None,
             Self::Video(video) => video.duration_seconds(),
+            Self::Podcast(podcast) => podcast.duration_seconds(),
         }
     }
 
@@ -464,6 +588,7 @@ impl SearchEntry {
         match self {
             Self::Article(article) => article.word_count(),
             Self::Video(_) => 0,
+            Self::Podcast(_) => 0,
         }
     }
 }
@@ -516,6 +641,23 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
                         .unwrap_or_default(),
                     thumbnail_url: row.try_get("thumbnail_url")?,
                     duration_seconds: row.try_get("duration_seconds")?,
+                },
+            }),
+            "podcast" => SearchEntry::Podcast(PodcastEpisode {
+                id: row.try_get("id")?,
+                data: PodcastEpisodeData {
+                    metadata: Metadata {
+                        title: row.try_get("title")?,
+                        url: row.try_get("url")?,
+                        category: row.try_get("category")?,
+                        date: row.try_get("date")?,
+                    },
+                    podcast_name: row.try_get("podcast_name")?,
+                    episode_name: row.try_get("episode_name")?,
+                    summary: row.try_get("summary")?,
+                    thumbnail_url: row.try_get("thumbnail_url")?,
+                    duration_seconds: row.try_get("duration_seconds")?,
+                    transcript: row.try_get("transcript")?,
                 },
             }),
             other => {
@@ -576,14 +718,11 @@ impl SearchResult {
             SearchEntry::Video(video) => video
                 .duration_seconds()
                 .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
+            SearchEntry::Podcast(podcast) => podcast
+                .duration_seconds()
+                .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
             SearchEntry::Article(article) => Some(Duration::from_word_count(article.word_count())),
         }
-    }
-
-    /// Returns true if this result is a video.
-    #[must_use]
-    pub fn is_video(&self) -> bool {
-        matches!(self.entry, SearchEntry::Video(_))
     }
 
     /// Thumbnail helper.

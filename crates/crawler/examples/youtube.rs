@@ -134,18 +134,14 @@ async fn main() -> anyhow::Result<()> {
     let default_url = "https://www.youtube.com/watch?v=aZ5sfhGmEVU";
     let url = args.get(1).map(|s| s.as_str()).unwrap_or(default_url);
 
-    println!("Crawling YouTube URL: {}", url);
+    println!("Crawling YouTube URL: {url}");
 
     match YouTube::new(url).await {
         Ok(video) => {
-            println!("----------------------------------------");
             println!("Successfully fetched video details (API V3)!");
-            println!("----------------------------------------");
             println!("Title:       {}", video.title);
             println!("Thumbnail:   {}", video.thumbnails.maxres);
-            println!("----------------------------------------");
             println!("Description:\n{}", video.description);
-            println!("----------------------------------------");
 
             // Fetch transcript
             println!("Fetching transcript...");

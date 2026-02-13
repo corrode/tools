@@ -2,11 +2,13 @@ use anyhow::Result;
 use async_trait::async_trait;
 use storage::Repository;
 
-/// RFC indexer module
+/// Podcast indexer
+pub mod podcast;
+/// Rust RFC indexer
 pub mod rfc;
-/// TWiR indexer module
+/// This Week In Rust Indexer
 pub mod twir;
-/// YouTube indexer module
+/// YouTube indexer
 pub mod youtube;
 
 /// Trait for content indexers

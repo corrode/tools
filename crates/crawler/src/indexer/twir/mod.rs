@@ -46,30 +46,6 @@ impl Twir {
         }
     }
 
-    /// Set debug mode
-    pub fn with_debug(mut self, debug: bool) -> Self {
-        self.debug = debug;
-        self
-    }
-
-    /// Set dry run mode
-    pub fn with_dry_run(mut self, dry_run: bool) -> Self {
-        self.dry_run = dry_run;
-        self
-    }
-
-    /// Set start date
-    pub fn with_start_date(mut self, date: Option<String>) -> Self {
-        self.start_date = date;
-        self
-    }
-
-    /// Set overwrite mode
-    pub fn with_overwrite(mut self, overwrite: bool) -> Self {
-        self.overwrite = overwrite;
-        self
-    }
-
     /// Extracts date from filename if it matches YYYY-MM-DD pattern
     fn extract_date_from_filename(filename: &str) -> Option<NaiveDate> {
         if filename.len() >= 10 {

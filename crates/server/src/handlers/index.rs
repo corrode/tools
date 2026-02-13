@@ -4,7 +4,7 @@ use std::sync::Arc;
 use storage::Repository;
 
 use types::ContentType;
-use types::search_result::{Article, Video};
+use types::search_result::{Article, Podcast, Video};
 
 use crate::handlers::search::DisplayQuote;
 
@@ -14,11 +14,12 @@ struct SearchTemplate {
     query: Option<String>,
     videos: Vec<Video>,
     articles: Vec<Article>,
+    podcasts: Vec<Podcast>,
     total_results: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
     sort_by: Option<String>,
-    content_type: ContentType,
+    content_type: Option<ContentType>,
     start_index: i64,
     end_index: i64,
     prev_page_href: Option<String>,
@@ -43,11 +44,12 @@ pub(crate) async fn index(
         query: None,
         videos: vec![],
         articles: vec![],
+        podcasts: vec![],
         total_results: 0,
         start_year: None,
         end_year: None,
         sort_by: None,
-        content_type: ContentType::default(),
+        content_type: None,
         start_index: 0,
         end_index: 0,
         prev_page_href: None,
