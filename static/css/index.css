@@ -1015,6 +1015,18 @@ html[data-theme="dark-twir"] .tag {
     letter-spacing: 0.1em;
 }
 
+.quote-attribution a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.quote-attribution a:hover {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
 @media (max-width: 768px) {
     .search-tabs {
         gap: 16px;

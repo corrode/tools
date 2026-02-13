@@ -6,8 +6,6 @@ use storage::Repository;
 use types::ContentType;
 use types::search_result::{Article, Podcast, Video};
 
-use crate::handlers::search::DisplayQuote;
-
 #[derive(Template)]
 #[template(path = "index.html")]
 struct SearchTemplate {
@@ -24,7 +22,7 @@ struct SearchTemplate {
     end_index: i64,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
-    quote: Option<DisplayQuote>,
+    quote: Option<types::Quote>,
 }
 
 /// Handler for the index page
@@ -32,10 +30,7 @@ pub(crate) async fn index(
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, axum::http::StatusCode> {
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
-        Some(DisplayQuote {
-            text: q.text,
-            author: q.author,
-        })
+        Some(q)
     } else {
         None
     };

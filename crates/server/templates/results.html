@@ -205,8 +205,14 @@
     <!-- Quote Easter Egg -->
     {% if let Some(q) = quote %}
     <div class="quote-easter-egg">
-        <div class="quote-content">"{{ q.text }}"</div>
-        <div class="quote-attribution">— {{ q.author }}</div>
+        <div class="quote-content">"{{ q.text|truncate(150) }}"</div>
+        <div class="quote-attribution">
+            {% if let Some(url) = q.url %}
+            <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+                >— {{ q.author }}</a
+            >
+            {% else %} — {{ q.author }} {% endif %}
+        </div>
     </div>
     {% endif %} {% endif %}
 </div>

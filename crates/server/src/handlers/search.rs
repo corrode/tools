@@ -7,15 +7,9 @@ use axum::{
 use std::sync::Arc;
 
 use storage::{Repository, SearchRequest};
-use types::ContentType;
 use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Video};
-
-#[derive(Clone)]
-pub struct DisplayQuote {
-    pub text: String,
-    pub author: String,
-}
+use types::{ContentType, Quote};
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -33,7 +27,7 @@ struct SearchTemplate {
     end_index: i64,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
-    pub quote: Option<DisplayQuote>,
+    pub quote: Option<Quote>,
 }
 
 #[derive(Template)]
@@ -52,7 +46,7 @@ struct ResultsTemplate {
     end_index: i64,
     prev_page_href: Option<String>,
     next_page_href: Option<String>,
-    pub quote: Option<DisplayQuote>,
+    pub quote: Option<types::Quote>,
 }
 
 /// Handler for searching the posts
@@ -121,10 +115,7 @@ pub(crate) async fn search(
 
     // Select random quote
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
-        Some(DisplayQuote {
-            text: q.text,
-            author: q.author,
-        })
+        Some(q)
     } else {
         None
     };
