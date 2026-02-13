@@ -21,6 +21,10 @@ format fmt: ## Format the code
 dev: ## Run the server in watch mode
 	cargo watch -x 'run --bin server'
 
+.PHONY: docs
+docs: ## Open documentation 
+	cargo doc --document-private-items --workspace --open 
+
 .PHONY: docker
 docker: ## Build the Docker image
 	docker build -t search .
