@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use log::{debug, info, warn};
 use reqwest::header;
+use srtparse;
 use storage::Repository;
 use types::{Metadata, PodcastEpisodeData, Url};
 use vtt::WebVtt;
@@ -270,6 +271,23 @@ impl PodcastIndexer {
 
         result.join("\n")
     }
+
+    /// Extracts plain text from SRT (SubRip) format transcripts using srtparse.
+    fn extract_srt_text(input: &str) -> Result<String> {
+        let items = srtparse::from_str(input).context("Failed to parse SRT transcript")?;
+        let text = items
+            .into_iter()
+            .map(|item| item.text)
+            .collect::<Vec<_>>()
+            .join(" ");
+        Ok(text)
+    }
+
+    /// Checks if the transcript text appears to be in SRT format.
+    fn is_srt_format(text: &str) -> bool {
+        // Try to parse the first few lines as SRT
+        srtparse::from_str(text).is_ok()
+    }
 }
 
 #[async_trait]
@@ -490,10 +508,9 @@ impl Indexer for PodcastIndexer {
                                 transcript_text.len()
                             );
 
-                            // The transcript file could be WebVTT, which
-                            // contains timestamps and other metadata. We want
-                            // to remove those and keep only the transcript
-                            // text.
+                            // The transcript file could be WebVTT or SRT, which
+                            // contain timestamps and other metadata. We want
+                            // to remove those and keep only the transcript text.
 
                             let transcript = if transcript_text.trim_start().starts_with("WEBVTT") {
                                 info!(
@@ -522,6 +539,26 @@ impl Indexer for PodcastIndexer {
                                     .map(|cue| cue.payload)
                                     .collect::<Vec<_>>();
                                 payloads.join("\n")
+                            } else if Self::is_srt_format(&transcript_text) {
+                                info!(
+                                    "[{}] [{}] Transcript is in SRT format. Extracting text...",
+                                    podcast.0, title
+                                );
+                                match Self::extract_srt_text(&transcript_text) {
+                                    Ok(text) => text,
+                                    Err(e) => {
+                                        let err_msg = format!(
+                                            "[{}] [{}] Failed to parse SRT transcript: {e}",
+                                            podcast.0, title
+                                        );
+                                        if self.debug {
+                                            bail!(err_msg);
+                                        }
+                                        warn!("{}", err_msg);
+                                        stats.failed += 1;
+                                        continue;
+                                    }
+                                }
                             } else {
                                 info!(
                                     "[{}] [{}] Transcript is in plain text format.",

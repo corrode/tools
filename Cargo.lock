@@ -712,6 +712,7 @@ dependencies = [
  "scraper",
  "serde",
  "serde_json",
+ "srtparse",
  "storage",
  "tempfile",
  "tokio",
@@ -3684,6 +3685,12 @@ dependencies = [
  "tracing",
  "url",
 ]
+
+[[package]]
+name = "srtparse"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbadd676c5a6089e211136745ebd6ab154f28ddd4b15fc356c11e9a678a5d034"
 
 [[package]]
 name = "stable_deref_trait"
