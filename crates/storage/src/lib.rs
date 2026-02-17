@@ -326,6 +326,23 @@ impl Repository {
         Ok(result.is_some())
     }
 
+    /// Checks if a podcast episode URL already exists in the podcast_episodes table
+    pub async fn podcast_episode_exists(&self, url: &Url) -> Result<bool> {
+        let url_str = url.as_str();
+
+        let result = sqlx::query(
+            r#"
+            SELECT 1 FROM podcast_episodes WHERE url = ?
+            LIMIT 1
+            "#,
+        )
+        .bind(url_str)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.is_some())
+    }
+
     /// Gets the latest entry date from the database (across both tables)
     pub async fn get_latest_entry_date(&self) -> Result<Option<NaiveDate>> {
         let result = sqlx::query(

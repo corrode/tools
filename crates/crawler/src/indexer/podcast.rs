@@ -418,10 +418,10 @@ impl Indexer for PodcastIndexer {
                                         .and_then(|image_url| Url::parse(image_url.as_str()).ok())
                                 });
 
-                            if !self.overwrite && repo.url_exists(&url).await? {
+                            if !self.overwrite && repo.podcast_episode_exists(&url).await? {
                                 debug!(
-                                    "[{}] [{}] Skipping existing podcast episode",
-                                    podcast.0, title
+                                    "[{}] [{}] Skipping existing podcast episode (url: {})",
+                                    podcast.0, title, url
                                 );
                                 stats.skipped_existing += 1;
                                 continue;
