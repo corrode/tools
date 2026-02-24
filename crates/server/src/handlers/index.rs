@@ -4,7 +4,7 @@ use std::sync::Arc;
 use storage::Repository;
 
 use types::ContentType;
-use types::search_result::{Article, Podcast, Video};
+use types::search_result::{Article, Podcast, Talk, Video};
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -13,6 +13,7 @@ struct SearchTemplate {
     videos: Vec<Video>,
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
+    talks: Vec<Talk>,
     results_count: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -40,6 +41,7 @@ pub(crate) async fn index(
         videos: vec![],
         articles: vec![],
         podcasts: vec![],
+        talks: vec![],
         results_count: 0,
         start_year: None,
         end_year: None,

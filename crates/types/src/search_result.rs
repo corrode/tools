@@ -72,6 +72,31 @@ pub struct Podcast {
     pub summary: Option<String>,
 }
 
+/// Talk search result for display in templates.
+#[derive(Debug, Clone)]
+pub struct Talk {
+    /// Talk title
+    pub title: String,
+    /// Talk URL
+    pub url: String,
+    /// Conference name
+    pub conference: String,
+    /// Formatted date
+    pub date: String,
+    /// Search snippet with highlights
+    pub snippet: Option<String>,
+    /// Talk summary
+    pub summary: String,
+    /// Video URL (if available)
+    pub video_url: Option<String>,
+    /// Slides URL (if available)
+    pub slides_url: Option<String>,
+    /// Thumbnail URL (if available)
+    pub thumbnail_url: Option<String>,
+    /// Duration string (if available)
+    pub duration: Option<String>,
+}
+
 fn sanitize_podcast_snippet(snippet: Option<String>) -> Option<String> {
     let value = snippet?;
     if !value.contains('<') {
@@ -154,6 +179,31 @@ impl TryFrom<SearchResult> for Podcast {
             date: podcast.date().to_string(),
             domain,
             summary,
+        })
+    }
+}
+
+impl TryFrom<SearchResult> for Talk {
+    type Error = &'static str;
+
+    fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
+        let duration = result.duration().map(|d| d.to_string());
+        let SearchResult { entry, snippet, .. } = result;
+        let SearchEntry::Talk(talk) = entry else {
+            return Err("expected talk result for Talk view");
+        };
+
+        Ok(Self {
+            title: talk.title().to_string(),
+            url: talk.website_url().to_string(),
+            conference: talk.conference().to_string(),
+            date: talk.date().to_string(),
+            snippet,
+            summary: talk.summary().to_string(),
+            video_url: talk.video_url().map(|s| s.to_string()),
+            slides_url: talk.slides_url().map(|s| s.to_string()),
+            thumbnail_url: talk.thumbnail_url().map(|s| s.to_string()),
+            duration,
         })
     }
 }

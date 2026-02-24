@@ -65,7 +65,7 @@ pub struct RawParams {
     /// Optional sort order requested by the user.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<SortOrder>,
-    /// Content type filter: "articles", "video", or "podcast".
+    /// Content type filter: "articles", "video", "podcast", or "talks".
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     pub content_type: Option<ContentType>,
     /// Optional page number.

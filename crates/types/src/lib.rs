@@ -90,6 +90,151 @@ impl std::ops::Deref for Url {
     }
 }
 
+/// A YouTube video ID (e.g., "dQw4w9WgXcQ").
+///
+/// This newtype ensures type safety and validates that the ID is not empty
+/// or malformed.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct VideoId(String);
+
+/// Error type for invalid video IDs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidVideoId(String);
+
+impl fmt::Display for InvalidVideoId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid video ID: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidVideoId {}
+
+impl VideoId {
+    /// Creates a new VideoId from a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the ID is empty, contains only whitespace,
+    /// or contains invalid characters (spaces, emojis, etc.).
+    pub fn new(id: impl Into<String>) -> Result<Self, InvalidVideoId> {
+        let id = id.into();
+        let trimmed = id.trim();
+
+        if trimmed.is_empty() {
+            return Err(InvalidVideoId("video ID cannot be empty".to_string()));
+        }
+
+        // YouTube video IDs are alphanumeric with hyphens and underscores
+        if !trimmed
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Err(InvalidVideoId(format!(
+                "video ID contains invalid characters: {}",
+                trimmed
+            )));
+        }
+
+        // YouTube video IDs msut have a minimum length (11 characters).
+        // We can be lenient here and just enforce a reasonable minimum to catch
+        // obvious errors.
+        if trimmed.len() < 10 {
+            return Err(InvalidVideoId(format!(
+                "video ID is too short ({} chars): {}",
+                trimmed.len(),
+                trimmed
+            )));
+        }
+
+        Ok(Self(trimmed.to_string()))
+    }
+
+    /// Returns the video ID as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Returns the YouTube watch URL for this video.
+    #[must_use]
+    pub fn watch_url(&self) -> Url {
+        Url::parse(&format!("https://www.youtube.com/watch?v={}", self.0))
+            .expect("valid YouTube URL")
+    }
+}
+
+impl fmt::Display for VideoId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// A YouTube playlist ID.
+///
+/// This newtype ensures type safety and validates that the ID is not empty.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PlaylistId(String);
+
+/// Error type for invalid playlist IDs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidPlaylistId(String);
+
+impl fmt::Display for InvalidPlaylistId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid playlist ID: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidPlaylistId {}
+
+impl PlaylistId {
+    /// Creates a new PlaylistId from a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the ID is empty or contains only whitespace.
+    pub fn new(id: impl Into<String>) -> Result<Self, InvalidPlaylistId> {
+        let id = id.into();
+        let trimmed = id.trim();
+
+        if trimmed.is_empty() {
+            return Err(InvalidPlaylistId("playlist ID cannot be empty".to_string()));
+        }
+
+        // YouTube playlist IDs start with PL, UU, etc. and are alphanumeric with hyphens/underscores
+        if !trimmed
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Err(InvalidPlaylistId(format!(
+                "playlist ID contains invalid characters: {}",
+                trimmed
+            )));
+        }
+
+        Ok(Self(trimmed.to_string()))
+    }
+
+    /// Returns the playlist ID as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Returns the YouTube playlist URL.
+    #[must_use]
+    pub fn playlist_url(&self) -> Url {
+        Url::parse(&format!("https://www.youtube.com/playlist?list={}", self.0))
+            .expect("valid YouTube playlist URL")
+    }
+}
+
+impl fmt::Display for PlaylistId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// Top-level content filters used by the UI/API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Display)]
 #[serde(rename_all = "lowercase")]
@@ -101,6 +246,8 @@ pub enum ContentType {
     Video,
     /// Podcast episodes and other audio content.
     Podcast,
+    /// Conference talks and related presentations.
+    Talks,
 }
 
 /// Duration abstraction used for display.
@@ -453,6 +600,133 @@ impl Video {
     }
 }
 
+/// Speaker data for conference talks.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Speaker {
+    /// Primary key.
+    pub id: i64,
+    /// Speaker's name.
+    pub name: String,
+}
+
+/// Data for creating a new speaker (without ID).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewSpeaker {
+    /// Speaker's name.
+    pub name: String,
+}
+
+/// Talk-specific data fields.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TalkData {
+    /// Talk title.
+    pub title: String,
+    /// Abstract or description of the talk.
+    pub summary: String,
+    /// Full transcript of the talk (from video captions or manual transcription).
+    /// TODO: Integrate with yt-dlp for auto-generated captions in the future.
+    pub transcript: Option<String>,
+    /// The conference where this talk was presented (e.g., "RustConf", "EuroRust").
+    pub conference: String,
+    /// Date when the talk was presented.
+    pub date: NaiveDate,
+    /// Canonical URL for the talk on the conference website.
+    pub website_url: Url,
+    /// URL to video recording (YouTube, Vimeo, conference platform, etc.).
+    pub video_url: Option<String>,
+    /// URL to slide deck (SlideShare, Speaker Deck, Google Slides, PDF, etc.).
+    pub slides_url: Option<String>,
+    /// Optional thumbnail URL for the talk.
+    pub thumbnail_url: Option<String>,
+    /// Duration of the talk in seconds.
+    pub duration_seconds: Option<i64>,
+}
+
+/// Talk row stored in the `talks` table.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Talk {
+    /// Primary key.
+    pub id: i64,
+    /// Talk data fields.
+    #[sqlx(flatten)]
+    pub data: TalkData,
+}
+
+/// Payload used when inserting or updating a talk.
+pub type NewTalk = TalkData;
+
+impl Talk {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.data.title
+    }
+
+    /// Returns the summary/abstract.
+    #[must_use]
+    pub fn summary(&self) -> &str {
+        &self.data.summary
+    }
+
+    /// Returns the transcript if available.
+    #[must_use]
+    pub fn transcript(&self) -> Option<&str> {
+        self.data.transcript.as_deref()
+    }
+
+    /// Returns the conference name.
+    #[must_use]
+    pub fn conference(&self) -> &str {
+        &self.data.conference
+    }
+
+    /// Returns the presentation date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.data.date
+    }
+
+    /// Returns the canonical website URL.
+    #[must_use]
+    pub fn website_url(&self) -> &Url {
+        &self.data.website_url
+    }
+
+    /// Returns the video URL if available.
+    #[must_use]
+    pub fn video_url(&self) -> Option<&str> {
+        self.data.video_url.as_deref()
+    }
+
+    /// Returns the slides URL if available.
+    #[must_use]
+    pub fn slides_url(&self) -> Option<&str> {
+        self.data.slides_url.as_deref()
+    }
+
+    /// Returns the thumbnail URL if available.
+    #[must_use]
+    pub fn thumbnail_url(&self) -> Option<&str> {
+        self.data.thumbnail_url.as_deref()
+    }
+
+    /// Returns the duration in seconds if available.
+    #[must_use]
+    pub fn duration_seconds(&self) -> Option<i64> {
+        self.data.duration_seconds
+    }
+
+    /// Returns the text content for search, preferring transcript and falling back to summary.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        self.data
+            .transcript
+            .as_deref()
+            .filter(|t| !t.is_empty())
+            .unwrap_or(&self.data.summary)
+    }
+}
+
 /// Quote of the Week.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Quote {
@@ -475,6 +749,8 @@ pub enum SearchEntry {
     Video(Video),
     /// Podcast episode result.
     Podcast(PodcastEpisode),
+    /// Conference talk result.
+    Talk(Talk),
 }
 
 impl SearchEntry {
@@ -485,6 +761,7 @@ impl SearchEntry {
             Self::Article(article) => article.title(),
             Self::Video(video) => video.title(),
             Self::Podcast(podcast) => podcast.title(),
+            Self::Talk(talk) => talk.title(),
         }
     }
 
@@ -495,6 +772,7 @@ impl SearchEntry {
             Self::Article(article) => article.url(),
             Self::Video(video) => video.url(),
             Self::Podcast(podcast) => podcast.url(),
+            Self::Talk(talk) => talk.website_url(),
         }
     }
 
@@ -505,6 +783,7 @@ impl SearchEntry {
             Self::Article(article) => article.category(),
             Self::Video(video) => video.category(),
             Self::Podcast(podcast) => podcast.category(),
+            Self::Talk(talk) => talk.conference(),
         }
     }
 
@@ -515,6 +794,7 @@ impl SearchEntry {
             Self::Article(article) => article.date(),
             Self::Video(video) => video.date(),
             Self::Podcast(podcast) => podcast.date(),
+            Self::Talk(talk) => talk.date(),
         }
     }
 
@@ -525,6 +805,7 @@ impl SearchEntry {
             Self::Article(article) => article.text(),
             Self::Video(video) => video.text(),
             Self::Podcast(podcast) => podcast.text(),
+            Self::Talk(talk) => talk.text(),
         }
     }
 
@@ -533,6 +814,7 @@ impl SearchEntry {
     pub fn summary(&self) -> Option<&str> {
         match self {
             Self::Podcast(podcast) => Some(podcast.summary()),
+            Self::Talk(talk) => Some(talk.summary()),
             _ => None,
         }
     }
@@ -550,6 +832,7 @@ impl SearchEntry {
             Self::Article(_) => ContentType::Articles,
             Self::Video(_) => ContentType::Video,
             Self::Podcast(_) => ContentType::Podcast,
+            Self::Talk(_) => ContentType::Talks,
         }
     }
 
@@ -560,6 +843,7 @@ impl SearchEntry {
             Self::Article(article) => article.reference(),
             Self::Video(_) => None,
             Self::Podcast(_) => None,
+            Self::Talk(_) => None,
         }
     }
 
@@ -570,6 +854,7 @@ impl SearchEntry {
             Self::Article(_) => None,
             Self::Video(video) => video.thumbnail_url(),
             Self::Podcast(podcast) => podcast.thumbnail_url(),
+            Self::Talk(talk) => talk.thumbnail_url(),
         }
     }
 
@@ -580,6 +865,7 @@ impl SearchEntry {
             Self::Article(_) => None,
             Self::Video(video) => video.duration_seconds(),
             Self::Podcast(podcast) => podcast.duration_seconds(),
+            Self::Talk(talk) => talk.duration_seconds(),
         }
     }
 
@@ -590,6 +876,7 @@ impl SearchEntry {
             Self::Article(article) => article.word_count(),
             Self::Video(_) => 0,
             Self::Podcast(_) => 0,
+            Self::Talk(_) => 0,
         }
     }
 }
@@ -661,6 +948,21 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
                     transcript: row.try_get("transcript")?,
                 },
             }),
+            "talk" => SearchEntry::Talk(Talk {
+                id: row.try_get("id")?,
+                data: TalkData {
+                    title: row.try_get("title")?,
+                    summary: row.try_get("summary")?,
+                    transcript: row.try_get("transcript")?,
+                    conference: row.try_get("conference")?,
+                    date: row.try_get("date")?,
+                    website_url: row.try_get("url")?,
+                    video_url: row.try_get("video_url")?,
+                    slides_url: row.try_get("slides_url")?,
+                    thumbnail_url: row.try_get("thumbnail_url")?,
+                    duration_seconds: row.try_get("duration_seconds")?,
+                },
+            }),
             other => {
                 let err: BoxDynError = format!("unknown content_type: {other}").into();
                 return Err(sqlx::Error::Decode(err));
@@ -720,6 +1022,9 @@ impl SearchResult {
                 .duration_seconds()
                 .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
             SearchEntry::Podcast(podcast) => podcast
+                .duration_seconds()
+                .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
+            SearchEntry::Talk(talk) => talk
                 .duration_seconds()
                 .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
             SearchEntry::Article(article) => Some(Duration::from_word_count(article.word_count())),
@@ -998,5 +1303,56 @@ mod tests {
         );
         assert_eq!(Duration::parse_iso8601("invalid"), None);
         assert_eq!(Duration::parse_iso8601("P1D"), None);
+    }
+
+    #[test]
+    fn test_video_id_valid() {
+        let id = VideoId::new("dQw4w9WgXcQ").unwrap();
+        assert_eq!(id.as_str(), "dQw4w9WgXcQ");
+        assert_eq!(
+            id.watch_url().as_str(),
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        );
+    }
+
+    #[test]
+    fn test_video_id_with_hyphen_underscore() {
+        let id = VideoId::new("abc-123_XYZ").unwrap();
+        assert_eq!(id.as_str(), "abc-123_XYZ");
+    }
+
+    #[test]
+    fn test_video_id_empty() {
+        assert!(VideoId::new("").is_err());
+        assert!(VideoId::new("   ").is_err());
+    }
+
+    #[test]
+    fn test_video_id_invalid_chars() {
+        assert!(VideoId::new("abc def").is_err()); // space
+        assert!(VideoId::new("abc🎵def").is_err()); // emoji
+    }
+
+    #[test]
+    fn test_video_id_too_short() {
+        assert!(VideoId::new("abc").is_err());
+    }
+
+    #[test]
+    fn test_playlist_id_valid() {
+        let id = PlaylistId::new("PL2b0df3jKKiTWZeF7cip6ZUsaVXxWioRi").unwrap();
+        assert_eq!(id.as_str(), "PL2b0df3jKKiTWZeF7cip6ZUsaVXxWioRi");
+        assert!(id.playlist_url().as_str().contains("list="));
+    }
+
+    #[test]
+    fn test_playlist_id_empty() {
+        assert!(PlaylistId::new("").is_err());
+        assert!(PlaylistId::new("   ").is_err());
+    }
+
+    #[test]
+    fn test_playlist_id_invalid_chars() {
+        assert!(PlaylistId::new("PL abc").is_err()); // space
     }
 }

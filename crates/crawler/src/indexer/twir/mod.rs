@@ -1,5 +1,5 @@
 use super::Indexer;
-use crate::{browser::Browser, paths};
+use crate::{paths, tools::browser::Browser};
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;

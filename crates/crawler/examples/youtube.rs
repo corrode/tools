@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use crawler::indexer::youtube::Youtube as YoutubeIndexer;
+use crawler::tools::youtube::fetch_transcript;
 use regex::Regex;
 use serde_json::Value;
 use std::env;
@@ -145,14 +145,14 @@ async fn main() -> anyhow::Result<()> {
 
             // Fetch transcript
             println!("Fetching transcript...");
-            match YoutubeIndexer::fetch_transcript(&video.id).await {
-                Some(transcript) => {
+            match fetch_transcript(&video.id).await {
+                Ok(transcript) => {
                     println!("Successfully fetched transcript!");
                     println!("\nTranscript content (First 500 chars):");
                     println!("{}", transcript.chars().take(500).collect::<String>());
                 }
-                None => {
-                    eprintln!("Failed to fetch transcript.");
+                Err(e) => {
+                    eprintln!("Failed to fetch transcript: {}", e);
                 }
             }
             println!("----------------------------------------");

@@ -72,6 +72,24 @@
         >
             Podcasts
         </a>
+        <a
+            href="?q={{ q }}&type=talks"
+            class="tab {% if content_type == Some(types::ContentType::Talks) %}tab-active{% endif %}"
+            role="tab"
+            aria-selected="{% if content_type == Some(types::ContentType::Talks) %}true{% else %}false{% endif %}"
+            hx-get="/search?q={{ q }}&type=talks"
+            hx-target="#results-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            onclick="
+                document
+                    .getElementById('content-type')
+                    .setAttribute('name', 'type');
+                document.getElementById('content-type').value = 'talks';
+            "
+        >
+            Talks
+        </a>
     </nav>
     {% endif %}
     <div class="results" id="search-results">
@@ -147,7 +165,7 @@
             </button>
         </div>
         {% endif %} {% if videos.is_empty() && articles.is_empty() &&
-        podcasts.is_empty() %}
+        podcasts.is_empty() && talks.is_empty() %}
         <div class="result-item">
             <div class="result-title">No results found</div>
             <div class="result-snippet">
@@ -155,9 +173,10 @@
             </div>
         </div>
         {% else %} {% for podcast in podcasts %} {% include
-        "result/podcast.html" %} {% endfor %} {% for video in videos %} {%
-        include "result/video.html" %} {% endfor %} {% for article in articles
-        %} {% include "result/article.html" %} {% endfor %} {% endif %}
+        "result/podcast.html" %} {% endfor %} {% for talk in talks %} {% include
+        "result/talk.html" %} {% endfor %} {% for video in videos %} {% include
+        "result/video.html" %} {% endfor %} {% for article in articles %} {%
+        include "result/article.html" %} {% endfor %} {% endif %}
     </div>
 
     <!-- Pagination -->

@@ -1,8 +1,8 @@
 //! Browser automation for crawling web pages
 
-use super::cookies::COOKIE_BANNER_SELECTORS;
-use super::paths;
-use super::sanitizer::Sanitizer;
+use crate::cookies::COOKIE_BANNER_SELECTORS;
+use crate::paths;
+use crate::sanitizer::Sanitizer;
 use types::Metadata;
 
 use anyhow::{Result, bail};

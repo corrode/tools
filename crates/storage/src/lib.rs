@@ -81,6 +81,10 @@ use sqlx::{
 use std::path::Path;
 use std::str::FromStr;
 use types::NewPodcastEpisode;
+use types::NewSpeaker;
+use types::NewTalk;
+use types::Speaker;
+use types::Talk;
 use types::Url;
 use types::params::{Params, SortOrder};
 use types::{
@@ -341,6 +345,168 @@ impl Repository {
         .await?;
 
         Ok(result.is_some())
+    }
+
+    /// Inserts or updates a talk in the database
+    pub async fn insert_talk(&self, talk: &NewTalk) -> Result<i64> {
+        log::debug!("Inserting talk: {}", talk.website_url);
+
+        let date_str = talk.date.format("%Y-%m-%d").to_string();
+        let url_str = talk.website_url.as_str();
+
+        let talk_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO talks(
+                title,
+                summary,
+                transcript,
+                conference,
+                date,
+                website_url,
+                video_url,
+                slides_url,
+                thumbnail_url,
+                duration_seconds
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(website_url) DO UPDATE SET
+                title = excluded.title,
+                summary = excluded.summary,
+                transcript = CASE
+                    WHEN excluded.transcript IS NULL
+                    THEN talks.transcript
+                    ELSE excluded.transcript
+                END,
+                conference = excluded.conference,
+                date = excluded.date,
+                video_url = COALESCE(excluded.video_url, talks.video_url),
+                slides_url = COALESCE(excluded.slides_url, talks.slides_url),
+                thumbnail_url = COALESCE(excluded.thumbnail_url, talks.thumbnail_url),
+                duration_seconds = COALESCE(excluded.duration_seconds, talks.duration_seconds)
+            RETURNING id
+            "#,
+        )
+        .bind(&talk.title)
+        .bind(&talk.summary)
+        .bind(&talk.transcript)
+        .bind(&talk.conference)
+        .bind(&date_str)
+        .bind(url_str)
+        .bind(&talk.video_url)
+        .bind(&talk.slides_url)
+        .bind(&talk.thumbnail_url)
+        .bind(talk.duration_seconds)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(talk_id)
+    }
+
+    /// Checks if a talk URL already exists in the talks table
+    pub async fn talk_exists(&self, url: &Url) -> Result<bool> {
+        let url_str = url.as_str();
+
+        let result = sqlx::query(
+            r#"
+            SELECT 1 FROM talks WHERE website_url = ?
+            LIMIT 1
+            "#,
+        )
+        .bind(url_str)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.is_some())
+    }
+
+    /// Gets a talk by its website URL
+    pub async fn get_talk_by_url(&self, url: &Url) -> Result<Option<Talk>> {
+        let url_str = url.as_str();
+
+        let talk = sqlx::query_as::<_, Talk>(
+            r#"
+            SELECT id, title, summary, transcript, conference, date,
+                   website_url, video_url, slides_url, thumbnail_url, duration_seconds
+            FROM talks
+            WHERE website_url = ?
+            "#,
+        )
+        .bind(url_str)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(talk)
+    }
+
+    /// Inserts or updates a speaker in the database, returning the speaker ID
+    pub async fn upsert_speaker(&self, speaker: &NewSpeaker) -> Result<i64> {
+        log::debug!("Upserting speaker: {}", speaker.name);
+
+        let speaker_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO speakers(name)
+            VALUES (?)
+            ON CONFLICT(name) DO UPDATE SET
+                name = excluded.name
+            RETURNING id
+            "#,
+        )
+        .bind(&speaker.name)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(speaker_id)
+    }
+
+    /// Gets a speaker by name
+    pub async fn get_speaker_by_name(&self, name: &str) -> Result<Option<Speaker>> {
+        let speaker = sqlx::query_as::<_, Speaker>(
+            r#"
+            SELECT id, name
+            FROM speakers
+            WHERE name = ?
+            "#,
+        )
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(speaker)
+    }
+
+    /// Links a speaker to a talk
+    pub async fn link_speaker_to_talk(&self, talk_id: i64, speaker_id: i64) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO talk_speakers(talk_id, speaker_id)
+            VALUES (?, ?)
+            ON CONFLICT(talk_id, speaker_id) DO NOTHING
+            "#,
+        )
+        .bind(talk_id)
+        .bind(speaker_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Gets all speakers for a talk
+    pub async fn get_speakers_for_talk(&self, talk_id: i64) -> Result<Vec<Speaker>> {
+        let speakers = sqlx::query_as::<_, Speaker>(
+            r#"
+            SELECT s.id, s.name
+            FROM speakers s
+            JOIN talk_speakers ts ON s.id = ts.speaker_id
+            WHERE ts.talk_id = ?
+            ORDER BY s.name
+            "#,
+        )
+        .bind(talk_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(speakers)
     }
 
     /// Gets the latest entry date from the database (across both tables)
@@ -890,6 +1056,7 @@ impl Repository {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
             Some(ContentType::Podcast) => self.search_podcasts(request, offset).await,
+            Some(ContentType::Talks) => self.search_talks(request, offset).await,
             None => self.search_all(request, offset).await,
         }
     }
@@ -902,6 +1069,24 @@ impl Repository {
     ) {
         if let Some(site) = params.site_filter() {
             query.push(format!(" AND {alias}.url LIKE "));
+            query.push_bind(format!("%{}%", site.as_str()));
+        }
+
+        query.push(format!(" AND {alias}.date >= "));
+        query.push_bind(format!("{}-01-01", params.start_year));
+
+        query.push(format!(" AND {alias}.date <= "));
+        query.push_bind(format!("{}-12-31", params.end_year));
+    }
+
+    fn apply_talk_filters(
+        &self,
+        query: &mut QueryBuilder<'_, Sqlite>,
+        params: &Params,
+        alias: &str,
+    ) {
+        if let Some(site) = params.site_filter() {
+            query.push(format!(" AND {alias}.website_url LIKE "));
             query.push_bind(format!("%{}%", site.as_str()));
         }
 
@@ -1203,6 +1388,105 @@ impl Repository {
         Ok((results, total_count))
     }
 
+    async fn search_talks(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        // 1. Get Count
+        let mut count_query = if request.params.has_query_terms() {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT COUNT(*) FROM talks_fts
+                JOIN talks t ON talks_fts.rowid = t.id
+                WHERE talks_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+            q
+        } else {
+            QueryBuilder::new(r#"SELECT COUNT(*) FROM talks t WHERE 1=1"#)
+        };
+
+        self.apply_talk_filters(&mut count_query, request.params, "t");
+
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
+
+        // 2. Get Results
+        let mut query = if request.params.has_query_terms() {
+            let mut q = QueryBuilder::new(
+                r#"
+                SELECT
+                    'talk' as content_type,
+                    t.id, t.title, t.summary, t.transcript, t.conference, t.date,
+                    t.website_url as url,
+                    t.video_url, t.slides_url, t.thumbnail_url, t.duration_seconds,
+                    rank,
+                    CASE
+                        WHEN length(t.transcript) > 0 THEN snippet(talks_fts, 2, '<mark>', '</mark>', '...', 50)
+                        ELSE snippet(talks_fts, 1, '<mark>', '</mark>', '...', 50)
+                    END as snippet
+                FROM talks_fts
+                JOIN talks t ON talks_fts.rowid = t.id
+                WHERE talks_fts MATCH "#,
+            );
+            q.push_bind(
+                request
+                    .params
+                    .escaped_fts_query()
+                    .unwrap()
+                    .as_str()
+                    .to_string(),
+            );
+            q
+        } else {
+            QueryBuilder::new(
+                r#"
+                SELECT
+                    'talk' as content_type,
+                    t.id, t.title, t.summary, t.transcript, t.conference, t.date,
+                    t.website_url as url,
+                    t.video_url, t.slides_url, t.thumbnail_url, t.duration_seconds,
+                    0.0 as rank,
+                    NULL as snippet
+                FROM talks t
+                WHERE 1=1"#,
+            )
+        };
+
+        self.apply_talk_filters(&mut query, request.params, "t");
+
+        match request.params.sort_by {
+            SortOrder::DateDesc => query.push(" ORDER BY t.date DESC"),
+            SortOrder::DateAsc => query.push(" ORDER BY t.date ASC"),
+            _ => query.push(" ORDER BY rank"),
+        };
+
+        query.push(" LIMIT ");
+        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push(" OFFSET ");
+        query.push_bind(offset as i64);
+
+        let rows = query.build().fetch_all(&self.pool).await?;
+        let mut results = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            results.push(SearchResult::from_row(&row)?);
+        }
+
+        Ok((results, total_count))
+    }
+
     /// Searches articles, videos, and podcasts, merging results by BM25 rank.
     ///
     /// # Performance: Top-N Optimization
@@ -1248,6 +1532,11 @@ impl Repository {
         let (inner_order_p, _) = match request.params.sort_by {
             SortOrder::DateDesc => ("ORDER BY p.date DESC", ""),
             SortOrder::DateAsc => ("ORDER BY p.date ASC", ""),
+            _ => ("ORDER BY rank", ""),
+        };
+        let (_inner_order_t, _) = match request.params.sort_by {
+            SortOrder::DateDesc => ("ORDER BY t.date DESC", ""),
+            SortOrder::DateAsc => ("ORDER BY t.date ASC", ""),
             _ => ("ORDER BY rank", ""),
         };
 

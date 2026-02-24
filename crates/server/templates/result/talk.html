@@ -1,0 +1,73 @@
+<div class="result-item result-item-talk">
+    {% if let Some(video_url) = talk.video_url %}
+    <a
+        href="{{ video_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="video-thumbnail-link"
+    >
+        <div class="video-thumbnail-wrapper">
+            {% if let Some(thumb) = talk.thumbnail_url %}
+            <img
+                src="{{ thumb }}"
+                alt="{{ talk.title }}"
+                class="video-thumbnail"
+            />
+            {% else %}
+            <div class="video-thumbnail video-thumbnail-placeholder"></div>
+            {% endif %}
+        </div>
+        <div class="video-play-overlay">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+        </div>
+        {% if let Some(duration) = talk.duration %}
+        <span class="video-duration">{{ duration }}</span>
+        {% endif %}
+    </a>
+    {% endif %}
+    <div class="result-content">
+        <div class="result-title">
+            <a href="{{ talk.url }}" target="_blank" rel="noopener noreferrer"
+                >{{ talk.title }}</a
+            >
+        </div>
+
+        {% if let Some(snippet) = talk.snippet %}
+        <div class="result-snippet">{{ snippet|safe }}</div>
+        {% else %}
+        <div class="result-snippet">{{ talk.summary }}</div>
+        {% endif %}
+
+        <div class="result-meta">
+            <span class="meta-item">{{ talk.conference }}</span>
+            <span class="meta-item">Talk</span>
+            <span class="meta-item">{{ talk.date }}</span>
+        </div>
+
+        {% if talk.video_url.is_some() || talk.slides_url.is_some() %}
+        <div class="tags">
+            {% if let Some(video_url) = talk.video_url %}
+            <a
+                class="tag"
+                href="{{ video_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Video
+            </a>
+            {% endif %} {% if let Some(slides_url) = talk.slides_url %}
+            <a
+                class="tag"
+                href="{{ slides_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Slides
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>

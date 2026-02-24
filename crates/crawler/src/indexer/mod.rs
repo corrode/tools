@@ -2,14 +2,16 @@ use anyhow::Result;
 use async_trait::async_trait;
 use storage::Repository;
 
+/// Conference talk indexer
+pub mod conference;
 /// Podcast indexer
 pub mod podcast;
 /// Rust RFC indexer
 pub mod rfc;
 /// This Week In Rust Indexer
 pub mod twir;
-/// YouTube indexer
-pub mod youtube;
+/// Video indexer
+pub mod video;
 
 /// Trait for content indexers
 #[async_trait]

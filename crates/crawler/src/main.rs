@@ -7,9 +7,9 @@
 use anyhow::Context;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use crawler::browser::Browser;
 use crawler::indexer::{self, Indexer};
 use crawler::paths;
+use crawler::tools::browser::Browser;
 use log::info;
 use std::env;
 use std::fs;
@@ -43,6 +43,7 @@ struct Args {
 
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
 enum CrawlerName {
+    Conference,
     Podcast,
     Rfc,
     Twir,
@@ -79,8 +80,13 @@ fn create_podcast_indexer() -> Box<dyn Indexer> {
 fn create_youtube_indexer() -> Result<Box<dyn Indexer>> {
     let api_key =
         env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
-    let youtube = indexer::youtube::Youtube::new(api_key);
+    let youtube = indexer::video::Youtube::new(api_key);
     Ok(Box::new(youtube))
+}
+
+fn create_conference_indexer() -> Result<Box<dyn Indexer>> {
+    let indexer = indexer::conference::ConferenceIndexer::new()?;
+    Ok(Box::new(indexer))
 }
 
 /// Main indexing function that processes and stores content
@@ -93,6 +99,7 @@ pub async fn main() -> Result<()> {
     create_output_directories()?;
 
     let mut indexer: Box<dyn Indexer> = match args.indexer {
+        CrawlerName::Conference => create_conference_indexer()?,
         CrawlerName::Podcast => create_podcast_indexer(),
         CrawlerName::Rfc => create_rfc_indexer(),
         CrawlerName::Twir => create_twir_indexer(args.debug)?,

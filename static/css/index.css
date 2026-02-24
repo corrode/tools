@@ -632,7 +632,8 @@ html[data-theme="dark-twir"] .tag {
 }
 
 /* Video Result Card */
-.result-item-video {
+.result-item-video,
+.result-item-talk {
     display: flex;
     gap: 20px;
 }
@@ -1046,7 +1047,8 @@ html[data-theme="dark-twir"] .tag {
         padding: 20px;
     }
 
-    .result-item-video {
+    .result-item-video,
+    .result-item-talk {
         flex-direction: column;
         gap: 12px;
     }
