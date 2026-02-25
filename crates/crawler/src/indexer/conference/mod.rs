@@ -20,7 +20,12 @@ use crate::tools::youtube::{
 };
 
 pub mod eurorust;
+pub mod fosdem;
+pub mod oxidize;
 pub mod rustconf;
+pub mod rustfest;
+pub mod rustlab;
+pub mod rustnation;
 pub mod rustweek;
 mod title_matcher;
 
@@ -122,6 +127,16 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(rustweek::RustWeek2025),
         Box::new(rustweek::RustNL2024),
         Box::new(rustweek::RustNL2023),
+        // FOSDEM Rust devroom editions
+        Box::new(fosdem::FOSDEM2024),
+        // Oxidize editions
+        Box::new(oxidize::Oxidize2024),
+        // RustFest editions
+        Box::new(rustfest::RustFest2024),
+        // RustLab editions
+        Box::new(rustlab::RustLab2024),
+        // RustNation editions
+        Box::new(rustnation::RustNation2024),
     ]
 }
 
