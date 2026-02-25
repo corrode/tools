@@ -3,13 +3,15 @@
 //! These types are optimized for template rendering, converting from the
 //! database-layer `SearchResult` type.
 
-use crate::{SearchEntry, SearchResult};
+use crate::{ArxivCategory, SearchEntry, SearchResult};
 
 /// Video search result for display in templates.
 #[derive(Debug, Clone)]
 pub struct Video {
     /// Video title
     pub title: String,
+    /// Title with search terms highlighted via `<mark>` tags
+    pub highlighted_title: Option<String>,
     /// Video URL
     pub url: String,
     /// Thumbnail URL (if available)
@@ -29,6 +31,8 @@ pub struct Video {
 pub struct Article {
     /// Article title
     pub title: String,
+    /// Title with search terms highlighted via `<mark>` tags
+    pub highlighted_title: Option<String>,
     /// Article URL
     pub url: String,
     /// Search snippet with highlights
@@ -52,6 +56,8 @@ pub struct Article {
 pub struct Podcast {
     /// Podcast title
     pub title: String,
+    /// Title with search terms highlighted via `<mark>` tags
+    pub highlighted_title: Option<String>,
     /// Podcast URL
     pub url: String,
     /// Podcast/show name
@@ -72,11 +78,55 @@ pub struct Podcast {
     pub summary: Option<String>,
 }
 
+/// Maximum number of authors to display before truncating with "et al."
+const MAX_AUTHORS_SHOWN: usize = 3;
+
+/// Research paper search result for display in templates.
+#[derive(Debug, Clone)]
+pub struct Research {
+    /// Paper title
+    pub title: String,
+    /// Title with search terms highlighted via `<mark>` tags
+    pub highlighted_title: Option<String>,
+    /// Paper URL
+    pub url: String,
+    /// Authors (truncated to a few names + "et al." if needed)
+    pub authors: String,
+    /// Abstract/summary (shortened by SQL — FTS snippet or substr)
+    pub abstract_text: String,
+    /// Search snippet with highlights
+    pub snippet: Option<String>,
+    /// Formatted date
+    pub date: String,
+    /// Domain name
+    pub domain: String,
+    /// Parsed arXiv category with human-readable display name
+    pub category: ArxivCategory,
+    /// Paper ID (e.g., "arXiv:2301.00000" or DOI)
+    pub paper_id: Option<String>,
+    /// Publication venue
+    pub publication: Option<String>,
+}
+
+/// Truncate an authors string to at most `max` names, appending "et al." if
+/// there are more.
+fn truncate_authors(authors: &str, max: usize) -> String {
+    let parts: Vec<&str> = authors.split(", ").collect();
+    if parts.len() <= max {
+        return authors.to_string();
+    }
+    let mut result = parts[..max].join(", ");
+    result.push_str(" et al.");
+    result
+}
+
 /// Talk search result for display in templates.
 #[derive(Debug, Clone)]
 pub struct Talk {
     /// Talk title
     pub title: String,
+    /// Title with search terms highlighted via `<mark>` tags
+    pub highlighted_title: Option<String>,
     /// Talk URL
     pub url: String,
     /// Conference name
@@ -137,6 +187,7 @@ impl TryFrom<SearchResult> for Video {
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
         let domain = result.host_str().unwrap_or("youtube.com").to_string();
+        let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
         let SearchEntry::Video(video) = entry else {
             return Err("expected video result for Video view");
@@ -144,6 +195,7 @@ impl TryFrom<SearchResult> for Video {
 
         Ok(Self {
             title: video.title().to_string(),
+            highlighted_title,
             url: video.url().to_string(),
             thumbnail_url: video.thumbnail_url().map(|s| s.to_string()),
             duration,
@@ -160,6 +212,7 @@ impl TryFrom<SearchResult> for Podcast {
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
+        let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
         let summary = entry.summary().map(|s| s.to_string());
         let SearchEntry::Podcast(podcast) = entry else {
@@ -170,6 +223,7 @@ impl TryFrom<SearchResult> for Podcast {
 
         Ok(Self {
             title: podcast.title().to_string(),
+            highlighted_title,
             url: podcast.url().to_string(),
             podcast_name,
             episode_name,
@@ -188,6 +242,7 @@ impl TryFrom<SearchResult> for Talk {
 
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
+        let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
         let SearchEntry::Talk(talk) = entry else {
             return Err("expected talk result for Talk view");
@@ -195,6 +250,7 @@ impl TryFrom<SearchResult> for Talk {
 
         Ok(Self {
             title: talk.title().to_string(),
+            highlighted_title,
             url: talk.website_url().to_string(),
             conference: talk.conference().to_string(),
             date: talk.date().to_string(),
@@ -218,6 +274,7 @@ impl TryFrom<SearchResult> for Article {
             .unwrap_or_else(|| "~1 min read".to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
         let icon_svg = result.icon_svg();
+        let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
         let SearchEntry::Article(article) = entry else {
             return Err("expected article result for Article view");
@@ -225,6 +282,7 @@ impl TryFrom<SearchResult> for Article {
 
         Ok(Self {
             title: article.title().to_string(),
+            highlighted_title,
             url: article.url().to_string(),
             date: article.date().to_string(),
             domain,
@@ -233,6 +291,33 @@ impl TryFrom<SearchResult> for Article {
             reading_time,
             icon_svg,
             snippet,
+        })
+    }
+}
+
+impl TryFrom<SearchResult> for Research {
+    type Error = &'static str;
+
+    fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
+        let domain = result.host_str().unwrap_or("unknown").to_string();
+        let highlighted_title = result.highlighted_title.clone();
+        let SearchResult { entry, snippet, .. } = result;
+        let SearchEntry::Research(paper) = entry else {
+            return Err("expected research result for Research view");
+        };
+
+        Ok(Self {
+            title: paper.title().to_string(),
+            highlighted_title,
+            url: paper.url().to_string(),
+            authors: truncate_authors(paper.authors(), MAX_AUTHORS_SHOWN),
+            abstract_text: paper.abstract_text().to_string(),
+            snippet,
+            date: paper.date().to_string(),
+            domain,
+            category: ArxivCategory::from_code(paper.category()),
+            paper_id: paper.paper_id().map(|s| s.to_string()),
+            publication: paper.publication().map(|s| s.to_string()),
         })
     }
 }

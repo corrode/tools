@@ -1,0 +1,24 @@
+<div class="result-item">
+    <div class="result-title">
+        <a href="{{ paper.url }}" target="_blank" rel="noopener noreferrer"
+            >{% if let Some(ht) = paper.highlighted_title %}{{ ht|safe }}{% else
+            %}{{ paper.title }}{% endif %}</a
+        >
+    </div>
+    {% if let Some(snippet) = paper.snippet %}
+    <div class="result-snippet">{{ snippet|safe }}</div>
+    {% else %}
+    <div class="result-snippet">{{ paper.abstract_text }}</div>
+    {% endif %}
+    <div class="result-meta">
+        <span class="meta-item">{{ paper.category }}</span>
+        <span class="meta-item authors">{{ paper.authors }}</span>
+        {% if let Some(publication) = paper.publication %}
+        <span class="meta-item">{{ publication }}</span>
+        {% endif %}
+        <span class="meta-item">{{ paper.date }}</span>
+        {% if let Some(paper_id) = paper.paper_id %}
+        <span class="meta-item">{{ paper_id }}</span>
+        {% endif %}
+    </div>
+</div>

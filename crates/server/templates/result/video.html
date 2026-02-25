@@ -28,7 +28,8 @@
     <div class="result-content">
         <div class="result-title">
             <a href="{{ video.url }}" target="_blank" rel="noopener noreferrer"
-                >{{ video.title }}</a
+                >{% if let Some(ht) = video.highlighted_title %}{{ ht|safe }}{%
+                else %}{{ video.title }}{% endif %}</a
             >
         </div>
         {% if let Some(snippet) = video.snippet %}

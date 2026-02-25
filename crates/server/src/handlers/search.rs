@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use storage::{Repository, SearchRequest};
 use types::params::{Params, RawParams, SearchDefaults};
-use types::search_result::{Article, Podcast, Talk, Video};
+use types::search_result::{Article, Podcast, Research, Talk, Video};
 use types::{ContentType, Quote};
 
 #[derive(Template)]
@@ -18,6 +18,7 @@ struct SearchTemplate {
     videos: Vec<Video>,
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
+    research_papers: Vec<Research>,
     talks: Vec<Talk>,
     results_count: i64,
     start_year: Option<i32>,
@@ -38,6 +39,7 @@ struct ResultsTemplate {
     videos: Vec<Video>,
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
+    research_papers: Vec<Research>,
     talks: Vec<Talk>,
     results_count: i64,
     start_year: Option<i32>,
@@ -76,6 +78,7 @@ pub(crate) async fn search(
     let mut videos = Vec::new();
     let mut articles = Vec::new();
     let mut podcasts = Vec::new();
+    let mut research_papers = Vec::new();
     let mut talks = Vec::new();
 
     for result in raw_results {
@@ -93,6 +96,11 @@ pub(crate) async fn search(
             ContentType::Articles => {
                 if let Ok(article) = Article::try_from(result) {
                     articles.push(article);
+                }
+            }
+            ContentType::Research => {
+                if let Ok(paper) = Research::try_from(result) {
+                    research_papers.push(paper);
                 }
             }
             ContentType::Talks => {
@@ -134,6 +142,7 @@ pub(crate) async fn search(
             videos,
             articles,
             podcasts,
+            research_papers,
             talks,
             results_count,
             start_year: raw_params.start_year,
@@ -157,6 +166,7 @@ pub(crate) async fn search(
             videos,
             articles,
             podcasts,
+            research_papers,
             talks,
             results_count,
             start_year: raw_params.start_year,

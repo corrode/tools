@@ -46,6 +46,7 @@ enum CrawlerName {
     Conference,
     Podcast,
     Rfc,
+    Research,
     Twir,
     Youtube,
 }
@@ -77,6 +78,10 @@ fn create_podcast_indexer() -> Box<dyn Indexer> {
     Box::new(indexer::podcast::PodcastIndexer::new())
 }
 
+fn create_research_indexer() -> Box<dyn Indexer> {
+    Box::new(indexer::research::ResearchIndexer::new())
+}
+
 fn create_youtube_indexer() -> Result<Box<dyn Indexer>> {
     let api_key =
         env::var("YOUTUBE_API_KEY").context("YOUTUBE_API_KEY environment variable not set")?;
@@ -102,6 +107,7 @@ pub async fn main() -> Result<()> {
         CrawlerName::Conference => create_conference_indexer()?,
         CrawlerName::Podcast => create_podcast_indexer(),
         CrawlerName::Rfc => create_rfc_indexer(),
+        CrawlerName::Research => create_research_indexer(),
         CrawlerName::Twir => create_twir_indexer(args.debug)?,
         CrawlerName::Youtube => create_youtube_indexer()?,
     };

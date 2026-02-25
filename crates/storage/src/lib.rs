@@ -307,6 +307,54 @@ impl Repository {
         Ok(episode_id)
     }
 
+    /// Inserts a new research paper
+    pub async fn insert_research_paper(&self, paper: &types::NewResearchPaper) -> Result<i64> {
+        log::debug!("Inserting research paper: {}", paper.metadata.url);
+
+        let date_str = paper.metadata.date.format("%Y-%m-%d").to_string();
+        let url_str = paper.metadata.url.as_str();
+
+        let paper_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO research_papers(
+                title,
+                url,
+                category,
+                date,
+                authors,
+                abstract_text,
+                text,
+                paper_id,
+                publication
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                category = excluded.category,
+                date = excluded.date,
+                authors = excluded.authors,
+                abstract_text = excluded.abstract_text,
+                text = excluded.text,
+                paper_id = excluded.paper_id,
+                publication = excluded.publication
+            RETURNING id
+            "#,
+        )
+        .bind(&paper.metadata.title)
+        .bind(url_str)
+        .bind(&paper.metadata.category)
+        .bind(&date_str)
+        .bind(&paper.authors)
+        .bind(&paper.abstract_text)
+        .bind(&paper.text)
+        .bind(&paper.paper_id)
+        .bind(&paper.publication)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(paper_id)
+    }
+
     /// Checks if a URL already exists in the database (articles, videos, or podcasts)
     pub async fn url_exists(&self, url: &Url) -> Result<bool> {
         let url_str = url.as_str();
@@ -323,6 +371,23 @@ impl Repository {
         )
         .bind(url_str)
         .bind(url_str)
+        .bind(url_str)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.is_some())
+    }
+
+    /// Checks if a research paper URL already exists in the research_papers table
+    pub async fn research_paper_exists(&self, url: &Url) -> Result<bool> {
+        let url_str = url.as_str();
+
+        let result = sqlx::query(
+            r#"
+            SELECT 1 FROM research_papers WHERE url = ?
+            LIMIT 1
+            "#,
+        )
         .bind(url_str)
         .fetch_optional(&self.pool)
         .await?;
@@ -1056,6 +1121,7 @@ impl Repository {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
             Some(ContentType::Podcast) => self.search_podcasts(request, offset).await,
+            Some(ContentType::Research) => self.search_research_papers(request, offset).await,
             Some(ContentType::Talks) => self.search_talks(request, offset).await,
             None => self.search_all(request, offset).await,
         }
@@ -1102,26 +1168,25 @@ impl Repository {
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
+        if !request.params.has_query_terms() {
+            return Ok((vec![], 0));
+        }
+
+        let fts_query = request
+            .params
+            .escaped_fts_query()
+            .unwrap()
+            .as_str()
+            .to_string();
+
         // 1. Get Count
-        let mut count_query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) FROM articles_fts
-                JOIN articles a ON articles_fts.rowid = a.id
-                WHERE articles_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(r#"SELECT COUNT(*) FROM articles a WHERE 1=1"#)
-        };
+        let mut count_query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) FROM articles_fts
+            JOIN articles a ON articles_fts.rowid = a.id
+            WHERE articles_fts MATCH "#,
+        );
+        count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "a");
 
@@ -1132,43 +1197,21 @@ impl Repository {
             .0;
 
         // 2. Get Results
-        let mut query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT
-                    'article' as content_type,
-                    a.id, a.title, a.url, a.category, a.date, a.text,
-                    a.reference, a.word_count,
-                    NULL as thumbnail_url, NULL as duration_seconds,
-                    rank,
-                    snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
-                FROM articles_fts
-                JOIN articles a ON articles_fts.rowid = a.id
-                WHERE articles_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT
-                    'article' as content_type,
-                    a.id, a.title, a.url, a.category, a.date, a.text,
-                    a.reference, a.word_count,
-                    NULL as thumbnail_url, NULL as duration_seconds,
-                    0.0 as rank,
-                    NULL as snippet
-                FROM articles a
-                WHERE 1=1"#,
-            )
-        };
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT
+                'article' as content_type,
+                a.id, a.title, a.url, a.category, a.date, a.text,
+                a.reference, a.word_count,
+                NULL as thumbnail_url, NULL as duration_seconds,
+                bm25(articles_fts, 10.0, 1.0, 1.0) as rank,
+                snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
+                highlight(articles_fts, 0, '<mark>', '</mark>') as highlighted_title
+            FROM articles_fts
+            JOIN articles a ON articles_fts.rowid = a.id
+            WHERE articles_fts MATCH "#,
+        );
+        query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "a");
 
@@ -1198,26 +1241,25 @@ impl Repository {
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
+        if !request.params.has_query_terms() {
+            return Ok((vec![], 0));
+        }
+
+        let fts_query = request
+            .params
+            .escaped_fts_query()
+            .unwrap()
+            .as_str()
+            .to_string();
+
         // 1. Get Count
-        let mut count_query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) FROM videos_fts
-                JOIN videos v ON videos_fts.rowid = v.id
-                WHERE videos_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(r#"SELECT COUNT(*) FROM videos v WHERE 1=1"#)
-        };
+        let mut count_query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) FROM videos_fts
+            JOIN videos v ON videos_fts.rowid = v.id
+            WHERE videos_fts MATCH "#,
+        );
+        count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "v");
 
@@ -1228,43 +1270,21 @@ impl Repository {
             .0;
 
         // 2. Get Results
-        let mut query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT
-                    'video' as content_type,
-                    v.id, v.title, v.url, v.category, v.date, v.text,
-                    NULL as reference, NULL as word_count,
-                    v.thumbnail_url, v.duration_seconds,
-                    rank,
-                    snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
-                FROM videos_fts
-                JOIN videos v ON videos_fts.rowid = v.id
-                WHERE videos_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT
-                    'video' as content_type,
-                    v.id, v.title, v.url, v.category, v.date, v.text,
-                    NULL as reference, NULL as word_count,
-                    v.thumbnail_url, v.duration_seconds,
-                    0.0 as rank,
-                    NULL as snippet
-                FROM videos v
-                WHERE 1=1"#,
-            )
-        };
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT
+                'video' as content_type,
+                v.id, v.title, v.url, v.category, v.date, v.text,
+                NULL as reference, NULL as word_count,
+                v.thumbnail_url, v.duration_seconds,
+                bm25(videos_fts, 10.0, 1.0, 1.0) as rank,
+                snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
+                highlight(videos_fts, 0, '<mark>', '</mark>') as highlighted_title
+            FROM videos_fts
+            JOIN videos v ON videos_fts.rowid = v.id
+            WHERE videos_fts MATCH "#,
+        );
+        query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "v");
 
@@ -1294,26 +1314,25 @@ impl Repository {
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
+        if !request.params.has_query_terms() {
+            return Ok((vec![], 0));
+        }
+
+        let fts_query = request
+            .params
+            .escaped_fts_query()
+            .unwrap()
+            .as_str()
+            .to_string();
+
         // 1. Get Count
-        let mut count_query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) FROM podcast_episodes_fts
-                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
-                WHERE podcast_episodes_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(r#"SELECT COUNT(*) FROM podcast_episodes p WHERE 1=1"#)
-        };
+        let mut count_query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) FROM podcast_episodes_fts
+            JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+            WHERE podcast_episodes_fts MATCH "#,
+        );
+        count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "p");
 
@@ -1324,46 +1343,24 @@ impl Repository {
             .0;
 
         // 2. Get Results
-        let mut query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT
-                    'podcast' as content_type,
-                    p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
-                    p.podcast_name, p.episode_name,
-                    p.summary, p.thumbnail_url, p.duration_seconds, p.transcript,
-                    rank,
-                    CASE
-                        WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
-                        ELSE snippet(podcast_episodes_fts, 2, '<mark>', '</mark>', '...', 50)
-                    END as snippet
-                FROM podcast_episodes_fts
-                JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
-                WHERE podcast_episodes_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT
-                    'podcast' as content_type,
-                    p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
-                    p.podcast_name, p.episode_name,
-                    p.summary, p.thumbnail_url, p.duration_seconds, p.transcript,
-                    0.0 as rank,
-                    NULL as snippet
-                FROM podcast_episodes p
-                WHERE 1=1"#,
-            )
-        };
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT
+                'podcast' as content_type,
+                p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
+                p.podcast_name, p.episode_name,
+                p.summary, p.thumbnail_url, p.duration_seconds, p.transcript,
+                bm25(podcast_episodes_fts, 2.0, 8.0, 2.0, 1.0) as rank,
+                CASE
+                    WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
+                    ELSE snippet(podcast_episodes_fts, 2, '<mark>', '</mark>', '...', 50)
+                END as snippet,
+                highlight(podcast_episodes_fts, 1, '<mark>', '</mark>') as highlighted_title
+            FROM podcast_episodes_fts
+            JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
+            WHERE podcast_episodes_fts MATCH "#,
+        );
+        query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "p");
 
@@ -1388,31 +1385,104 @@ impl Repository {
         Ok((results, total_count))
     }
 
+    async fn search_research_papers(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        if !request.params.has_query_terms() {
+            return Ok((vec![], 0));
+        }
+
+        let fts_query = request
+            .params
+            .escaped_fts_query()
+            .unwrap()
+            .as_str()
+            .to_string();
+
+        // 1. Get Count
+        let mut count_query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) FROM research_papers_fts
+            JOIN research_papers r ON research_papers_fts.rowid = r.id
+            WHERE research_papers_fts MATCH "#,
+        );
+        count_query.push_bind(fts_query.clone());
+
+        self.apply_generic_filters(&mut count_query, request.params, "r");
+
+        let total_count: i64 = count_query
+            .build_query_as::<(i64,)>()
+            .fetch_one(&self.pool)
+            .await?
+            .0;
+
+        // 2. Get Results
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT
+                'research' as content_type,
+                r.id, r.title, r.url, r.category, r.date,
+                r.authors,
+                snippet(research_papers_fts, 3, '', '', '...', 32) as abstract_text,
+                r.text, r.paper_id, r.publication,
+                bm25(research_papers_fts, 10.0, 1.0, 1.0, 4.0, 2.0) as rank,
+                snippet(research_papers_fts, 3, '<mark>', '</mark>', '...', 32) as snippet,
+                highlight(research_papers_fts, 0, '<mark>', '</mark>') as highlighted_title
+            FROM research_papers_fts
+            JOIN research_papers r ON research_papers_fts.rowid = r.id
+            WHERE research_papers_fts MATCH "#,
+        );
+        query.push_bind(fts_query);
+
+        self.apply_generic_filters(&mut query, request.params, "r");
+
+        match request.params.sort_by {
+            SortOrder::DateDesc => query.push(" ORDER BY r.date DESC"),
+            SortOrder::DateAsc => query.push(" ORDER BY r.date ASC"),
+            _ => query.push(" ORDER BY rank"),
+        };
+
+        query.push(" LIMIT ");
+        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push(" OFFSET ");
+        query.push_bind(offset as i64);
+
+        let rows = query.build().fetch_all(&self.pool).await?;
+        let mut results = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            results.push(SearchResult::from_row(&row)?);
+        }
+
+        Ok((results, total_count))
+    }
+
     async fn search_talks(
         &self,
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
+        if !request.params.has_query_terms() {
+            return Ok((vec![], 0));
+        }
+
+        let fts_query = request
+            .params
+            .escaped_fts_query()
+            .unwrap()
+            .as_str()
+            .to_string();
+
         // 1. Get Count
-        let mut count_query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT COUNT(*) FROM talks_fts
-                JOIN talks t ON talks_fts.rowid = t.id
-                WHERE talks_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(r#"SELECT COUNT(*) FROM talks t WHERE 1=1"#)
-        };
+        let mut count_query = QueryBuilder::new(
+            r#"
+            SELECT COUNT(*) FROM talks_fts
+            JOIN talks t ON talks_fts.rowid = t.id
+            WHERE talks_fts MATCH "#,
+        );
+        count_query.push_bind(fts_query.clone());
 
         self.apply_talk_filters(&mut count_query, request.params, "t");
 
@@ -1423,46 +1493,24 @@ impl Repository {
             .0;
 
         // 2. Get Results
-        let mut query = if request.params.has_query_terms() {
-            let mut q = QueryBuilder::new(
-                r#"
-                SELECT
-                    'talk' as content_type,
-                    t.id, t.title, t.summary, t.transcript, t.conference, t.date,
-                    t.website_url as url,
-                    t.video_url, t.slides_url, t.thumbnail_url, t.duration_seconds,
-                    rank,
-                    CASE
-                        WHEN length(t.transcript) > 0 THEN snippet(talks_fts, 2, '<mark>', '</mark>', '...', 50)
-                        ELSE snippet(talks_fts, 1, '<mark>', '</mark>', '...', 50)
-                    END as snippet
-                FROM talks_fts
-                JOIN talks t ON talks_fts.rowid = t.id
-                WHERE talks_fts MATCH "#,
-            );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-            q
-        } else {
-            QueryBuilder::new(
-                r#"
-                SELECT
-                    'talk' as content_type,
-                    t.id, t.title, t.summary, t.transcript, t.conference, t.date,
-                    t.website_url as url,
-                    t.video_url, t.slides_url, t.thumbnail_url, t.duration_seconds,
-                    0.0 as rank,
-                    NULL as snippet
-                FROM talks t
-                WHERE 1=1"#,
-            )
-        };
+        let mut query = QueryBuilder::new(
+            r#"
+            SELECT
+                'talk' as content_type,
+                t.id, t.title, t.summary, t.transcript, t.conference, t.date,
+                t.website_url as url,
+                t.video_url, t.slides_url, t.thumbnail_url, t.duration_seconds,
+                bm25(talks_fts, 10.0, 2.0, 1.0, 1.0) as rank,
+                CASE
+                    WHEN length(t.transcript) > 0 THEN snippet(talks_fts, 2, '<mark>', '</mark>', '...', 50)
+                    ELSE snippet(talks_fts, 1, '<mark>', '</mark>', '...', 50)
+                END as snippet,
+                highlight(talks_fts, 0, '<mark>', '</mark>') as highlighted_title
+            FROM talks_fts
+            JOIN talks t ON talks_fts.rowid = t.id
+            WHERE talks_fts MATCH "#,
+        );
+        query.push_bind(fts_query);
 
         self.apply_talk_filters(&mut query, request.params, "t");
 
@@ -1646,8 +1694,9 @@ impl Repository {
                             a.reference, a.word_count,
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
-                            rank,
-                            snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
+                            bm25(articles_fts, 10.0, 1.0, 1.0) as rank,
+                            snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
+                            highlight(articles_fts, 0, '<mark>', '</mark>') as highlighted_title
                         FROM articles_fts
                         JOIN articles a ON articles_fts.rowid = a.id
                         WHERE articles_fts MATCH "#,
@@ -1682,8 +1731,9 @@ impl Repository {
                             NULL as reference, NULL as word_count,
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
-                            rank,
-                            snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
+                            bm25(videos_fts, 10.0, 1.0, 1.0) as rank,
+                            snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
+                            highlight(videos_fts, 0, '<mark>', '</mark>') as highlighted_title
                         FROM videos_fts
                         JOIN videos v ON videos_fts.rowid = v.id
                         WHERE videos_fts MATCH "#,
@@ -1718,11 +1768,12 @@ impl Repository {
                             NULL as reference, NULL as word_count,
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
-                            rank,
+                            bm25(podcast_episodes_fts, 2.0, 8.0, 2.0, 1.0) as rank,
                             CASE
                                 WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
                                 ELSE snippet(podcast_episodes_fts, 2, '<mark>', '</mark>', '...', 50)
-                            END as snippet
+                            END as snippet,
+                            highlight(podcast_episodes_fts, 1, '<mark>', '</mark>') as highlighted_title
                         FROM podcast_episodes_fts
                         JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
                         WHERE podcast_episodes_fts MATCH "#,
@@ -1762,7 +1813,8 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
                             0.0 as rank,
-                            NULL as snippet
+                            NULL as snippet,
+                            NULL as highlighted_title
                         FROM articles a
                         WHERE 1=1"#,
             );
@@ -1788,7 +1840,8 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet
+                            NULL as snippet,
+                            NULL as highlighted_title
                         FROM videos v
                         WHERE 1=1"#,
             );
@@ -1814,7 +1867,8 @@ impl Repository {
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet
+                            NULL as snippet,
+                            NULL as highlighted_title
                         FROM podcast_episodes p
                         WHERE 1=1"#,
             );

@@ -1,10 +1,9 @@
 <div class="result-item">
     <div class="result-title">
-        <a
-            href="{{ article.url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-        >{{ article.title }}</a>
+        <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
+            >{% if let Some(ht) = article.highlighted_title %}{{ ht|safe }}{%
+            else %}{{ article.title }}{% endif %}</a
+        >
     </div>
     {% if let Some(snippet) = article.snippet %}
     <div class="result-snippet">{{ snippet|safe }}</div>

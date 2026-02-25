@@ -246,6 +246,8 @@ pub enum ContentType {
     Video,
     /// Podcast episodes and other audio content.
     Podcast,
+    /// Research papers and academic publications.
+    Research,
     /// Conference talks and related presentations.
     Talks,
 }
@@ -600,6 +602,282 @@ impl Video {
     }
 }
 
+/// Research paper-specific data fields (shared between ResearchPaper and NewResearchPaper).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ResearchPaperData {
+    /// Common metadata fields.
+    #[sqlx(flatten)]
+    pub metadata: Metadata,
+    /// Authors of the research paper.
+    pub authors: String,
+    /// Abstract or summary of the research paper.
+    pub abstract_text: String,
+    /// Full text content for indexing (optional, may be empty if not available).
+    pub text: String,
+    /// DOI (Digital Object Identifier) or arXiv ID.
+    pub paper_id: Option<String>,
+    /// Publication venue (journal, conference, etc.).
+    pub publication: Option<String>,
+}
+
+/// Research Paper row stored in the `research_papers` table.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ResearchPaper {
+    /// Primary key.
+    pub id: i64,
+    /// Research paper data fields.
+    #[sqlx(flatten)]
+    pub data: ResearchPaperData,
+}
+
+/// Payload used when inserting or updating a research paper.
+pub type NewResearchPaper = ResearchPaperData;
+
+/// ArXiv category codes mapped to human-readable names.
+///
+/// These are the primary Computer Science subcategories from arXiv.
+/// See <https://arxiv.org/category_taxonomy> for the full taxonomy.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArxivCategory {
+    /// cs.AI — Artificial Intelligence
+    CsAI,
+    /// cs.AR — Hardware Architecture
+    CsAR,
+    /// cs.CC — Computational Complexity
+    CsCC,
+    /// cs.CE — Computational Engineering, Finance, and Science
+    CsCE,
+    /// cs.CG — Computational Geometry
+    CsCG,
+    /// cs.CL — Computation and Language
+    CsCL,
+    /// cs.CR — Cryptography and Security
+    CsCR,
+    /// cs.CV — Computer Vision and Pattern Recognition
+    CsCV,
+    /// cs.CY — Computers and Society
+    CsCY,
+    /// cs.DB — Databases
+    CsDB,
+    /// cs.DC — Distributed, Parallel, and Cluster Computing
+    CsDC,
+    /// cs.DL — Digital Libraries
+    CsDL,
+    /// cs.DM — Discrete Mathematics
+    CsDM,
+    /// cs.DS — Data Structures and Algorithms
+    CsDS,
+    /// cs.ET — Emerging Technologies
+    CsET,
+    /// cs.FL — Formal Languages and Automata Theory
+    CsFL,
+    /// cs.GL — General Literature
+    CsGL,
+    /// cs.GR — Graphics
+    CsGR,
+    /// cs.GT — Computer Science and Game Theory
+    CsGT,
+    /// cs.HC — Human-Computer Interaction
+    CsHC,
+    /// cs.IR — Information Retrieval
+    CsIR,
+    /// cs.IT — Information Theory
+    CsIT,
+    /// cs.LG — Machine Learning
+    CsLG,
+    /// cs.LO — Logic in Computer Science
+    CsLO,
+    /// cs.MA — Multiagent Systems
+    CsMA,
+    /// cs.MM — Multimedia
+    CsMM,
+    /// cs.MS — Mathematical Software
+    CsMS,
+    /// cs.NA — Numerical Analysis
+    CsNA,
+    /// cs.NE — Neural and Evolutionary Computing
+    CsNE,
+    /// cs.NI — Networking and Internet Architecture
+    CsNI,
+    /// cs.OH — Other Computer Science
+    CsOH,
+    /// cs.OS — Operating Systems
+    CsOS,
+    /// cs.PF — Performance
+    CsPF,
+    /// cs.PL — Programming Languages
+    CsPL,
+    /// cs.RO — Robotics
+    CsRO,
+    /// cs.SC — Symbolic Computation
+    CsSC,
+    /// cs.SD — Sound
+    CsSD,
+    /// cs.SE — Software Engineering
+    CsSE,
+    /// cs.SI — Social and Information Networks
+    CsSI,
+    /// cs.SY — Systems and Control
+    CsSY,
+    /// An unrecognized category code.
+    Other(String),
+}
+
+impl ArxivCategory {
+    /// Parse an arXiv category code (e.g. `"cs.SE"`) into an [`ArxivCategory`].
+    #[must_use]
+    pub fn from_code(code: &str) -> Self {
+        match code {
+            "cs.AI" => Self::CsAI,
+            "cs.AR" => Self::CsAR,
+            "cs.CC" => Self::CsCC,
+            "cs.CE" => Self::CsCE,
+            "cs.CG" => Self::CsCG,
+            "cs.CL" => Self::CsCL,
+            "cs.CR" => Self::CsCR,
+            "cs.CV" => Self::CsCV,
+            "cs.CY" => Self::CsCY,
+            "cs.DB" => Self::CsDB,
+            "cs.DC" => Self::CsDC,
+            "cs.DL" => Self::CsDL,
+            "cs.DM" => Self::CsDM,
+            "cs.DS" => Self::CsDS,
+            "cs.ET" => Self::CsET,
+            "cs.FL" => Self::CsFL,
+            "cs.GL" => Self::CsGL,
+            "cs.GR" => Self::CsGR,
+            "cs.GT" => Self::CsGT,
+            "cs.HC" => Self::CsHC,
+            "cs.IR" => Self::CsIR,
+            "cs.IT" => Self::CsIT,
+            "cs.LG" => Self::CsLG,
+            "cs.LO" => Self::CsLO,
+            "cs.MA" => Self::CsMA,
+            "cs.MM" => Self::CsMM,
+            "cs.MS" => Self::CsMS,
+            "cs.NA" => Self::CsNA,
+            "cs.NE" => Self::CsNE,
+            "cs.NI" => Self::CsNI,
+            "cs.OH" => Self::CsOH,
+            "cs.OS" => Self::CsOS,
+            "cs.PF" => Self::CsPF,
+            "cs.PL" => Self::CsPL,
+            "cs.RO" => Self::CsRO,
+            "cs.SC" => Self::CsSC,
+            "cs.SD" => Self::CsSD,
+            "cs.SE" => Self::CsSE,
+            "cs.SI" => Self::CsSI,
+            "cs.SY" => Self::CsSY,
+            other => Self::Other(other.to_string()),
+        }
+    }
+}
+
+impl fmt::Display for ArxivCategory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::CsAI => "Artificial Intelligence",
+            Self::CsAR => "Hardware Architecture",
+            Self::CsCC => "Computational Complexity",
+            Self::CsCE => "Computational Engineering",
+            Self::CsCG => "Computational Geometry",
+            Self::CsCL => "Computation and Language",
+            Self::CsCR => "Cryptography and Security",
+            Self::CsCV => "Computer Vision",
+            Self::CsCY => "Computers and Society",
+            Self::CsDB => "Databases",
+            Self::CsDC => "Distributed Computing",
+            Self::CsDL => "Digital Libraries",
+            Self::CsDM => "Discrete Mathematics",
+            Self::CsDS => "Data Structures and Algorithms",
+            Self::CsET => "Emerging Technologies",
+            Self::CsFL => "Formal Languages",
+            Self::CsGL => "General Literature",
+            Self::CsGR => "Graphics",
+            Self::CsGT => "Game Theory",
+            Self::CsHC => "Human-Computer Interaction",
+            Self::CsIR => "Information Retrieval",
+            Self::CsIT => "Information Theory",
+            Self::CsLG => "Machine Learning",
+            Self::CsLO => "Logic in Computer Science",
+            Self::CsMA => "Multiagent Systems",
+            Self::CsMM => "Multimedia",
+            Self::CsMS => "Mathematical Software",
+            Self::CsNA => "Numerical Analysis",
+            Self::CsNE => "Neural and Evolutionary Computing",
+            Self::CsNI => "Networking",
+            Self::CsOH => "Other",
+            Self::CsOS => "Operating Systems",
+            Self::CsPF => "Performance",
+            Self::CsPL => "Programming Languages",
+            Self::CsRO => "Robotics",
+            Self::CsSC => "Symbolic Computation",
+            Self::CsSD => "Sound",
+            Self::CsSE => "Software Engineering",
+            Self::CsSI => "Social and Information Networks",
+            Self::CsSY => "Systems and Control",
+            Self::Other(code) => code.as_str(),
+        };
+        f.write_str(name)
+    }
+}
+
+impl ResearchPaper {
+    /// Returns the title.
+    #[must_use]
+    pub fn title(&self) -> &str {
+        &self.data.metadata.title
+    }
+
+    /// Returns the URL.
+    #[must_use]
+    pub fn url(&self) -> &Url {
+        &self.data.metadata.url
+    }
+
+    /// Returns the category.
+    #[must_use]
+    pub fn category(&self) -> &str {
+        &self.data.metadata.category
+    }
+
+    /// Returns the publication date.
+    #[must_use]
+    pub fn date(&self) -> NaiveDate {
+        self.data.metadata.date
+    }
+
+    /// Returns the authors.
+    #[must_use]
+    pub fn authors(&self) -> &str {
+        &self.data.authors
+    }
+
+    /// Returns the abstract.
+    #[must_use]
+    pub fn abstract_text(&self) -> &str {
+        &self.data.abstract_text
+    }
+
+    /// Returns the full text content.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.data.text
+    }
+
+    /// Returns the paper ID (DOI or arXiv ID).
+    #[must_use]
+    pub fn paper_id(&self) -> Option<&str> {
+        self.data.paper_id.as_deref()
+    }
+
+    /// Returns the publication venue.
+    #[must_use]
+    pub fn publication(&self) -> Option<&str> {
+        self.data.publication.as_deref()
+    }
+}
+
 /// Speaker data for conference talks.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Speaker {
@@ -749,6 +1027,8 @@ pub enum SearchEntry {
     Video(Video),
     /// Podcast episode result.
     Podcast(PodcastEpisode),
+    /// Research paper result.
+    Research(ResearchPaper),
     /// Conference talk result.
     Talk(Talk),
 }
@@ -761,6 +1041,7 @@ impl SearchEntry {
             Self::Article(article) => article.title(),
             Self::Video(video) => video.title(),
             Self::Podcast(podcast) => podcast.title(),
+            Self::Research(paper) => paper.title(),
             Self::Talk(talk) => talk.title(),
         }
     }
@@ -772,6 +1053,7 @@ impl SearchEntry {
             Self::Article(article) => article.url(),
             Self::Video(video) => video.url(),
             Self::Podcast(podcast) => podcast.url(),
+            Self::Research(paper) => paper.url(),
             Self::Talk(talk) => talk.website_url(),
         }
     }
@@ -783,6 +1065,7 @@ impl SearchEntry {
             Self::Article(article) => article.category(),
             Self::Video(video) => video.category(),
             Self::Podcast(podcast) => podcast.category(),
+            Self::Research(paper) => paper.category(),
             Self::Talk(talk) => talk.conference(),
         }
     }
@@ -794,6 +1077,7 @@ impl SearchEntry {
             Self::Article(article) => article.date(),
             Self::Video(video) => video.date(),
             Self::Podcast(podcast) => podcast.date(),
+            Self::Research(paper) => paper.date(),
             Self::Talk(talk) => talk.date(),
         }
     }
@@ -805,6 +1089,7 @@ impl SearchEntry {
             Self::Article(article) => article.text(),
             Self::Video(video) => video.text(),
             Self::Podcast(podcast) => podcast.text(),
+            Self::Research(paper) => paper.text(),
             Self::Talk(talk) => talk.text(),
         }
     }
@@ -832,6 +1117,7 @@ impl SearchEntry {
             Self::Article(_) => ContentType::Articles,
             Self::Video(_) => ContentType::Video,
             Self::Podcast(_) => ContentType::Podcast,
+            Self::Research(_) => ContentType::Research,
             Self::Talk(_) => ContentType::Talks,
         }
     }
@@ -843,6 +1129,7 @@ impl SearchEntry {
             Self::Article(article) => article.reference(),
             Self::Video(_) => None,
             Self::Podcast(_) => None,
+            Self::Research(_) => None,
             Self::Talk(_) => None,
         }
     }
@@ -854,6 +1141,7 @@ impl SearchEntry {
             Self::Article(_) => None,
             Self::Video(video) => video.thumbnail_url(),
             Self::Podcast(podcast) => podcast.thumbnail_url(),
+            Self::Research(_) => None,
             Self::Talk(talk) => talk.thumbnail_url(),
         }
     }
@@ -865,6 +1153,7 @@ impl SearchEntry {
             Self::Article(_) => None,
             Self::Video(video) => video.duration_seconds(),
             Self::Podcast(podcast) => podcast.duration_seconds(),
+            Self::Research(_) => None,
             Self::Talk(talk) => talk.duration_seconds(),
         }
     }
@@ -876,6 +1165,7 @@ impl SearchEntry {
             Self::Article(article) => article.word_count(),
             Self::Video(_) => 0,
             Self::Podcast(_) => 0,
+            Self::Research(_) => 0,
             Self::Talk(_) => 0,
         }
     }
@@ -890,6 +1180,8 @@ pub struct SearchResult {
     pub rank: f64,
     /// Highlight snippet.
     pub snippet: Option<String>,
+    /// Title with search terms wrapped in `<mark>` tags (if FTS matched the title).
+    pub highlighted_title: Option<String>,
 }
 
 impl<'r> FromRow<'r, SqliteRow> for SearchResult {
@@ -897,6 +1189,7 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
         let content_type: String = row.try_get("content_type")?;
         let rank = row.try_get("rank")?;
         let snippet = row.try_get("snippet")?;
+        let highlighted_title: Option<String> = row.try_get("highlighted_title").unwrap_or(None);
 
         let entry = match content_type.as_str() {
             "article" => SearchEntry::Article(Article {
@@ -948,6 +1241,24 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
                     transcript: row.try_get("transcript")?,
                 },
             }),
+            "research" => SearchEntry::Research(ResearchPaper {
+                id: row.try_get("id")?,
+                data: ResearchPaperData {
+                    metadata: Metadata {
+                        title: row.try_get("title")?,
+                        url: row.try_get("url")?,
+                        category: row.try_get("category")?,
+                        date: row.try_get("date")?,
+                    },
+                    authors: row.try_get("authors")?,
+                    abstract_text: row.try_get("abstract_text")?,
+                    text: row
+                        .try_get::<Option<String>, _>("text")?
+                        .unwrap_or_default(),
+                    paper_id: row.try_get("paper_id")?,
+                    publication: row.try_get("publication")?,
+                },
+            }),
             "talk" => SearchEntry::Talk(Talk {
                 id: row.try_get("id")?,
                 data: TalkData {
@@ -973,6 +1284,7 @@ impl<'r> FromRow<'r, SqliteRow> for SearchResult {
             entry,
             rank,
             snippet,
+            highlighted_title,
         })
     }
 }
@@ -1028,6 +1340,7 @@ impl SearchResult {
                 .duration_seconds()
                 .map(|seconds: i64| Duration::Video(seconds.max(0) as u32)),
             SearchEntry::Article(article) => Some(Duration::from_word_count(article.word_count())),
+            SearchEntry::Research(_) => None,
         }
     }
 

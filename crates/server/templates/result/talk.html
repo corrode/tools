@@ -30,7 +30,8 @@
     <div class="result-content">
         <div class="result-title">
             <a href="{{ talk.url }}" target="_blank" rel="noopener noreferrer"
-                >{{ talk.title }}</a
+                >{% if let Some(ht) = talk.highlighted_title %}{{ ht|safe }}{%
+                else %}{{ talk.title }}{% endif %}</a
             >
         </div>
 

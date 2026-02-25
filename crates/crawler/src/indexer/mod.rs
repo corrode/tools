@@ -6,6 +6,8 @@ use storage::Repository;
 pub mod conference;
 /// Podcast indexer
 pub mod podcast;
+/// Research paper indexer
+pub mod research;
 /// Rust RFC indexer
 pub mod rfc;
 /// This Week In Rust Indexer
