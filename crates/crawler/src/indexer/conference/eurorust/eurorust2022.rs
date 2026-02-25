@@ -28,9 +28,9 @@ use types::{NewSpeaker, NewTalk, Url};
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
-use crate::tools::css::{css, select_text, text};
+use crate::tools::css::{css, select_text, slugify, text};
 
-use super::{clean_speaker_name, should_skip, slugify};
+use super::{clean_speaker_name, should_skip};
 
 /// Parser for EuroRust 2022
 pub struct EuroRust2022;

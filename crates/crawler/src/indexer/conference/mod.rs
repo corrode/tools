@@ -21,6 +21,7 @@ use crate::tools::youtube::{
 
 pub mod eurorust;
 pub mod rustconf;
+pub mod rustweek;
 mod title_matcher;
 
 use title_matcher::{TitleMatcher, TitleMatcherConfig};
@@ -117,6 +118,10 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(eurorust::EuroRust2024),
         Box::new(eurorust::EuroRust2023),
         Box::new(eurorust::EuroRust2022),
+        // RustWeek / RustNL editions
+        Box::new(rustweek::RustWeek2025),
+        Box::new(rustweek::RustNL2024),
+        Box::new(rustweek::RustNL2023),
     ]
 }
 

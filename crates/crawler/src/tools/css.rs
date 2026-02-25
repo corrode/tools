@@ -20,6 +20,52 @@
 use anyhow::Result;
 use scraper::{ElementRef, Selector};
 
+/// Normalize whitespace in a string (collapse runs of whitespace to single
+/// spaces and trim).
+///
+/// This is the standalone version of the normalization that [`text`] performs
+/// on an [`ElementRef`]. Use it when you already have a plain `&str`.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(normalize_whitespace("  hello   world  "), "hello world");
+/// ```
+pub fn normalize_whitespace(input: &str) -> String {
+    input.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Slugify a string for use in URL fragments.
+///
+/// Converts to lowercase, replaces spaces with dashes, and strips common
+/// punctuation characters.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(slugify("10 Years of Rust: Why?"), "10-years-of-rust-why");
+/// ```
+pub fn slugify(input: &str) -> String {
+    input.to_lowercase().replace(' ', "-").replace(
+        ['\'', '?', '!', ':', '`', '"', '(', ')', ',', '.', ';', '&'],
+        "",
+    )
+}
+
+/// Parse a speaker name string that may contain multiple speakers.
+///
+/// Handles formats like:
+/// - `"Rik Arends"` → `["Rik Arends"]`
+/// - `"Alice & Bob"` → `["Alice", "Bob"]`
+/// - `"Alice and Bob"` → `["Alice", "Bob"]`
+pub fn parse_speaker_names(raw: &str) -> Vec<String> {
+    raw.split(" & ")
+        .flat_map(|part| part.split(" and "))
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
 /// Parse a CSS selector string, returning a descriptive [`anyhow::Error`] on
 /// failure.
 ///
@@ -217,5 +263,35 @@ mod tests {
         let child_sel = css("a.link").unwrap();
         let parent = html.select(&parent_sel).next().unwrap();
         assert_eq!(select_attr(parent, &child_sel, "href"), None);
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses() {
+        assert_eq!(normalize_whitespace("  hello   world  "), "hello world");
+        assert_eq!(
+            normalize_whitespace("no\nnewlines\there"),
+            "no newlines here"
+        );
+    }
+
+    #[test]
+    fn slugify_basic() {
+        assert_eq!(slugify("10 Years of Rust: Why?"), "10-years-of-rust-why");
+        assert_eq!(slugify("Floating Point Hashing"), "floating-point-hashing");
+    }
+
+    #[test]
+    fn parse_speaker_names_single() {
+        assert_eq!(parse_speaker_names("Rik Arends"), vec!["Rik Arends"]);
+    }
+
+    #[test]
+    fn parse_speaker_names_ampersand() {
+        assert_eq!(parse_speaker_names("Alice & Bob"), vec!["Alice", "Bob"]);
+    }
+
+    #[test]
+    fn parse_speaker_names_and() {
+        assert_eq!(parse_speaker_names("Alice and Bob"), vec!["Alice", "Bob"]);
     }
 }

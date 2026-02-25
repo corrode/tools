@@ -22,18 +22,6 @@ use types::{NewSpeaker, NewTalk};
 use super::ParsedTalk;
 use crate::tools::css::{css, select_text, text};
 
-/// Slugify a string for use in EuroRust URLs.
-///
-/// The EuroRust site uses its own slug generation. This is only used as a
-/// fallback for editions without individual talk pages (2022, 2023) where we
-/// need to fabricate a unique URL fragment.
-pub fn slugify(input: &str) -> String {
-    input.to_lowercase().replace(' ', "-").replace(
-        ['\'', '?', '!', ':', '`', '"', '(', ')', ',', '.', ';', '&'],
-        "",
-    )
-}
-
 /// Strip trailing emoji and other non-ASCII decorations from speaker names.
 ///
 /// EuroRust uses names like "Jon Gjengset 🦀" and "Charlie Marsh 🦀" in the
@@ -84,11 +72,6 @@ pub fn should_skip(title: &str) -> bool {
         return true;
     }
     SKIP_TITLES.iter().any(|&skip| lower.contains(skip))
-}
-
-/// Normalize whitespace in a string (collapse runs of whitespace to single spaces).
-pub fn normalize_whitespace(input: &str) -> String {
-    input.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Parse the abstract from a EuroRust individual talk page (2024 or 2025).
@@ -238,18 +221,6 @@ mod tests {
     }
 
     #[test]
-    fn test_slugify() {
-        assert_eq!(
-            slugify("Through the Fire and the Flames"),
-            "through-the-fire-and-the-flames"
-        );
-        assert_eq!(
-            slugify("I/O in Rust: the whole story"),
-            "i/o-in-rust-the-whole-story"
-        );
-    }
-
-    #[test]
     fn test_should_skip() {
         assert!(should_skip("Doors open & Breakfast"));
         assert!(should_skip("Lunch"));
@@ -261,14 +232,5 @@ mod tests {
         assert!(!should_skip(
             "Building an extremely fast Python package manager, in Rust"
         ));
-    }
-
-    #[test]
-    fn test_normalize_whitespace() {
-        assert_eq!(normalize_whitespace("  hello   world  "), "hello world");
-        assert_eq!(
-            normalize_whitespace("no\nnewlines\there"),
-            "no newlines here"
-        );
     }
 }
