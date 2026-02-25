@@ -12,6 +12,11 @@ help: ## Display this help message
 lint: ## Run format check and clippy
 	cargo fmt --all -- --check
 	cargo clippy --workspace --all-targets --all-features -- -D warnings 
+	
+.PHONY: lint-fix
+lint-fix: ## Run format and clippy with auto-fix 
+	cargo fmt --all 
+	cargo clippy --workspace --all-targets --all-features --fix --allow-dirty -- -D warnings 
 
 .PHONY: format fmt
 format fmt: ## Format the code

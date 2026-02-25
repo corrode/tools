@@ -6,7 +6,7 @@ use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use log::{debug, info};
-use scraper::{Html, Selector};
+use scraper::Html;
 use std::sync::LazyLock;
 use types::{NewSpeaker, NewTalk, Url};
 use url::Url as UrlLib;
@@ -14,6 +14,7 @@ use url::Url as UrlLib;
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
+use crate::tools::css::{css, select_attr, select_text, text};
 
 /// Parser for RustConf 2019
 pub struct RustConf2019;
@@ -80,20 +81,11 @@ impl RustConf2019 {
 
         debug!("Parsing RustConf 2019 schedule table");
 
-        let row_selector = Selector::parse("table.card tbody tr")
-            .map_err(|e| anyhow::anyhow!("Failed to parse row selector: {:?}", e))?;
-
-        let session_selector = Selector::parse("td.session")
-            .map_err(|e| anyhow::anyhow!("Failed to parse session selector: {:?}", e))?;
-
-        let title_selector = Selector::parse("p")
-            .map_err(|e| anyhow::anyhow!("Failed to parse title selector: {:?}", e))?;
-
-        let speaker_selector = Selector::parse("ul.inline-list li a")
-            .map_err(|e| anyhow::anyhow!("Failed to parse speaker selector: {:?}", e))?;
-
-        let link_selector = Selector::parse("a")
-            .map_err(|e| anyhow::anyhow!("Failed to parse link selector: {:?}", e))?;
+        let row_selector = css("table.card tbody tr")?;
+        let session_selector = css("td.session")?;
+        let title_selector = css("p")?;
+        let speaker_selector = css("ul.inline-list li a")?;
+        let link_selector = css("a")?;
 
         let schedule_base: Url = base_url
             .join("schedule/")
@@ -102,15 +94,10 @@ impl RustConf2019 {
 
         for row in document.select(&row_selector) {
             for session in row.select(&session_selector) {
-                let title = session
-                    .select(&title_selector)
-                    .next()
-                    .map(|el| el.text().collect::<String>().trim().to_string())
-                    .unwrap_or_default();
-
-                if title.is_empty() {
-                    continue;
-                }
+                let title = match select_text(session, &title_selector) {
+                    Some(t) => t,
+                    None => continue,
+                };
 
                 if should_skip_title(&title) {
                     continue;
@@ -118,7 +105,7 @@ impl RustConf2019 {
 
                 let speakers: Vec<String> = session
                     .select(&speaker_selector)
-                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .map(|el| text(el))
                     .filter(|s| !s.is_empty())
                     .collect();
 
@@ -127,11 +114,7 @@ impl RustConf2019 {
                     continue;
                 }
 
-                let website_url = if let Some(href) = session
-                    .select(&link_selector)
-                    .next()
-                    .and_then(|link| link.value().attr("href"))
-                {
+                let website_url = if let Some(href) = select_attr(session, &link_selector, "href") {
                     Self::resolve_url(base_url, &schedule_base, href)
                         .with_context(|| format!("Invalid URL for talk: {}", title))?
                 } else {

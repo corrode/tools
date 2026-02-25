@@ -2,17 +2,18 @@
 //!
 //! The 2016 site exposes an HTML schedule table at `/schedule.html`.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use log::{debug, info};
-use scraper::{Html, Selector};
+use scraper::Html;
 use std::sync::LazyLock;
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
+use crate::tools::css::{css, select_text, text};
 
 /// Parser for RustConf 2016
 pub struct RustConf2016;
@@ -78,14 +79,10 @@ impl RustConf2016 {
 
         debug!("Parsing RustConf 2016 schedule table");
 
-        let row_selector = Selector::parse("table#schedule tbody tr")
-            .map_err(|err| anyhow!("Failed to parse row selector: {err}"))?;
-        let cell_selector =
-            Selector::parse("td").map_err(|err| anyhow!("Failed to parse cell selector: {err}"))?;
-        let speaker_selector = Selector::parse("p.speaker")
-            .map_err(|err| anyhow!("Failed to parse speaker selector: {err}"))?;
-        let byline_selector = Selector::parse("p.byline")
-            .map_err(|err| anyhow!("Failed to parse byline selector: {err}"))?;
+        let row_selector = css("table#schedule tbody tr")?;
+        let cell_selector = css("td")?;
+        let speaker_selector = css("p.speaker")?;
+        let byline_selector = css("p.byline")?;
 
         for row in document.select(&row_selector) {
             let cells: Vec<_> = row.select(&cell_selector).collect();
@@ -95,15 +92,10 @@ impl RustConf2016 {
 
             // First cell is time; remaining are sessions (possibly 1 or 2 columns)
             for cell in cells.iter().skip(1) {
-                let title = cell
-                    .select(&speaker_selector)
-                    .next()
-                    .map(|el| el.text().collect::<String>().trim().to_string())
-                    .unwrap_or_default();
-
-                if title.is_empty() {
-                    continue;
-                }
+                let title = match select_text(*cell, &speaker_selector) {
+                    Some(t) => t,
+                    None => continue,
+                };
 
                 if self.is_break_item(&title) {
                     continue;
@@ -112,8 +104,7 @@ impl RustConf2016 {
                 let speakers = cell
                     .select(&byline_selector)
                     .next()
-                    .map(|el| el.text().collect::<String>())
-                    .map(|text| self.parse_speakers_from_byline(&text))
+                    .map(|el| self.parse_speakers_from_byline(&text(el)))
                     .unwrap_or_default();
 
                 if speakers.is_empty() {

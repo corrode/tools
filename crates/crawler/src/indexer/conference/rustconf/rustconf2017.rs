@@ -1,16 +1,17 @@
 //! RustConf 2017 schedule parser.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use log::{debug, info};
-use scraper::{ElementRef, Html, Selector};
+use scraper::{ElementRef, Html};
 use std::sync::LazyLock;
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
+use crate::tools::css::{css, select_text, text};
 
 /// Parser for RustConf 2017
 pub struct RustConf2017;
@@ -76,13 +77,11 @@ impl RustConf2017 {
         debug!("Parsing RustConf 2017 schedule entries");
         let mut talks = Vec::new();
 
-        let speaker_selector = Selector::parse("p.speaker")
-            .map_err(|err| anyhow!("Failed to parse speaker selector: {}", err))?;
-        let byline_selector = Selector::parse("p.byline")
-            .map_err(|err| anyhow!("Failed to parse byline selector: {}", err))?;
+        let speaker_selector = css("p.speaker")?;
+        let byline_selector = css("p.byline")?;
 
         for speaker_el in document.select(&speaker_selector) {
-            let title = normalize_whitespace(&speaker_el.text().collect::<String>());
+            let title = text(speaker_el);
             if title.is_empty() {
                 continue;
             }
@@ -91,8 +90,7 @@ impl RustConf2017 {
                 .ancestors()
                 .filter_map(ElementRef::wrap)
                 .find(|el| el.value().name() == "td")
-                .and_then(|td| td.select(&byline_selector).next())
-                .map(|el| normalize_whitespace(&el.text().collect::<String>()))
+                .and_then(|td| select_text(td, &byline_selector))
                 .unwrap_or_default();
 
             let speakers = parse_speakers(&byline);
@@ -160,10 +158,6 @@ fn parse_speakers(byline: &str) -> Vec<String> {
         .filter(|s| !s.is_empty())
         .map(String::from)
         .collect()
-}
-
-fn normalize_whitespace(input: &str) -> String {
-    input.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 #[cfg(test)]

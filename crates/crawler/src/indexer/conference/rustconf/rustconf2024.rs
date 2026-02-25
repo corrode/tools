@@ -4,13 +4,14 @@ use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use log::{debug, info};
-use scraper::{Html, Selector};
+use scraper::Html;
 use std::sync::LazyLock;
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
+use crate::tools::css::{css, text};
 
 /// Parser for RustConf 2024
 pub struct RustConf2024;
@@ -84,25 +85,20 @@ impl RustConf2024 {
         // - Speaker name(s) in <h5>
 
         // Try to find schedule list items
-        let li_selector = Selector::parse("li")
-            .map_err(|e| anyhow::anyhow!("Failed to parse li selector: {:?}", e))?;
-
-        let h5_selector = Selector::parse("h5")
-            .map_err(|e| anyhow::anyhow!("Failed to parse h5 selector: {:?}", e))?;
-
-        let p_selector = Selector::parse("p")
-            .map_err(|e| anyhow::anyhow!("Failed to parse p selector: {:?}", e))?;
+        let li_selector = css("li")?;
+        let h5_selector = css("h5")?;
+        let p_selector = css("p")?;
 
         for li in document.select(&li_selector) {
-            let text = li.text().collect::<String>();
+            let li_text = text(li);
 
             // Skip non-talk items
-            if !text.contains("Session") && !text.contains("Keynote") {
+            if !li_text.contains("Session") && !li_text.contains("Keynote") {
                 continue;
             }
 
             // Skip meals, breaks, registration, etc.
-            let lower = text.to_lowercase();
+            let lower = li_text.to_lowercase();
             if lower.contains("lunch")
                 || lower.contains("break")
                 || lower.contains("snack")
@@ -117,7 +113,7 @@ impl RustConf2024 {
             // Extract speaker names from h5 tags
             let speakers: Vec<String> = li
                 .select(&h5_selector)
-                .map(|el| el.text().collect::<String>().trim().to_string())
+                .map(|el| text(el))
                 .filter(|s| !s.is_empty())
                 .collect();
 
@@ -129,14 +125,14 @@ impl RustConf2024 {
             // Extract description from p tags
             let description: String = li
                 .select(&p_selector)
-                .map(|el| el.text().collect::<String>().trim().to_string())
+                .map(|el| text(el))
                 .filter(|s| !s.is_empty() && s.len() > 50) // Filter out short non-description text
                 .collect::<Vec<_>>()
                 .join(" ");
 
             // Try to extract title - it's typically in the text before "Session" or "Keynote"
             // and after the time range
-            let title = self.extract_title(&text)?;
+            let title = self.extract_title(&li_text)?;
 
             if title.is_empty() {
                 debug!("Skipping item with empty title");

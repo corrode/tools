@@ -19,6 +19,7 @@ use crate::tools::youtube::{
     video_id_from_watch_url, video_watch_url,
 };
 
+pub mod eurorust;
 pub mod rustconf;
 mod title_matcher;
 
@@ -111,8 +112,11 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(rustconf::RustConf2018),
         Box::new(rustconf::RustConf2017),
         Box::new(rustconf::RustConf2016),
-        // Box::new(eurorust::EuroRust2024),
-        // Box::new(rustfest::RustFest2019Barcelona),
+        // EuroRust editions
+        Box::new(eurorust::EuroRust2025),
+        Box::new(eurorust::EuroRust2024),
+        Box::new(eurorust::EuroRust2023),
+        Box::new(eurorust::EuroRust2022),
     ]
 }
 

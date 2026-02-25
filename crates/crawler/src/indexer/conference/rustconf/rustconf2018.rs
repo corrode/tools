@@ -2,7 +2,7 @@
 //!
 //! The schedule is a static HTML table at `/schedule.html`.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use log::{debug, info};
@@ -13,6 +13,7 @@ use types::{NewSpeaker, NewTalk, Url};
 use crate::indexer::conference::{
     ConferenceMetadata, ParsedTalk, ScheduleParser, base_url, static_url,
 };
+use crate::tools::css::{css, select_text, text};
 
 /// Parser for RustConf 2018.
 pub struct RustConf2018;
@@ -79,14 +80,10 @@ impl RustConf2018 {
 
         debug!("Parsing RustConf 2018 schedule table");
 
-        let row_selector = Selector::parse("table#schedule tr")
-            .map_err(|err| anyhow!("Failed to parse row selector: {}", err))?;
-        let cell_selector = Selector::parse("td")
-            .map_err(|err| anyhow!("Failed to parse cell selector: {}", err))?;
-        let speaker_selector = Selector::parse("p.speaker")
-            .map_err(|err| anyhow!("Failed to parse speaker selector: {}", err))?;
-        let byline_selector = Selector::parse("p.byline")
-            .map_err(|err| anyhow!("Failed to parse byline selector: {}", err))?;
+        let row_selector = css("table#schedule tr")?;
+        let cell_selector = css("td")?;
+        let speaker_selector = css("p.speaker")?;
+        let byline_selector = css("p.byline")?;
 
         for row in document.select(&row_selector) {
             let cells: Vec<ElementRef> = row.select(&cell_selector).collect();
@@ -146,11 +143,7 @@ impl RustConf2018 {
         speaker_selector: &Selector,
         byline_selector: &Selector,
     ) -> Option<(String, Vec<String>)> {
-        let title = cell
-            .select(speaker_selector)
-            .next()
-            .map(|el| el.text().collect::<Vec<_>>().join("").trim().to_string())
-            .filter(|t| !t.is_empty())?;
+        let title = select_text(*cell, speaker_selector)?;
 
         if should_skip_title(&title) {
             return None;
@@ -159,7 +152,7 @@ impl RustConf2018 {
         let byline = cell
             .select(byline_selector)
             .next()
-            .map(|el| el.text().collect::<Vec<_>>().join(" ").trim().to_string())
+            .map(|el| text(el))
             .unwrap_or_default();
 
         let speakers = parse_speakers(&byline);
