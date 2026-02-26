@@ -161,7 +161,14 @@ pub(crate) async fn search(
         }
     }
 
-    let current_page = params.page;
+    // Clamp to the last valid page so the UI stays consistent with
+    // the offset clamping that already happened in the storage layer.
+    let last_page = if results_count > 0 {
+        ((results_count - 1) / Repository::RESULTS_PER_PAGE as i64 + 1) as u32
+    } else {
+        1
+    };
+    let current_page = params.page.min(last_page);
     let has_more = page_count == Repository::RESULTS_PER_PAGE as usize;
 
     let prev_page_href = if current_page > 1 {

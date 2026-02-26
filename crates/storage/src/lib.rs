@@ -1112,6 +1112,19 @@ impl Repository {
         })
     }
 
+    /// Clamps the offset so it doesn't exceed the last valid page.
+    ///
+    /// When `total_count` is known ahead of the data query we can avoid
+    /// scanning past the end of the result set entirely.
+    fn clamp_offset(offset: u32, total_count: i64) -> u32 {
+        if total_count <= 0 {
+            return 0;
+        }
+        let last_page_offset =
+            ((total_count - 1) / Self::RESULTS_PER_PAGE as i64) * Self::RESULTS_PER_PAGE as i64;
+        offset.min(last_page_offset as u32)
+    }
+
     /// Searches for entries matching the given query
     pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
         let page_num = request.params.page.max(1);
@@ -1196,6 +1209,8 @@ impl Repository {
             .await?
             .0;
 
+        let offset = Self::clamp_offset(offset, total_count);
+
         // 2. Get Results
         let mut query = QueryBuilder::new(
             r#"
@@ -1269,6 +1284,8 @@ impl Repository {
             .await?
             .0;
 
+        let offset = Self::clamp_offset(offset, total_count);
+
         // 2. Get Results
         let mut query = QueryBuilder::new(
             r#"
@@ -1341,6 +1358,8 @@ impl Repository {
             .fetch_one(&self.pool)
             .await?
             .0;
+
+        let offset = Self::clamp_offset(offset, total_count);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1418,6 +1437,8 @@ impl Repository {
             .await?
             .0;
 
+        let offset = Self::clamp_offset(offset, total_count);
+
         // 2. Get Results
         let mut query = QueryBuilder::new(
             r#"
@@ -1492,6 +1513,8 @@ impl Repository {
             .await?
             .0;
 
+        let offset = Self::clamp_offset(offset, total_count);
+
         // 2. Get Results
         let mut query = QueryBuilder::new(
             r#"
@@ -1562,10 +1585,6 @@ impl Repository {
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
-        // We need to fetch enough results from each table to satisfy pagination.
-        // For page N with 20 results per page, we need offset + limit results.
-        let inner_limit = offset as i64 + Self::RESULTS_PER_PAGE as i64;
-
         // Determine sort order for inner queries
         let (inner_order, outer_order) = match request.params.sort_by {
             SortOrder::DateDesc => ("ORDER BY a.date DESC", "ORDER BY date DESC"),
@@ -1680,6 +1699,12 @@ impl Repository {
             .fetch_one(&self.pool)
             .await?
             .0;
+
+        let offset = Self::clamp_offset(offset, total_count);
+
+        // We need to fetch enough results from each table to satisfy pagination.
+        // For page N with 20 results per page, we need offset + limit results.
+        let inner_limit = offset as i64 + Self::RESULTS_PER_PAGE as i64;
 
         let mut query = if request.params.has_query_terms() {
             let mut q = QueryBuilder::new(

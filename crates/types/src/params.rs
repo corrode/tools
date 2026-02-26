@@ -630,4 +630,20 @@ mod tests {
         let err = Params::try_from((params, defaults)).unwrap_err();
         assert_eq!(err, ParamsError::InvalidPage(0));
     }
+
+    #[test]
+    fn filters_validation_large_page_accepted() {
+        let defaults = SearchDefaults::new(2013, 2025);
+        let params = RawParams {
+            q: Some("rust".to_string()),
+            start_year: None,
+            end_year: None,
+            sort_by: None,
+            content_type: None,
+            page: Some(10_000),
+        };
+
+        let result = Params::try_from((params, defaults)).unwrap();
+        assert_eq!(result.page, 10_000);
+    }
 }
