@@ -17,7 +17,12 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    pretty_env_logger::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
 
     let repo = Arc::new(Repository::new(types::get_search_index_path()).await?);
 
@@ -33,7 +38,7 @@ async fn main() -> Result<()> {
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    log::info!("Listening on http://{addr}");
+    tracing::info!("Listening on http://{addr}");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

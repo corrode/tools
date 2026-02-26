@@ -164,7 +164,7 @@ async fn search_feeling_lucky(client: &Client, query: &str) -> Result<Option<Str
         bail!("Search query cannot be empty");
     }
 
-    log::debug!("Performing DuckDuckGo 'I'm Feeling Ducky' search for query: {query}");
+    tracing::debug!("Performing DuckDuckGo 'I'm Feeling Ducky' search for query: {query}");
 
     let url = build_duckduckgo_lucky_url(query);
     let response = client.get(&url).send().await?;
@@ -174,7 +174,7 @@ async fn search_feeling_lucky(client: &Client, query: &str) -> Result<Option<Str
         return Ok(None);
     }
 
-    log::debug!("DuckDuckGo search redirected to: {final_url}");
+    tracing::debug!("DuckDuckGo search redirected to: {final_url}");
 
     Ok(Some(final_url))
 }

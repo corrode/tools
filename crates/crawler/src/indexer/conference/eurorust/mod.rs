@@ -15,8 +15,8 @@ pub use eurorust2024::EuroRust2024;
 pub use eurorust2025::EuroRust2025;
 
 use anyhow::{Context, Result};
-use log::debug;
 use scraper::Html;
+use tracing::debug;
 use types::{NewSpeaker, NewTalk};
 
 use super::ParsedTalk;

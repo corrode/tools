@@ -2,9 +2,9 @@ use super::Indexer;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate};
-use log::{debug, info, warn};
 use std::env;
 use storage::Repository;
+use tracing::{debug, info, warn};
 use types::{Metadata, NewVideo, Url};
 
 use crate::tools::youtube::{

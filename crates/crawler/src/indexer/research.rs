@@ -9,10 +9,10 @@ use super::Indexer;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info, warn};
 use reqwest::header;
 use serde::Deserialize;
 use storage::Repository;
+use tracing::{debug, info, warn};
 use types::{Metadata, NewResearchPaper, Url};
 
 /// arXiv API base URL

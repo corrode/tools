@@ -14,10 +14,11 @@ async-trait = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
 dom_smoothie = { workspace = true }
-env_logger = { workspace = true }
+
 headless_chrome = { workspace = true }
 indoc = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 pulldown-cmark = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }

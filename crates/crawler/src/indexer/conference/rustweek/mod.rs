@@ -17,8 +17,8 @@ pub use rustnl2024::RustNL2024;
 pub use rustweek2025::RustWeek2025;
 
 use anyhow::{Context, Result};
-use log::debug;
 use scraper::Html;
+use tracing::debug;
 use types::{NewSpeaker, NewTalk};
 
 use super::ParsedTalk;

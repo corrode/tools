@@ -3,9 +3,9 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate};
-use log::{debug, info};
 use serde_json::Value;
 use std::sync::LazyLock;
+use tracing::{debug, info};
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{

@@ -49,7 +49,8 @@ single_match_else = "deny"
 anyhow = "1.0.100"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-log = "0.4.29"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
@@ -70,14 +71,12 @@ tempfile = "3.24.0"
 # Crawler
 clap = { version = "4.5", features = ["derive"] }
 dom_smoothie = "0.14"
-env_logger = "0.11"
 headless_chrome = "1.0.20"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 scraper = "0.20"
 indoc = "2.0.7"
 
 # Server
-pretty_env_logger = "0.5.0"
 axum = "0.7.9"
 askama_axum = "0.4.0"
 tower-http = { version = "0.6", features = ["fs"] }

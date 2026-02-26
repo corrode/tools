@@ -129,7 +129,7 @@ impl Sanitizer {
                 for element in document.select(&selector) {
                     cleaned_html.push_str(&element.html());
                     if !cleaned_html.is_empty() {
-                        log::debug!("Extracted content from: {}", selector_str);
+                        tracing::debug!("Extracted content from: {}", selector_str);
                         return cleaned_html;
                     }
                 }

@@ -119,8 +119,13 @@ impl YouTube {
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    // Set up logging
-    env_logger::init();
+    // Set up tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
 
     // Ensure API key is set for the test
     if env::var("YOUTUBE_API_KEY").is_err() {

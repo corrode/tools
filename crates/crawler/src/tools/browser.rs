@@ -44,7 +44,7 @@ impl Drop for TabGuard {
             if !err_str.contains("Not attached to an active page")
                 && !err_str.contains("underlying connection is closed")
             {
-                log::warn!("Failed to close tab: {e}");
+                tracing::warn!("Failed to close tab: {e}");
             }
         }
     }
@@ -105,7 +105,7 @@ impl Browser {
             && let Some(new_prefix) = URL_REWRITES.get(host)
             && let Ok(new_url) = url::Url::parse(&format!("{}{}", new_prefix, url.path()))
         {
-            log::debug!("Rewrote {} -> {}", url, new_url);
+            tracing::debug!("Rewrote {} -> {}", url, new_url);
             return new_url;
         }
 
@@ -149,18 +149,18 @@ impl Browser {
 
     /// Crawls a webpage and returns its text content
     pub fn crawl(&self, metadata: &Metadata) -> anyhow::Result<Option<String>> {
-        log::info!("Crawling {}", metadata.url);
+        tracing::info!("Crawling {}", metadata.url);
 
         // Rewrite URLs (domain migrations, YouTube thumbnails, etc.)
         let target_url = Self::rewrite_url(&metadata.url);
 
         if target_url != *metadata.url {
-            log::info!("Rewrote URL: {} -> {}", metadata.url, target_url);
+            tracing::info!("Rewrote URL: {} -> {}", metadata.url, target_url);
         }
 
         // For YouTube thumbnails, we can skip browser rendering
         if target_url.host_str() == Some("img.youtube.com") {
-            log::info!("YouTube thumbnail, skipping browser rendering");
+            tracing::info!("YouTube thumbnail, skipping browser rendering");
             return Ok(Some(format!("YouTube video: {}", metadata.title)));
         }
 
@@ -168,22 +168,22 @@ impl Browser {
         let tab = TabGuard::new(self.inner.new_tab()?);
         tab.set_default_timeout(time::Duration::from_secs(30));
 
-        log::debug!("Navigating to URL: {}", target_url);
+        tracing::debug!("Navigating to URL: {}", target_url);
         tab.navigate_to(target_url.as_str())?;
 
-        log::debug!("Waiting for navigation to complete (30s timeout)...");
+        tracing::debug!("Waiting for navigation to complete (30s timeout)...");
         if let Err(e) = tab.wait_until_navigated() {
-            log::error!("Navigation timeout or error for {}: {e}", target_url);
+            tracing::error!("Navigation timeout or error for {}: {e}", target_url);
             bail!("Navigation failed: {e}");
         }
-        log::debug!("Navigation completed successfully");
+        tracing::debug!("Navigation completed successfully");
 
         self.remove_cookie_banner(&tab)?;
 
         // Wait for Cloudflare verification to complete (if present)
         // Poll up to 15 seconds for the verification page to disappear
         let text = self.wait_for_content(&tab, 15)?;
-        log::debug!("Extracted text: {} chars", text.len());
+        tracing::debug!("Extracted text: {} chars", text.len());
 
         if self.debug {
             let html = tab.get_content()?;
@@ -199,20 +199,20 @@ impl Browser {
     /// Takes a screenshot of the current page
     fn take_screenshot(&self, tab: &TabGuard, metadata: &Metadata) -> Result<()> {
         let screenshot_path = format!("{}/{metadata}.jpg", *paths::SCREENSHOT_PATH);
-        log::info!("Creating screenshot {screenshot_path}");
+        tracing::info!("Creating screenshot {screenshot_path}");
         let screenshot =
             tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, Some(75), None, true)?;
         fs::write(screenshot_path, &screenshot)?;
-        log::info!("Done creating screenshot");
+        tracing::info!("Done creating screenshot");
         Ok(())
     }
 
     /// Saves raw HTML to disk for future analysis
     fn save_raw_html(&self, html: &str, metadata: &Metadata) -> Result<()> {
         let html_path = format!("{}/{metadata}.html", *paths::HTML_PATH);
-        log::info!("Saving raw HTML to {html_path}");
+        tracing::info!("Saving raw HTML to {html_path}");
         fs::write(html_path, html)?;
-        log::debug!("Raw HTML saved successfully");
+        tracing::debug!("Raw HTML saved successfully");
         Ok(())
     }
 
@@ -224,7 +224,7 @@ impl Browser {
 
         loop {
             let html = tab.get_content()?;
-            log::trace!("HTML: {html}");
+            tracing::trace!("HTML: {html}");
 
             let text = Sanitizer::sanitize(&html)?;
 
@@ -236,7 +236,7 @@ impl Browser {
                 if start.elapsed() >= max_wait {
                     bail!("Timeout waiting for Cloudflare verification to complete");
                 }
-                log::debug!(
+                tracing::debug!(
                     "Cloudflare verification in progress, waiting... ({:.1}s)",
                     start.elapsed().as_secs_f32()
                 );
@@ -255,7 +255,7 @@ impl Browser {
             format!(r#"document.querySelectorAll('{all_selectors}').forEach(el => el.remove());"#);
 
         tab.evaluate(&js, false)?;
-        log::debug!("Attempted to remove cookie banner elements");
+        tracing::debug!("Attempted to remove cookie banner elements");
         Ok(())
     }
 }

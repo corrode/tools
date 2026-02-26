@@ -3,9 +3,9 @@ use crate::{paths, tools::browser::Browser};
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::info;
 use std::fs;
 use storage::Repository;
+use tracing::info;
 use types::{NewArticle, Url};
 
 mod parser;
@@ -62,7 +62,7 @@ impl Twir {
             .iter()
             .any(|protocol| url.scheme() == *protocol)
         {
-            log::info!("Skipping unsupported protocol: {url}");
+            tracing::info!("Skipping unsupported protocol: {url}");
             return false;
         }
 
@@ -134,7 +134,7 @@ impl Twir {
         ];
 
         if ignored_urls.iter().any(|u| url.to_string().contains(u)) {
-            log::debug!("Skipping ignored URL: {url}");
+            tracing::debug!("Skipping ignored URL: {url}");
             return false;
         }
 
@@ -203,7 +203,7 @@ impl Indexer for Twir {
 
             // Extract date from filename - skip files without valid date patterns
             let Some(file_date) = Self::extract_date_from_filename(file_name) else {
-                log::debug!("Skipping file without date pattern: {file_name}");
+                tracing::debug!("Skipping file without date pattern: {file_name}");
                 continue;
             };
 
@@ -211,7 +211,7 @@ impl Indexer for Twir {
             if let Some(ref checkpoint) = start_date
                 && file_date < *checkpoint
             {
-                log::debug!("Skipping file before checkpoint: {file_name}");
+                tracing::debug!("Skipping file before checkpoint: {file_name}");
                 continue;
             }
 
@@ -233,7 +233,7 @@ impl Indexer for Twir {
 
             // Parse file
             let Some(parse_result) = self.parser.parse_file(&content) else {
-                log::warn!("No valid entries found in file: {file_name}");
+                tracing::warn!("No valid entries found in file: {file_name}");
                 continue;
             };
 
@@ -250,7 +250,7 @@ impl Indexer for Twir {
                         quote.author
                     );
                 } else if let Err(e) = repo.insert_quote(&quote).await {
-                    log::warn!("Failed to insert quote: {e}");
+                    tracing::warn!("Failed to insert quote: {e}");
                 } else {
                     stats.quotes_processed += 1;
                 }
@@ -261,7 +261,7 @@ impl Indexer for Twir {
                 // Rewrite URLs that have moved to new domains
                 let rewritten_url = Browser::rewrite_url(&id.url);
                 if rewritten_url != *id.url {
-                    log::info!("Rewrote URL: {} -> {}", id.url, rewritten_url);
+                    tracing::info!("Rewrote URL: {} -> {}", id.url, rewritten_url);
                     id.url = rewritten_url.into();
                 }
 
@@ -270,7 +270,7 @@ impl Indexer for Twir {
                 }
 
                 if repo.url_exists(&id.url).await? {
-                    log::debug!("Skipping already crawled URL: {}", id.url);
+                    tracing::debug!("Skipping already crawled URL: {}", id.url);
                     stats.articles_skipped += 1;
                     continue;
                 }
@@ -291,25 +291,25 @@ impl Indexer for Twir {
                     // Since browser creation can fail, we handle it here.
                     match Browser::new(self.debug) {
                         Ok(b) => self.browser = b,
-                        Err(e) => log::error!("Failed to recreate browser: {e}"),
+                        Err(e) => tracing::error!("Failed to recreate browser: {e}"),
                     }
                 }
 
-                log::info!("Crawling URL: {}", id.url);
+                tracing::info!("Crawling URL: {}", id.url);
 
                 // Crawl with retry logic for closed connections
                 let crawl_result = self.browser.crawl(&id);
                 let crawl_result = if let Err(ref e) = crawl_result {
                     let err_msg = e.to_string();
                     if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
-                        log::warn!("Browser connection closed, recreating browser and retrying...");
+                        tracing::warn!("Browser connection closed, recreating browser and retrying...");
                         match Browser::new(self.debug) {
                             Ok(b) => {
                                 self.browser = b;
                                 self.browser.crawl(&id)
                             }
                             Err(recreate_err) => {
-                                log::error!(
+                                tracing::error!(
                                     "Failed to recreate browser during retry: {recreate_err}"
                                 );
                                 Err(anyhow::anyhow!("Browser recreation failed"))
@@ -334,7 +334,7 @@ impl Indexer for Twir {
                             word_count,
                         };
                         if let Err(e) = repo.insert_article(&article).await {
-                            log::error!("Failed to store entry {}: {e}", id.url);
+                            tracing::error!("Failed to store entry {}: {e}", id.url);
                             stats.articles_failed += 1;
                         } else {
                             info!("Successfully stored entry: {}", id.url);
@@ -342,11 +342,11 @@ impl Indexer for Twir {
                         }
                     }
                     Ok(None) => {
-                        log::warn!("No text content extracted for {}", id.url);
+                        tracing::warn!("No text content extracted for {}", id.url);
                         stats.articles_failed += 1;
                     }
                     Err(e) => {
-                        log::warn!("Failed to crawl {}: {e}", id.url);
+                        tracing::warn!("Failed to crawl {}: {e}", id.url);
                         stats.articles_failed += 1;
                     }
                 }

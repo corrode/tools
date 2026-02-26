@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info};
 use serde::Deserialize;
 use std::sync::LazyLock;
+use tracing::{debug, info};
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{

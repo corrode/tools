@@ -4,11 +4,11 @@
 //! API handling, transcript fetching, and thumbnail management.
 
 use anyhow::{Context, Result, bail};
-use log::debug;
 use reqwest::Client;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tokio::fs;
+use tracing::debug;
 use types::{Duration, Url};
 use ytt::YouTubeTranscript;
 

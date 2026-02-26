@@ -9,12 +9,12 @@ use super::Indexer;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use log::{debug, info, warn};
 use regex::Regex;
 use reqwest::header;
 use serde::Deserialize;
 use std::sync::LazyLock;
 use storage::Repository;
+use tracing::{debug, info, warn};
 use types::{Metadata, NewArticle, Url};
 
 /// Regex to strip leading RFC number from filename (e.g., "0001-foo" -> "foo")

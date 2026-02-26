@@ -5,10 +5,10 @@
 
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use log::info;
 use reqwest::header;
 use std::{collections::HashMap, env};
 use storage::Repository;
+use tracing::info;
 use types::{NewSpeaker, NewTalk, Url};
 use urlnorm::UrlNormalizer;
 
@@ -439,7 +439,7 @@ impl ConferenceIndexer {
         };
 
         let Some(playlist_id) = playlist_id_from_url(playlist_url) else {
-            log::warn!(
+            tracing::warn!(
                 "[{}] Could not extract playlist ID from URL: {}",
                 metadata.id,
                 playlist_url
@@ -447,7 +447,7 @@ impl ConferenceIndexer {
             return Ok(None);
         };
 
-        log::info!(
+        tracing::info!(
             "[{}] Fetching YouTube playlist: {}",
             metadata.id,
             playlist_id
@@ -455,11 +455,11 @@ impl ConferenceIndexer {
 
         match self.youtube_api.fetch_full_playlist(&playlist_id).await {
             Ok(items) => {
-                log::info!("[{}] Loaded {} playlist videos", metadata.id, items.len());
+                tracing::info!("[{}] Loaded {} playlist videos", metadata.id, items.len());
                 Ok(Some(YoutubePlaylistIndex::new(items, metadata)))
             }
             Err(e) => {
-                log::error!("[{}] Failed to fetch playlist via API: {}", metadata.id, e);
+                tracing::error!("[{}] Failed to fetch playlist via API: {}", metadata.id, e);
                 Err(e)
             }
         }
@@ -566,7 +566,7 @@ impl ConferenceIndexer {
         .await?;
 
         Ok(candidate.map(|c| {
-            log::debug!(
+            tracing::debug!(
                 "Slides found for '{}' from {:?}: {}",
                 talk.title,
                 c.source,
@@ -609,7 +609,7 @@ impl ConferenceIndexer {
         }
 
         let Some(youtube) = Self::resolve_youtube_match(talk, speakers, playlist) else {
-            log::warn!(
+            tracing::warn!(
                 "No playlist match for talk '{}' ({} {})",
                 talk.title,
                 playlist.conference,
@@ -664,9 +664,9 @@ impl ConferenceIndexer {
 
         // Transcript
         if talk.transcript.as_deref().unwrap_or_default().is_empty() {
-            log::trace!("Fetching transcript for video {}", video_id);
+            tracing::trace!("Fetching transcript for video {}", video_id);
             if let Ok(transcript) = fetch_transcript(video_id).await {
-                log::debug!(
+                tracing::debug!(
                     "Transcript fetched for {} ({} chars)",
                     video_id,
                     transcript.len()
@@ -698,7 +698,7 @@ impl ConferenceIndexer {
     async fn process_talk(&self, repo: &Repository, parsed: ParsedTalk) -> Result<()> {
         // Check if talk already exists
         if !self.overwrite && repo.talk_exists(&parsed.talk.website_url).await? {
-            log::debug!("Talk already exists, skipping: {}", parsed.talk.title);
+            tracing::debug!("Talk already exists, skipping: {}", parsed.talk.title);
             return Ok(());
         }
 
@@ -781,7 +781,7 @@ impl Indexer for ConferenceIndexer {
                         if !self.overwrite {
                             match repo.talk_exists(&parsed.talk.website_url).await {
                                 Ok(true) => {
-                                    log::debug!(
+                                    tracing::debug!(
                                         "[{}] Talk already exists: {}",
                                         metadata.id,
                                         talk_title
@@ -791,7 +791,7 @@ impl Indexer for ConferenceIndexer {
                                 }
                                 Ok(false) => {}
                                 Err(e) => {
-                                    log::warn!(
+                                    tracing::warn!(
                                         "[{}] Failed to check talk existence: {}",
                                         metadata.id,
                                         e
@@ -810,7 +810,7 @@ impl Indexer for ConferenceIndexer {
                                 .enrich_talk_with_youtube(&mut parsed.talk, &parsed.speakers, index)
                                 .await
                         {
-                            log::warn!(
+                            tracing::warn!(
                                 "[{}] Failed to enrich talk '{}': {}",
                                 metadata.id,
                                 talk_title,
@@ -827,7 +827,7 @@ impl Indexer for ConferenceIndexer {
                                 total_stats.processed += 1;
                             }
                             Err(e) => {
-                                log::warn!(
+                                tracing::warn!(
                                     "[{}] Failed to index talk '{}': {}",
                                     metadata.id,
                                     talk_title,
@@ -842,7 +842,7 @@ impl Indexer for ConferenceIndexer {
                     }
                 }
                 Err(e) => {
-                    log::warn!("[{}] Failed to parse schedule: {}", metadata.id, e);
+                    tracing::warn!("[{}] Failed to parse schedule: {}", metadata.id, e);
                     if self.debug {
                         return Err(e);
                     }

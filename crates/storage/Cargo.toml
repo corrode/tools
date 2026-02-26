@@ -9,7 +9,7 @@ types = { workspace = true }
 
 anyhow = { workspace = true }
 chrono = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 sqlx = { workspace = true }
 url = { workspace = true }
 

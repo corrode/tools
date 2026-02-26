@@ -111,7 +111,7 @@ impl Repository {
     /// Creates a new repository instance.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
-        log::info!("Opening database at: {database_url}");
+        tracing::info!("Opening database at: {database_url}");
 
         let options = SqliteConnectOptions::from_str(&database_url)?.pragma("trusted_schema", "1");
 
@@ -125,7 +125,7 @@ impl Repository {
         let trusted: i32 = sqlx::query_scalar("PRAGMA trusted_schema")
             .fetch_one(&pool)
             .await?;
-        log::debug!("trusted_schema = {}", trusted);
+        tracing::debug!("trusted_schema = {}", trusted);
 
         let repo = Self { pool };
         repo.init_db().await?;
@@ -141,7 +141,7 @@ impl Repository {
 
     /// Inserts a new quote
     pub async fn insert_quote(&self, quote: &types::Quote) -> Result<()> {
-        log::debug!("Inserting quote by: {}", quote.author);
+        tracing::debug!("Inserting quote by: {}", quote.author);
 
         let date_str = quote.date.format("%Y-%m-%d").to_string();
         let url_str = quote.url.as_ref().map(|u| u.as_str());
@@ -193,7 +193,7 @@ impl Repository {
 
     /// Inserts a new article
     pub async fn insert_article(&self, article: &NewArticle) -> Result<i64> {
-        log::debug!("Inserting article: {}", article.metadata.url);
+        tracing::debug!("Inserting article: {}", article.metadata.url);
 
         let date_str = article.metadata.date.format("%Y-%m-%d").to_string();
         let url_str = article.metadata.url.as_str();
@@ -227,7 +227,7 @@ impl Repository {
 
     /// Inserts a new video
     pub async fn insert_video(&self, video: &NewVideo) -> Result<i64> {
-        log::debug!("Inserting video: {}", video.metadata.url);
+        tracing::debug!("Inserting video: {}", video.metadata.url);
 
         let date_str = video.metadata.date.format("%Y-%m-%d").to_string();
         let url_str = video.metadata.url.as_str();
@@ -261,7 +261,7 @@ impl Repository {
 
     /// Inserts a new podcast episode
     pub async fn insert_podcast_episode(&self, episode: &NewPodcastEpisode) -> Result<i64> {
-        log::debug!("Inserting podcast episode: {}", episode.metadata.url);
+        tracing::debug!("Inserting podcast episode: {}", episode.metadata.url);
 
         let date_str = episode.metadata.date.format("%Y-%m-%d").to_string();
         let url_str = episode.metadata.url.as_str();
@@ -309,7 +309,7 @@ impl Repository {
 
     /// Inserts a new research paper
     pub async fn insert_research_paper(&self, paper: &types::NewResearchPaper) -> Result<i64> {
-        log::debug!("Inserting research paper: {}", paper.metadata.url);
+        tracing::debug!("Inserting research paper: {}", paper.metadata.url);
 
         let date_str = paper.metadata.date.format("%Y-%m-%d").to_string();
         let url_str = paper.metadata.url.as_str();
@@ -414,7 +414,7 @@ impl Repository {
 
     /// Inserts or updates a talk in the database
     pub async fn insert_talk(&self, talk: &NewTalk) -> Result<i64> {
-        log::debug!("Inserting talk: {}", talk.website_url);
+        tracing::debug!("Inserting talk: {}", talk.website_url);
 
         let date_str = talk.date.format("%Y-%m-%d").to_string();
         let url_str = talk.website_url.as_str();
@@ -505,7 +505,7 @@ impl Repository {
 
     /// Inserts or updates a speaker in the database, returning the speaker ID
     pub async fn upsert_speaker(&self, speaker: &NewSpeaker) -> Result<i64> {
-        log::debug!("Upserting speaker: {}", speaker.name);
+        tracing::debug!("Upserting speaker: {}", speaker.name);
 
         let speaker_id: i64 = sqlx::query_scalar(
             r#"

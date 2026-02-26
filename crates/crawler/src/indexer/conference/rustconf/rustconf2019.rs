@@ -5,9 +5,9 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info};
 use scraper::Html;
 use std::sync::LazyLock;
+use tracing::{debug, info};
 use types::{NewSpeaker, NewTalk, Url};
 use url::Url as UrlLib;
 

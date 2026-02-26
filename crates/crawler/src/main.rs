@@ -10,10 +10,11 @@ use clap::{Parser, ValueEnum};
 use crawler::indexer::{self, Indexer};
 use crawler::paths;
 use crawler::tools::browser::Browser;
-use log::info;
 use std::env;
 use std::fs;
 use storage::Repository;
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 /// Command line arguments for the crawler
 #[derive(Parser, Debug)]
@@ -98,7 +99,12 @@ fn create_conference_indexer() -> Result<Box<dyn Indexer>> {
 #[tokio::main]
 pub async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
-    env_logger::init();
+
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
     let args = Args::parse();
 
     create_output_directories()?;
@@ -122,7 +128,7 @@ pub async fn main() -> Result<()> {
     let name = indexer.name();
     info!("Starting indexer: {name}");
     if let Err(e) = indexer.index(&repo).await {
-        log::error!("Indexer {name} failed: {e}");
+        tracing::error!("Indexer {name} failed: {e}");
     } else {
         info!("Indexer {name} completed successfully.");
     }

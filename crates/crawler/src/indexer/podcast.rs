@@ -13,10 +13,10 @@ use super::Indexer;
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use log::{debug, info, warn};
 use reqwest::header;
 use srtparse;
 use storage::Repository;
+use tracing::{debug, info, warn};
 use types::{Metadata, PodcastEpisodeData, Url};
 use vtt::WebVtt;
 

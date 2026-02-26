@@ -65,8 +65,8 @@ use std::sync::LazyLock;
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info};
 use scraper::Html;
+use tracing::{debug, info};
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{ConferenceMetadata, ParsedTalk, ScheduleParser, static_url};
@@ -170,7 +170,7 @@ impl ScheduleParser for RustWeek2025 {
                     }
                 }
                 Err(e) => {
-                    log::warn!("Failed to fetch talk detail page {}: {}", entry.url, e);
+                    tracing::warn!("Failed to fetch talk detail page {}: {}", entry.url, e);
                     if let Some(parsed) = entry.to_fallback_talk() {
                         talks.push(parsed);
                     }

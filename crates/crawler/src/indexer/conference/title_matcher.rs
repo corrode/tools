@@ -240,7 +240,7 @@ impl TitleMatcher {
         let title_lower = stripped_title.to_lowercase();
         let is_keynote_search = title.to_lowercase().contains("keynote");
 
-        log::debug!(
+        tracing::debug!(
             "YouTube title match lookup for '{}': cleaned='{}'",
             title,
             clean_search
@@ -340,7 +340,7 @@ impl TitleMatcher {
         if best_score >= self.config.threshold
             && let Some(item) = best_item
         {
-            log::debug!(
+            tracing::debug!(
                 "YouTube title fuzzy match for '{}': '{}' (score {:.2})",
                 title,
                 item.title,
@@ -349,7 +349,7 @@ impl TitleMatcher {
             return Some(MatchResult { item });
         }
 
-        log::debug!(
+        tracing::debug!(
             "YouTube title match not found for '{}'; best score {:.2}",
             title,
             best_score
