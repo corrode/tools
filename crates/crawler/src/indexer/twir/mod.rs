@@ -302,7 +302,9 @@ impl Indexer for Twir {
                 let crawl_result = if let Err(ref e) = crawl_result {
                     let err_msg = e.to_string();
                     if err_msg.contains("connection is closed") || err_msg.contains("Connection") {
-                        tracing::warn!("Browser connection closed, recreating browser and retrying...");
+                        tracing::warn!(
+                            "Browser connection closed, recreating browser and retrying..."
+                        );
                         match Browser::new(self.debug) {
                             Ok(b) => {
                                 self.browser = b;
