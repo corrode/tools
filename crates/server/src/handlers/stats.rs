@@ -1,6 +1,5 @@
-use anyhow::Result;
 use askama::Template;
-use axum::{extract::State, response::Html};
+use axum::{extract::State, http::HeaderMap, response::Html};
 use charming::{
     Chart,
     component::{Axis, Grid, Title},
@@ -21,8 +20,16 @@ struct StatsTemplate {
 
 /// Handler for the stats page
 pub(crate) async fn stats(
+    headers: HeaderMap,
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, axum::http::StatusCode> {
+    let referer = headers
+        .get(axum::http::header::REFERER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-");
+
+    tracing::info!(referer, "Stats page viewed");
+
     let stats = repo
         .get_stats()
         .await

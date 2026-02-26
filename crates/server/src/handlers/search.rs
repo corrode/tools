@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use storage::{Repository, SearchRequest};
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Research, Talk, Video};
 use types::{ContentType, Quote};
@@ -62,6 +62,10 @@ pub(crate) async fn search(
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, StatusCode> {
     let start = Instant::now();
+    let referer = headers
+        .get(axum::http::header::REFERER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-");
 
     let defaults = SearchDefaults::new(1900, 2050);
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
@@ -76,9 +80,14 @@ pub(crate) async fn search(
     // Check if query is provided and not empty/whitespace-only
     let (raw_results, results_count) = if params.has_query_terms() || params.has_filters() {
         let request = SearchRequest { params: &params };
-        repo.search(&request)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        repo.search(&request).await.map_err(|e| {
+            error!(
+                query = ?raw_params.q,
+                error = %e,
+                "Search query failed"
+            );
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
     } else {
         (vec![], 0)
     };
@@ -94,8 +103,25 @@ pub(crate) async fn search(
         end_year = ?raw_params.end_year,
         results = results_count,
         duration_ms = elapsed.as_millis() as u64,
+        referer,
         "Search request"
     );
+
+    if results_count == 0 && params.has_query_terms() {
+        warn!(
+            query = ?raw_params.q,
+            content_type = ?raw_params.content_type,
+            "Zero results"
+        );
+    }
+
+    if params.page >= 5 {
+        info!(
+            query = ?raw_params.q,
+            page = params.page,
+            "Deep pagination"
+        );
+    }
 
     // Partition results into videos and articles
     let page_count = raw_results.len();
