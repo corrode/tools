@@ -5,8 +5,10 @@ use axum::{
     response::Html,
 };
 use std::sync::Arc;
+use std::time::Instant;
 
 use storage::{Repository, SearchRequest};
+use tracing::{info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Research, Talk, Video};
 use types::{ContentType, Quote};
@@ -59,9 +61,17 @@ pub(crate) async fn search(
     Query(raw_params): Query<RawParams>,
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, StatusCode> {
+    let start = Instant::now();
+
     let defaults = SearchDefaults::new(1900, 2050);
-    let params =
-        Params::try_from((raw_params.clone(), defaults)).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
+        warn!(
+            query = ?raw_params.q,
+            error = %e,
+            "Invalid search params"
+        );
+        StatusCode::BAD_REQUEST
+    })?;
 
     // Check if query is provided and not empty/whitespace-only
     let (raw_results, results_count) = if params.has_query_terms() || params.has_filters() {
@@ -72,6 +82,20 @@ pub(crate) async fn search(
     } else {
         (vec![], 0)
     };
+
+    let elapsed = start.elapsed();
+
+    info!(
+        query = ?raw_params.q,
+        page = params.page,
+        content_type = ?raw_params.content_type,
+        sort_by = ?raw_params.sort_by,
+        start_year = ?raw_params.start_year,
+        end_year = ?raw_params.end_year,
+        results = results_count,
+        duration_ms = elapsed.as_millis() as u64,
+        "Search request"
+    );
 
     // Partition results into videos and articles
     let page_count = raw_results.len();
