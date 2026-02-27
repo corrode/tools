@@ -134,6 +134,7 @@ impl Repository {
 
     /// Initializes the database schema
     async fn init_db(&self) -> Result<()> {
+        tracing::info!("Running database migrations");
         sqlx::migrate!("../../migrations").run(&self.pool).await?;
 
         Ok(())
