@@ -16,35 +16,17 @@ use std::str::FromStr;
 
 /// The tracing target used to mark events for persistence into SQLite.
 ///
-/// This is a single-variant enum rather than a bare `&str` constant so that
-/// the compiler prevents typos — you can only pass the one canonical value.
+/// Any `tracing` event emitted with `target: MONITORING_TARGET` is captured
+/// by the `SqliteLayer` and batch-inserted into the `events` table.
+/// All other events are ignored by the layer (but still reach `fmt`/stdout).
 ///
 /// # Usage
 ///
 /// ```ignore
-/// tracing::info!(target: TracingTarget::Monitoring.as_str(), "Search request");
+/// use types::monitoring::MONITORING_TARGET;
+/// tracing::info!(target: MONITORING_TARGET, "Search request");
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum TracingTarget {
-    /// Events persisted to the `events` table for the monitoring dashboard.
-    Monitoring,
-}
-
-impl TracingTarget {
-    /// Return the target string expected by the `SqliteLayer` filter.
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Monitoring => "monitoring",
-        }
-    }
-}
-
-impl fmt::Display for TracingTarget {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
+pub const MONITORING_TARGET: &str = "monitoring";
 
 /// Log level for a monitoring event.
 ///

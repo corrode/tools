@@ -9,12 +9,10 @@ use std::time::Instant;
 
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
-use types::monitoring::TracingTarget;
+use types::monitoring::MONITORING_TARGET;
 use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Research, Talk, Video};
 use types::{ContentType, Quote};
-
-const MONITORING: &str = TracingTarget::Monitoring.as_str();
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -73,7 +71,7 @@ pub(crate) async fn search(
     let defaults = SearchDefaults::new(1900, 2050);
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
         warn!(
-            target: MONITORING,
+            target: MONITORING_TARGET,
             query = ?raw_params.q,
             error = %e,
             "Invalid search params"
@@ -86,7 +84,7 @@ pub(crate) async fn search(
         let request = SearchRequest { params: &params };
         repo.search(&request).await.map_err(|e| {
             error!(
-                target: MONITORING,
+                target: MONITORING_TARGET,
                 query = ?raw_params.q,
                 error = %e,
                 "Search query failed"
@@ -101,7 +99,7 @@ pub(crate) async fn search(
 
     if params.has_query_terms() {
         info!(
-            target: MONITORING,
+            target: MONITORING_TARGET,
             query = ?raw_params.q,
             page = params.page,
             content_type = ?raw_params.content_type,
@@ -117,7 +115,7 @@ pub(crate) async fn search(
 
     if results_count == 0 && params.has_query_terms() {
         warn!(
-            target: MONITORING,
+            target: MONITORING_TARGET,
             query = ?raw_params.q,
             content_type = ?raw_params.content_type,
             "Zero results"
@@ -126,7 +124,7 @@ pub(crate) async fn search(
 
     if params.page >= 5 {
         info!(
-            target: MONITORING,
+            target: MONITORING_TARGET,
             query = ?raw_params.q,
             page = params.page,
             "Deep pagination"

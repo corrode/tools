@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use storage::Repository;
 use types::Stats;
-use types::monitoring::TracingTarget;
-
-const MONITORING: &str = TracingTarget::Monitoring.as_str();
+use types::monitoring::MONITORING_TARGET;
 
 #[derive(Template)]
 #[template(path = "stats.html")]
@@ -31,7 +29,7 @@ pub(crate) async fn stats(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("-");
 
-    tracing::info!(target: MONITORING, referer, "Stats page viewed");
+    tracing::info!(target: MONITORING_TARGET, referer, "Stats page viewed");
 
     let stats = repo
         .get_stats()
