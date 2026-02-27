@@ -6,7 +6,7 @@
 -- Step 1: Create events table
 CREATE TABLE IF NOT EXISTS events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    timestamp  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
     level      TEXT    NOT NULL,            -- 'INFO', 'WARN', 'ERROR'
     message    TEXT    NOT NULL DEFAULT '',  -- e.g. 'Search request', 'Zero results'
     fields     TEXT    NOT NULL DEFAULT '{}' -- JSON blob of structured fields
