@@ -30,13 +30,13 @@ url = { workspace = true }
 urlnorm = "0.1"
 dotenvy = "0.15.7"
 ytt = "1.1.0"
-feedparser-rs = "0.4.3"
+feedparser-rs = "0.4.5"
 vtt = "1.0"
 tempfile.workspace = true
 srtparse = "0.3.0"
-quick-xml = { version = "0.36", features = ["serialize"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
 strsim = "0.11"
 
 [dev-dependencies]
 tempfile = { workspace = true }
-rstest = "0.24"
+rstest = "0.26"

@@ -46,7 +46,7 @@ exhaustive_structs = "deny"
 single_match_else = "deny"
 
 [workspace.dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.102"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
@@ -64,30 +64,24 @@ sqlx = { version = "0.8", features = [
     "sqlite",
     "migrate",
 ] }
-pulldown-cmark = "0.12.2"
-regex = "1.12.2"
-tempfile = "3.24.0"
+pulldown-cmark = "0.13.1"
+regex = "1.12.3"
+tempfile = "3.26.0"
 
 # Crawler
 clap = { version = "4.5", features = ["derive"] }
-dom_smoothie = "0.14"
-headless_chrome = "1.0.20"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
-scraper = "0.20"
+dom_smoothie = "0.15"
+headless_chrome = "1.0.21"
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
+scraper = "0.25"
 indoc = "2.0.7"
 
 # Server
-axum = "0.7.9"
-askama_axum = "0.4.0"
+axum = "0.8.8"
 tower-http = { version = "0.6", features = ["fs"] }
-askama = { version = "0.12.1", features = [
-    "serde",
-    "serde-json",
-    "with-axum",
-    "markdown",
-] }
-charming = "0.3"
-strum = { version = "0.26", features = ["derive"] }
+askama = { version = "0.15.4" }
+charming = "0.6"
+strum = { version = "0.28", features = ["derive"] }
 
 # Internal
 types = { path = "crates/types" }
