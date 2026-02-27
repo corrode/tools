@@ -108,6 +108,14 @@ impl Repository {
     /// Number of results per page
     pub const RESULTS_PER_PAGE: u32 = 20;
 
+    /// Returns a reference to the underlying SQLite connection pool.
+    ///
+    /// This is used by the monitoring [`SqliteLayer`] which needs its own
+    /// handle to the same database for batch-inserting tracing events.
+    pub fn pool(&self) -> &Pool<Sqlite> {
+        &self.pool
+    }
+
     /// Creates a new repository instance.
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
