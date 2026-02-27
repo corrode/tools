@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
-use types::monitoring::MONITORING_TARGET;
+use types::monitoring::MONITORING;
 use types::params::{Params, RawParams, SearchDefaults};
 use types::search_result::{Article, Podcast, Research, Talk, Video};
 use types::{ContentType, Quote};
@@ -71,7 +71,7 @@ pub(crate) async fn search(
     let defaults = SearchDefaults::new(1900, 2050);
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
         warn!(
-            target: MONITORING_TARGET,
+            target: MONITORING,
             query = ?raw_params.q,
             error = %e,
             "Invalid search params"
@@ -84,7 +84,7 @@ pub(crate) async fn search(
         let request = SearchRequest { params: &params };
         repo.search(&request).await.map_err(|e| {
             error!(
-                target: MONITORING_TARGET,
+                target: MONITORING,
                 query = ?raw_params.q,
                 error = %e,
                 "Search query failed"
@@ -99,7 +99,7 @@ pub(crate) async fn search(
 
     if params.has_query_terms() {
         info!(
-            target: MONITORING_TARGET,
+            target: MONITORING,
             query = ?raw_params.q,
             page = params.page,
             content_type = ?raw_params.content_type,
@@ -115,7 +115,7 @@ pub(crate) async fn search(
 
     if results_count == 0 && params.has_query_terms() {
         warn!(
-            target: MONITORING_TARGET,
+            target: MONITORING,
             query = ?raw_params.q,
             content_type = ?raw_params.content_type,
             "Zero results"
@@ -124,7 +124,7 @@ pub(crate) async fn search(
 
     if params.page >= 5 {
         info!(
-            target: MONITORING_TARGET,
+            target: MONITORING,
             query = ?raw_params.q,
             page = params.page,
             "Deep pagination"

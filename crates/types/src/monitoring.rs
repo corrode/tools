@@ -26,7 +26,7 @@ use std::str::FromStr;
 /// use types::monitoring::MONITORING_TARGET;
 /// tracing::info!(target: MONITORING_TARGET, "Search request");
 /// ```
-pub const MONITORING_TARGET: &str = "monitoring";
+pub const MONITORING: &str = "monitoring";
 
 /// Log level for a monitoring event.
 ///

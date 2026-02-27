@@ -18,7 +18,7 @@ use tracing::Subscriber;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::Context;
-use types::monitoring::MONITORING_TARGET;
+use types::monitoring::MONITORING;
 
 /// Channel capacity — large enough to absorb short bursts without dropping
 /// events, small enough to bound memory usage.
@@ -176,7 +176,7 @@ where
         let meta = event.metadata();
 
         // The ONE filter: only persist events explicitly opted in.
-        if meta.target() != MONITORING_TARGET {
+        if meta.target() != MONITORING {
             return;
         }
 
