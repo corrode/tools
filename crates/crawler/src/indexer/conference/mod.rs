@@ -128,15 +128,28 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(rustweek::RustNL2024),
         Box::new(rustweek::RustNL2023),
         // FOSDEM Rust devroom editions
+        Box::new(fosdem::FOSDEM2018),
+        Box::new(fosdem::FOSDEM2019),
+        Box::new(fosdem::FOSDEM2020),
+        Box::new(fosdem::FOSDEM2021),
+        Box::new(fosdem::FOSDEM2022),
+        Box::new(fosdem::FOSDEM2023),
         Box::new(fosdem::FOSDEM2024),
+        Box::new(fosdem::FOSDEM2025),
         // Oxidize editions
-        Box::new(oxidize::Oxidize2024),
+        Box::new(oxidize::Oxidize2025),
         // RustFest editions
+        Box::new(rustfest::RustFest2016),
+        Box::new(rustfest::RustFest2017Kyiv),
+        Box::new(rustfest::RustFest2017Zurich),
+        Box::new(rustfest::RustFest2018Paris),
+        Box::new(rustfest::RustFest2018Rome),
+        Box::new(rustfest::RustFest2019),
         Box::new(rustfest::RustFest2024),
         // RustLab editions
-        Box::new(rustlab::RustLab2024),
+        Box::new(rustlab::RustLab2026),
         // RustNation editions
-        Box::new(rustnation::RustNation2024),
+        Box::new(rustnation::RustNation2026),
     ]
 }
 
