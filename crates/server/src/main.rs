@@ -9,7 +9,7 @@ use anyhow::Result;
 mod handlers;
 mod tracing_layer;
 
-use axum::{Router, routing::get};
+use axum::{Router, middleware, routing::get};
 use storage::Repository;
 use tower_http::services::ServeDir;
 use tracing_subscriber::layer::SubscriberExt;
@@ -41,11 +41,24 @@ async fn main() -> Result<()> {
     // Spawn the background drain task that batch-INSERTs monitoring events.
     tokio::spawn(drain_task);
 
+    let monitoring_authed = Router::new()
+        .route("/", get(handlers::monitoring::dashboard))
+        .route("/queries", get(handlers::monitoring::queries))
+        .route_layer(middleware::from_fn(
+            handlers::monitoring::require_monitoring_token,
+        ));
+
+    let monitoring_routes = Router::new()
+        .route("/login", get(handlers::monitoring::login))
+        .merge(monitoring_authed)
+        .with_state(repo.clone());
+
     let app = Router::new()
         .route("/", get(handlers::index))
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
+        .nest("/monitoring", monitoring_routes)
         .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);

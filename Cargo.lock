@@ -3342,6 +3342,7 @@ dependencies = [
  "tracing-subscriber",
  "types",
  "url",
+ "urlencoding",
 ]
 
 [[package]]

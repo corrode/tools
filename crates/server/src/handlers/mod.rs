@@ -1,4 +1,5 @@
 mod index;
+pub(crate) mod monitoring;
 mod search;
 mod stats;
 

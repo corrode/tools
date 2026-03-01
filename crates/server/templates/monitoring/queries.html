@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Query Log - Monitoring - Rust Search</title>
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <style>
+            .monitoring-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 1rem 2rem 2rem;
+            }
+            .monitoring-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 1.5rem;
+            }
+            .monitoring-header h1 {
+                font-size: 1.5rem;
+                margin: 0;
+                color: var(--color-text, #e0e0e0);
+            }
+            .monitoring-nav {
+                display: flex;
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+            .monitoring-nav a {
+                color: var(--color-primary, #ff6b35);
+                text-decoration: none;
+            }
+            .monitoring-nav a:hover {
+                text-decoration: underline;
+            }
+
+            /* Search form */
+            .search-form {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 1.5rem;
+            }
+            .search-form input[type="text"] {
+                flex: 1;
+                padding: 0.5rem 0.75rem;
+                border: 1px solid var(--color-border, #333);
+                border-radius: 6px;
+                background: var(--color-surface, #1a1a2e);
+                color: var(--color-text, #e0e0e0);
+                font-size: 0.9rem;
+            }
+            .search-form input[type="text"]::placeholder {
+                color: var(--color-text-muted, #666);
+            }
+            .search-form input[type="text"]:focus {
+                outline: none;
+                border-color: var(--color-primary, #ff6b35);
+            }
+            .search-form button {
+                padding: 0.5rem 1rem;
+                border: 1px solid var(--color-border, #333);
+                border-radius: 6px;
+                background: var(--color-primary, #ff6b35);
+                color: #fff;
+                font-size: 0.9rem;
+                cursor: pointer;
+            }
+            .search-form button:hover {
+                opacity: 0.9;
+            }
+
+            /* Summary */
+            .summary {
+                font-size: 0.85rem;
+                color: var(--color-text-muted, #999);
+                margin-bottom: 0.75rem;
+            }
+
+            /* Table */
+            .data-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: var(--color-surface, #1a1a2e);
+                border: 1px solid var(--color-border, #333);
+                border-radius: 8px;
+                overflow: hidden;
+                font-size: 0.85rem;
+            }
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem 0.75rem;
+                text-align: left;
+                border-bottom: 1px solid var(--color-border, #333);
+            }
+            .data-table th {
+                background: rgba(255, 255, 255, 0.03);
+                color: var(--color-text-muted, #999);
+                font-weight: 600;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .data-table td {
+                color: var(--color-text, #e0e0e0);
+            }
+            .data-table tr:last-child td {
+                border-bottom: none;
+            }
+            .data-table .num {
+                text-align: right;
+                font-variant-numeric: tabular-nums;
+            }
+            .data-table .query-text {
+                max-width: 350px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .data-table .timestamp {
+                white-space: nowrap;
+                font-size: 0.8rem;
+                color: var(--color-text-muted, #999);
+            }
+
+            /* Pagination */
+            .pagination {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 1rem;
+                margin-top: 1.25rem;
+                font-size: 0.9rem;
+            }
+            .pagination a {
+                color: var(--color-primary, #ff6b35);
+                text-decoration: none;
+                padding: 0.3rem 0.75rem;
+                border: 1px solid var(--color-border, #333);
+                border-radius: 4px;
+                background: var(--color-surface, #1a1a2e);
+            }
+            .pagination a:hover {
+                border-color: var(--color-primary, #ff6b35);
+            }
+            .pagination .page-info {
+                color: var(--color-text-muted, #999);
+            }
+
+            .empty-state {
+                color: var(--color-text-muted, #999);
+                text-align: center;
+                padding: 3rem;
+                font-style: italic;
+            }
+            footer {
+                text-align: center;
+                padding: 1rem;
+                color: var(--color-text-muted, #999);
+                font-size: 0.8rem;
+            }
+            footer a {
+                color: var(--color-primary, #ff6b35);
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="monitoring-container">
+            <div class="monitoring-header">
+                <h1>Query Log</h1>
+                <nav class="monitoring-nav">
+                    <a href="/monitoring/">Dashboard</a>
+                    <a href="/">← Back to Search</a>
+                </nav>
+            </div>
+
+            <!-- Search form -->
+            <form class="search-form" method="GET" action="/monitoring/queries">
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search queries…"
+                    value="{% match search %}{% when Some with (s) %}{{ s }}{% when None %}{% endmatch %}"
+                    autocomplete="off"
+                />
+                <button type="submit">Search</button>
+            </form>
+
+            <div id="query-results">
+                {% include "monitoring/queries_partial.html" %}
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="https://corrode.dev">corrode</a></p>
+        </footer>
+    </body>
+</html>

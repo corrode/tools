@@ -103,6 +103,25 @@ pub struct EventRow {
     pub fields: String,
 }
 
+impl EventRow {
+    /// Create a new event row.
+    pub fn new(
+        id: i64,
+        timestamp: NaiveDateTime,
+        level: Level,
+        message: String,
+        fields: String,
+    ) -> Self {
+        Self {
+            id,
+            timestamp,
+            level,
+            message,
+            fields,
+        }
+    }
+}
+
 /// A row from the `search_queries` SQL view.
 ///
 /// This view extracts typed columns from the generic `events` table
@@ -140,6 +159,38 @@ pub struct SearchQueryRow {
     pub end_year: Option<i32>,
 }
 
+impl SearchQueryRow {
+    /// Create a new search query row.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        id: i64,
+        timestamp: NaiveDateTime,
+        query: String,
+        result_count: i64,
+        latency_ms: i64,
+        page: i64,
+        referer: String,
+        content_type: Option<String>,
+        sort_by: Option<String>,
+        start_year: Option<i32>,
+        end_year: Option<i32>,
+    ) -> Self {
+        Self {
+            id,
+            timestamp,
+            query,
+            result_count,
+            latency_ms,
+            page,
+            referer,
+            content_type,
+            sort_by,
+            start_year,
+            end_year,
+        }
+    }
+}
+
 /// Aggregate statistics for the monitoring dashboard gauges.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -164,6 +215,34 @@ pub struct QueryStats {
     pub error_count_last_hour: i64,
 }
 
+impl QueryStats {
+    /// Create a new set of query statistics.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        total_queries: i64,
+        queries_last_hour: i64,
+        queries_last_24h: i64,
+        avg_latency_ms: f64,
+        p50_latency_ms: i64,
+        p99_latency_ms: i64,
+        avg_result_count: f64,
+        zero_result_rate: f64,
+        error_count_last_hour: i64,
+    ) -> Self {
+        Self {
+            total_queries,
+            queries_last_hour,
+            queries_last_24h,
+            avg_latency_ms,
+            p50_latency_ms,
+            p99_latency_ms,
+            avg_result_count,
+            zero_result_rate,
+            error_count_last_hour,
+        }
+    }
+}
+
 /// A frequently-occurring query and its aggregate counts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -176,6 +255,17 @@ pub struct TopQuery {
     pub avg_result_count: f64,
 }
 
+impl TopQuery {
+    /// Create a new top-query entry.
+    pub fn new(query: String, count: i64, avg_result_count: f64) -> Self {
+        Self {
+            query,
+            count,
+            avg_result_count,
+        }
+    }
+}
+
 /// A single bucket in an hourly histogram.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -186,6 +276,13 @@ pub struct HourBucket {
     pub count: i64,
 }
 
+impl HourBucket {
+    /// Create a new hourly bucket.
+    pub fn new(hour: String, count: i64) -> Self {
+        Self { hour, count }
+    }
+}
+
 /// A single bucket in a daily histogram.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -194,4 +291,11 @@ pub struct DayBucket {
     pub day: String,
     /// Number of events on this day.
     pub count: i64,
+}
+
+impl DayBucket {
+    /// Create a new daily bucket.
+    pub fn new(day: String, count: i64) -> Self {
+        Self { day, count }
+    }
 }

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Monitoring Dashboard - Rust Search</title>
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <style>
+            .monitoring-container {
+                max-width: 1200px;
+                min-width: 900px;
+                margin: 0 auto;
+                padding: 1rem 2rem 2rem;
+            }
+            .monitoring-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 1.5rem;
+            }
+            .monitoring-header h1 {
+                font-size: 1.5rem;
+                margin: 0;
+                color: var(--color-text, #e0e0e0);
+            }
+            .monitoring-nav {
+                display: flex;
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+            .monitoring-nav a {
+                color: var(--color-primary, #ff6b35);
+                text-decoration: none;
+            }
+            .monitoring-nav a:hover {
+                text-decoration: underline;
+            }
+
+            /* Gauge cards */
+            .gauge-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+            .gauge-card {
+                background: var(--color-surface, #1a1a2e);
+                border: 1px solid var(--color-border, #333);
+                border-radius: 8px;
+                padding: 1rem;
+                text-align: center;
+            }
+            .gauge-value {
+                font-size: 1.8rem;
+                font-weight: 700;
+                color: var(--color-primary, #ff6b35);
+                line-height: 1.2;
+            }
+            .gauge-value.warn {
+                color: #e6a23c;
+            }
+            .gauge-value.error {
+                color: #f56c6c;
+            }
+            .gauge-label {
+                font-size: 0.8rem;
+                color: var(--color-text-muted, #999);
+                margin-top: 0.3rem;
+            }
+
+            /* Charts */
+            .chart-section {
+                margin-bottom: 2rem;
+            }
+            .chart-container {
+                background: var(--color-surface, #1a1a2e);
+                border: 1px solid var(--color-border, #333);
+                border-radius: 8px;
+                padding: 1rem;
+                height: 300px;
+            }
+            .chart-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+            @media (max-width: 768px) {
+                .chart-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Tables */
+            .table-section {
+                margin-bottom: 2rem;
+            }
+            .table-section h2 {
+                font-size: 1.1rem;
+                color: var(--color-text, #e0e0e0);
+                margin-bottom: 0.75rem;
+            }
+            .data-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: var(--color-surface, #1a1a2e);
+                border: 1px solid var(--color-border, #333);
+                border-radius: 8px;
+                overflow: hidden;
+                font-size: 0.85rem;
+            }
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem 0.75rem;
+                text-align: left;
+                border-bottom: 1px solid var(--color-border, #333);
+            }
+            .data-table th {
+                background: rgba(255, 255, 255, 0.03);
+                color: var(--color-text-muted, #999);
+                font-weight: 600;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .data-table td {
+                color: var(--color-text, #e0e0e0);
+            }
+            .data-table tr:last-child td {
+                border-bottom: none;
+            }
+            .data-table .num {
+                text-align: right;
+                font-variant-numeric: tabular-nums;
+            }
+            .data-table .query-text {
+                max-width: 400px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .table-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+            @media (max-width: 768px) {
+                .table-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .empty-state {
+                color: var(--color-text-muted, #999);
+                text-align: center;
+                padding: 2rem;
+                font-style: italic;
+            }
+            footer {
+                text-align: center;
+                padding: 1rem;
+                color: var(--color-text-muted, #999);
+                font-size: 0.8rem;
+            }
+            footer a {
+                color: var(--color-primary, #ff6b35);
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="monitoring-container">
+            <div class="monitoring-header">
+                <h1>Dashboard</h1>
+                <nav class="monitoring-nav">
+                    <a href="/monitoring/queries">Query Log</a>
+                    <a href="/">← Back to Search</a>
+                </nav>
+            </div>
+
+            <!-- Gauge cards -->
+            <div class="gauge-grid">
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-total">
+                        {{ stats.total_queries }}
+                    </div>
+                    <div class="gauge-label">Total Queries</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-hour">
+                        {{ stats.queries_last_hour }}
+                    </div>
+                    <div class="gauge-label">Queries / Hour</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-24h">
+                        {{ stats.queries_last_24h }}
+                    </div>
+                    <div class="gauge-label">Queries / 24h</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-avg-latency">
+                        {{ "{:.1}"|format(stats.avg_latency_ms) }}
+                    </div>
+                    <div class="gauge-label">Avg Latency (ms)</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-p50">
+                        {{ stats.p50_latency_ms }}
+                    </div>
+                    <div class="gauge-label">p50 Latency (ms)</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value warn" id="gauge-p99">
+                        {{ stats.p99_latency_ms }}
+                    </div>
+                    <div class="gauge-label">p99 Latency (ms)</div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-value" id="gauge-zero-rate">
+                        {{ "{:.1}"|format(stats.zero_result_rate * 100.0) }}%
+                    </div>
+                    <div class="gauge-label">Zero-Result Rate</div>
+                </div>
+                <div class="gauge-card">
+                    <div
+                        class="gauge-value{% if stats.error_count_last_hour > 0 %} error{% endif %}"
+                        id="gauge-errors"
+                    >
+                        {{ stats.error_count_last_hour }}
+                    </div>
+                    <div class="gauge-label">Errors / Hour</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-section">
+                <div class="chart-row">
+                    <div class="chart-container" id="hourly-chart"></div>
+                    <div class="chart-container" id="daily-chart"></div>
+                </div>
+            </div>
+
+            <!-- Tables -->
+            <div class="table-section">
+                <div class="table-row">
+                    <div>
+                        <h2>Top Queries</h2>
+                        {% if top_queries.is_empty() %}
+                        <div class="empty-state">No queries recorded yet.</div>
+                        {% else %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Query</th>
+                                    <th class="num">Count</th>
+                                    <th class="num">Avg Results</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for q in top_queries %}
+                                <tr>
+                                    <td class="num">{{ loop.index }}</td>
+                                    <td
+                                        class="query-text"
+                                        title="{{ q.query }}"
+                                    >
+                                        {{ q.query }}
+                                    </td>
+                                    <td class="num">{{ q.count }}</td>
+                                    <td class="num">
+                                        {{ "{:.1}"|format(q.avg_result_count) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2>Zero-Result Queries</h2>
+                        {% if zero_result_queries.is_empty() %}
+                        <div class="empty-state">
+                            No zero-result queries found.
+                        </div>
+                        {% else %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Query</th>
+                                    <th class="num">Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for q in zero_result_queries %}
+                                <tr>
+                                    <td class="num">{{ loop.index }}</td>
+                                    <td
+                                        class="query-text"
+                                        title="{{ q.query }}"
+                                    >
+                                        {{ q.query }}
+                                    </td>
+                                    <td class="num">{{ q.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="https://corrode.dev">corrode</a></p>
+        </footer>
+
+        <!-- ECharts Library -->
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Initialize hourly chart
+                var hourlyDom = document.getElementById("hourly-chart");
+                if (hourlyDom && window.echarts) {
+                    var hourlyChart = echarts.init(hourlyDom);
+                    var hourlyOption = {{ hourly_chart_json|safe }};
+                    hourlyChart.setOption(hourlyOption);
+                    window.addEventListener("resize", function () {
+                        hourlyChart.resize();
+                    });
+                }
+
+                // Initialize daily chart
+                var dailyDom = document.getElementById("daily-chart");
+                if (dailyDom && window.echarts) {
+                    var dailyChart = echarts.init(dailyDom);
+                    var dailyOption = {{ daily_chart_json|safe }};
+                    dailyChart.setOption(dailyOption);
+                    window.addEventListener("resize", function () {
+                        dailyChart.resize();
+                    });
+                }
+
+
+            });
+        </script>
+    </body>
+</html>
