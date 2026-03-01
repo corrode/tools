@@ -15,14 +15,12 @@
 //! the environment variable is not set.
 
 use axum::{
-    extract::Request,
+    extract::{Extension, Request},
     http::{HeaderMap, StatusCode, header},
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
 
-/// The environment variable that holds the expected monitoring token.
-const ENV_VAR: &str = "MONITORING_TOKEN";
 
 /// Name of the session cookie.
 const COOKIE_NAME: &str = "monitoring_session";
@@ -34,13 +32,10 @@ const COOKIE_NAME: &str = "monitoring_session";
 /// router's `route_layer`.
 pub(crate) async fn require_monitoring_token(
     headers: HeaderMap,
+    Extension(expected): Extension<String>,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    let expected = std::env::var(ENV_VAR).map_err(|_| {
-        eprintln!("monitoring: {ENV_VAR} environment variable is not set");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
 
     let provided = token_from_cookie(&headers)
         .or_else(|| token_from_header(&headers))
@@ -62,11 +57,11 @@ pub(crate) async fn require_monitoring_token(
 /// ```
 ///
 /// If the token is wrong or missing, returns `401`.
-pub(crate) async fn login(headers: HeaderMap, request: Request) -> Result<Response, StatusCode> {
-    let expected = std::env::var(ENV_VAR).map_err(|_| {
-        eprintln!("monitoring: {ENV_VAR} environment variable is not set");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+pub(crate) async fn login(
+    headers: HeaderMap,
+    Extension(expected): Extension<String>,
+    request: Request,
+) -> Result<Response, StatusCode> {
 
     // Accept token from query param, header, or existing cookie
     let provided = token_from_query(&request)

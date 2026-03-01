@@ -4,7 +4,7 @@
 //! It provides a web interface for searching through content, such as articles
 //! from 'This Week in Rust'.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 mod handlers;
 mod tracing_layer;
@@ -12,7 +12,9 @@ mod tracing_layer;
 use axum::{Router, middleware, routing::get};
 use storage::Repository;
 use tower_http::services::ServeDir;
+use tracing_subscriber::Layer;
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::filter::{Targets, LevelFilter};
 use tracing_subscriber::util::SubscriberInitExt;
 
 use std::sync::Arc;
@@ -35,11 +37,16 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer())
-        .with(sqlite_layer)
+        .with(sqlite_layer.with_filter(
+            Targets::new().with_target("monitoring", LevelFilter::INFO)
+        ))
         .init();
 
     // Spawn the background drain task that batch-INSERTs monitoring events.
     tokio::spawn(drain_task);
+
+    let monitoring_token = std::env::var("MONITORING_TOKEN")
+        .context("MONITORING_TOKEN environment variable must be set")?;
 
     let monitoring_authed = Router::new()
         .route("/", get(handlers::monitoring::dashboard))
@@ -51,6 +58,7 @@ async fn main() -> Result<()> {
     let monitoring_routes = Router::new()
         .route("/login", get(handlers::monitoring::login))
         .merge(monitoring_authed)
+        .layer(axum::Extension(monitoring_token))
         .with_state(repo.clone());
 
     let app = Router::new()

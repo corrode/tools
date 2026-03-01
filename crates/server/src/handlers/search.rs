@@ -72,7 +72,7 @@ pub(crate) async fn search(
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
         warn!(
             target: MONITORING,
-            query = ?raw_params.q,
+            query = raw_params.q,
             error = %e,
             "Invalid search params"
         );
@@ -85,7 +85,7 @@ pub(crate) async fn search(
         repo.search(&request).await.map_err(|e| {
             error!(
                 target: MONITORING,
-                query = ?raw_params.q,
+                query = raw_params.q,
                 error = %e,
                 "Search query failed"
             );
@@ -100,12 +100,12 @@ pub(crate) async fn search(
     if params.has_query_terms() {
         info!(
             target: MONITORING,
-            query = ?raw_params.q,
+            query = raw_params.q,
             page = params.page,
-            content_type = ?raw_params.content_type,
-            sort_by = ?raw_params.sort_by,
-            start_year = ?raw_params.start_year,
-            end_year = ?raw_params.end_year,
+            content_type = raw_params.content_type.map(|c| c.to_string()),
+            sort_by = raw_params.sort_by.map(|s| format!("{s:?}")),
+            start_year = raw_params.start_year,
+            end_year = raw_params.end_year,
             results = results_count,
             duration_ms = elapsed.as_millis() as u64,
             referer,
@@ -116,8 +116,8 @@ pub(crate) async fn search(
     if results_count == 0 && params.has_query_terms() {
         warn!(
             target: MONITORING,
-            query = ?raw_params.q,
-            content_type = ?raw_params.content_type,
+            query = raw_params.q,
+            content_type = raw_params.content_type.map(|c| c.to_string()),
             "Zero results"
         );
     }
@@ -125,7 +125,7 @@ pub(crate) async fn search(
     if params.page >= 5 {
         info!(
             target: MONITORING,
-            query = ?raw_params.q,
+            query = raw_params.q,
             page = params.page,
             "Deep pagination"
         );

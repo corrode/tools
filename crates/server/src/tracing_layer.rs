@@ -18,7 +18,6 @@ use tracing::Subscriber;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::Context;
-use types::monitoring::MONITORING;
 
 /// Channel capacity — large enough to absorb short bursts without dropping
 /// events, small enough to bound memory usage.
@@ -42,7 +41,7 @@ const MAX_ROWS: i64 = 100_000;
 #[derive(Debug)]
 pub struct EventRecord {
     /// UTC timestamp formatted as `YYYY-MM-DD HH:MM:SS.ffffff` (SQLite-native).
-    pub timestamp: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
     /// Log level as an uppercase string (`INFO`, `WARN`, `ERROR`).
     pub level: String,
     /// The human-readable message (the `message` field of the tracing event).
@@ -58,12 +57,14 @@ pub struct EventRecord {
 /// Visits the fields of a tracing event, collecting them into a map of JSON
 /// values. The `message` field is extracted separately by the caller.
 struct FieldVisitor {
+    message: String,
     fields: HashMap<String, serde_json::Value>,
 }
 
 impl FieldVisitor {
     fn new() -> Self {
         Self {
+            message: String::new(),
             fields: HashMap::new(),
         }
     }
@@ -71,11 +72,14 @@ impl FieldVisitor {
 
 impl Visit for FieldVisitor {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        let raw = format!("{value:?}");
-        // Clean up debug-formatted `Option` values:
-        //   Some("foo") → "foo",  Some(42) → 42,  None → null
-        let json_value = parse_debug_option(&raw);
-        self.fields.insert(field.name().to_string(), json_value);
+        if field.name() == "message" {
+            self.message = format!("{value:?}");
+        } else {
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::Value::String(format!("{value:?}")),
+            );
+        }
     }
 
     fn record_str(&mut self, field: &Field, value: &str) {
@@ -101,44 +105,6 @@ impl Visit for FieldVisitor {
     }
 }
 
-/// Attempt to clean up Rust `Debug`-formatted `Option` values so they produce
-/// sensible JSON. This handles the common patterns emitted by `?` formatting:
-///
-/// - `None`           → `null`
-/// - `Some("text")`   → `"text"` (string)
-/// - `Some(42)`       → `42` (number, if parseable)
-/// - `Some(Other)`    → `"Other"` (fallback to string)
-/// - `"quoted text"`  → `"quoted text"` (strip outer quotes)
-/// - anything else    → stored as-is string
-fn parse_debug_option(raw: &str) -> serde_json::Value {
-    if raw == "None" {
-        return serde_json::Value::Null;
-    }
-
-    // Strip `Some(...)` wrapper
-    let inner = if let Some(stripped) = raw.strip_prefix("Some(") {
-        stripped.strip_suffix(')').unwrap_or(stripped)
-    } else {
-        raw
-    };
-
-    // Strip surrounding quotes if present (debug-formatted strings)
-    let unquoted = if inner.starts_with('"') && inner.ends_with('"') && inner.len() >= 2 {
-        &inner[1..inner.len() - 1]
-    } else {
-        inner
-    };
-
-    // Try to parse as a JSON number
-    if let Ok(n) = unquoted.parse::<i64>() {
-        return serde_json::json!(n);
-    }
-    if let Ok(n) = unquoted.parse::<f64>() {
-        return serde_json::json!(n);
-    }
-
-    serde_json::Value::String(unquoted.to_string())
-}
 
 // ---------------------------------------------------------------------------
 // SqliteLayer
@@ -175,36 +141,18 @@ where
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         let meta = event.metadata();
 
-        // The ONE filter: only persist events explicitly opted in.
-        if meta.target() != MONITORING {
-            return;
-        }
-
         // Extract fields via visitor
         let mut visitor = FieldVisitor::new();
         event.record(&mut visitor);
 
-        // Pull `message` out of the field map (tracing stores the format
-        // string under the key "message").
-        let message = visitor
-            .fields
-            .remove("message")
-            .map(|v| match v {
-                serde_json::Value::String(s) => s,
-                other => other.to_string(),
-            })
-            .unwrap_or_default();
 
         let fields_json =
             serde_json::to_string(&visitor.fields).unwrap_or_else(|_| "{}".to_string());
 
-        let now = chrono::Utc::now();
-        let timestamp = now.format("%Y-%m-%d %H:%M:%S%.6f").to_string();
-
         let record = EventRecord {
-            timestamp,
+            timestamp: chrono::Utc::now(),
             level: meta.level().to_string(),
-            message,
+            message: visitor.message,
             fields: fields_json,
         };
 
@@ -228,28 +176,16 @@ async fn drain_loop(mut rx: mpsc::Receiver<EventRecord>, pool: Pool<Sqlite>) {
     let mut inserts_since_cleanup: u64 = 0;
 
     loop {
-        // Block until at least one event arrives (or channel closes).
-        match rx.recv().await {
-            Some(event) => buf.push(event),
-            None => break, // channel closed — exit
+        let count = rx.recv_many(&mut buf, BATCH_SIZE).await;
+        if count == 0 {
+            break; // Channel closed
         }
-
-        // Eagerly drain up to BATCH_SIZE events without waiting.
-        while buf.len() < BATCH_SIZE {
-            match rx.try_recv() {
-                Ok(event) => buf.push(event),
-                Err(_) => break,
-            }
-        }
-
-        let count = buf.len() as u64;
 
         if let Err(e) = batch_insert(&pool, &buf).await {
-            // Use eprintln, NOT tracing — avoid infinite recursion.
             eprintln!("monitoring: batch insert failed: {e}");
         }
 
-        inserts_since_cleanup += count;
+        inserts_since_cleanup += count as u64;
         buf.clear();
 
         // Periodic retention cleanup to cap table growth.
@@ -261,12 +197,10 @@ async fn drain_loop(mut rx: mpsc::Receiver<EventRecord>, pool: Pool<Sqlite>) {
         }
     }
 
-    // Flush any remaining events after channel close.
     if !buf.is_empty()
-        && let Err(e) = batch_insert(&pool, &buf).await
-    {
-        eprintln!("monitoring: final batch insert failed: {e}");
-    }
+        && let Err(e) = batch_insert(&pool, &buf).await {
+            eprintln!("monitoring: final batch insert failed: {e}");
+        }
 }
 
 /// Batch-INSERT a slice of events using `sqlx::QueryBuilder::push_values`.
@@ -279,7 +213,8 @@ async fn batch_insert(pool: &Pool<Sqlite>, events: &[EventRecord]) -> Result<(),
         QueryBuilder::new("INSERT INTO events (timestamp, level, message, fields) ");
 
     qb.push_values(events, |mut b, e| {
-        b.push_bind(&e.timestamp)
+        let ts = e.timestamp.format("%Y-%m-%d %H:%M:%S%.6f").to_string();
+        b.push_bind(ts)
             .push_bind(&e.level)
             .push_bind(&e.message)
             .push_bind(&e.fields);
@@ -301,50 +236,3 @@ async fn enforce_retention(pool: &Pool<Sqlite>, max_rows: i64) -> Result<(), sql
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_debug_option_none() {
-        assert_eq!(parse_debug_option("None"), serde_json::Value::Null);
-    }
-
-    #[test]
-    fn parse_debug_option_some_string() {
-        assert_eq!(
-            parse_debug_option("Some(\"hello\")"),
-            serde_json::Value::String("hello".to_string())
-        );
-    }
-
-    #[test]
-    fn parse_debug_option_some_number() {
-        assert_eq!(parse_debug_option("Some(42)"), serde_json::json!(42));
-    }
-
-    #[test]
-    fn parse_debug_option_plain_string() {
-        assert_eq!(
-            parse_debug_option("\"quoted\""),
-            serde_json::Value::String("quoted".to_string())
-        );
-    }
-
-    #[test]
-    fn parse_debug_option_plain_number() {
-        assert_eq!(parse_debug_option("123"), serde_json::json!(123));
-    }
-
-    #[test]
-    fn parse_debug_option_unquoted_text() {
-        assert_eq!(
-            parse_debug_option("Articles"),
-            serde_json::Value::String("Articles".to_string())
-        );
-    }
-}
