@@ -11,18 +11,16 @@ use charming::{
     element::{AxisLabel, AxisType, ItemStyle, Label, LabelPosition, TextStyle},
     series::Bar,
 };
-use std::sync::Arc;
 
 use crate::error::AppError;
-use storage::Repository;
-use types::monitoring::{DayBucket, HourBucket, QueryStats, TopQuery};
+use crate::models::{DayBucket, HourBucket, QueryStats, TopQuery};
 
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
 
 #[derive(Template)]
-#[template(path = "monitoring/dashboard.html")]
+#[template(path = "dashboard.html")]
 struct DashboardTemplate {
     stats: QueryStats,
     hourly_chart_json: String,
@@ -36,14 +34,14 @@ struct DashboardTemplate {
 // ---------------------------------------------------------------------------
 
 /// Renders the full monitoring dashboard page.
-pub(crate) async fn dashboard(
-    State(repo): State<Arc<Repository>>,
+pub async fn dashboard(
+    State(pool): State<sqlx::Pool<sqlx::Sqlite>>,
 ) -> Result<Html<String>, AppError> {
-    let stats = repo.get_query_stats().await?;
-    let hourly = repo.get_hourly_histogram(48).await?;
-    let daily = repo.get_daily_histogram(30).await?;
-    let top_queries = repo.get_top_queries(None, 20).await?;
-    let zero_result_queries = repo.get_zero_result_queries(20).await?;
+    let stats = crate::db::get_query_stats(&pool).await?;
+    let hourly = crate::db::get_hourly_histogram(&pool, 48).await?;
+    let daily = crate::db::get_daily_histogram(&pool, 30).await?;
+    let top_queries = crate::db::get_top_queries(&pool, None, 20).await?;
+    let zero_result_queries = crate::db::get_zero_result_queries(&pool, 20).await?;
 
     let hourly_chart_json = generate_hourly_chart(&hourly);
     let daily_chart_json = generate_daily_chart(&daily);

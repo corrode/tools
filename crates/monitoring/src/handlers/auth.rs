@@ -28,7 +28,7 @@ const COOKIE_NAME: &str = "monitoring_session";
 /// Checks (in order): cookie, `?token=` query param.
 /// Intended to be used with [`axum::middleware::from_fn`] on the monitoring
 /// router's `route_layer`.
-pub(crate) async fn require_monitoring_token(
+pub async fn require_monitoring_token(
     headers: HeaderMap,
     Extension(expected): Extension<String>,
     request: Request,
@@ -52,7 +52,7 @@ pub(crate) async fn require_monitoring_token(
 /// ```
 ///
 /// If the token is wrong or missing, returns `401`.
-pub(crate) async fn login(
+pub async fn login(
     headers: HeaderMap,
     Extension(expected): Extension<String>,
     request: Request,

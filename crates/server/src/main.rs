@@ -8,7 +8,6 @@ use anyhow::{Context, Result};
 mod error;
 
 mod handlers;
-mod tracing_layer;
 
 use axum::{Router, middleware, routing::get};
 use storage::Repository;
@@ -21,7 +20,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use std::sync::Arc;
 use tokio::signal;
 
-use crate::tracing_layer::SqliteLayer;
+use monitoring::SqliteLayer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -53,26 +52,25 @@ async fn main() -> Result<()> {
         .context("MONITORING_TOKEN environment variable must be set")?;
 
     let monitoring_authed = Router::new()
-        .route("/", get(handlers::monitoring::dashboard))
-        .route("/queries", get(handlers::monitoring::queries))
+        .route("/", get(monitoring::dashboard))
+        .route("/queries", get(monitoring::queries))
         .route_layer(middleware::from_fn(
-            handlers::monitoring::require_monitoring_token,
+            monitoring::require_monitoring_token,
         ));
 
     let monitoring_routes = Router::new()
-        .route("/login", get(handlers::monitoring::login))
+        .route("/login", get(monitoring::login))
         .merge(monitoring_authed)
         .layer(axum::Extension(monitoring_token))
-        .with_state(repo.clone());
+        .with_state(repo.pool().clone());
 
     let app = Router::new()
         .route("/", get(handlers::index))
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
-        .route("/monitoring", get(handlers::monitoring::dashboard)) // Allow no trailing slash
-        .route("/monitoring/", get(handlers::monitoring::dashboard)) // Allow trailing slash
-        .nest("/monitoring", monitoring_routes)
+        .route("/monitoring", get(|| async { axum::response::Redirect::permanent("/monitoring/") }))
+                        .nest("/monitoring", monitoring_routes)
         .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);

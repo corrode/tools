@@ -6,7 +6,6 @@
 //! Shared types used across the search system, including crawler
 //! payloads, repository models, and view-layer helpers.
 
-pub mod monitoring;
 pub mod params;
 pub mod search_result;
 

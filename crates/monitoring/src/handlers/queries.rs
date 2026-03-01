@@ -11,11 +11,9 @@ use axum::{
     response::Html,
 };
 use serde::Deserialize;
-use std::sync::Arc;
 
 use crate::error::AppError;
-use storage::Repository;
-use types::monitoring::SearchQueryRow;
+use crate::models::SearchQueryRow;
 
 /// Results per page in the query log.
 const QUERIES_PER_PAGE: i64 = 50;
@@ -26,7 +24,7 @@ const QUERIES_PER_PAGE: i64 = 50;
 
 /// Query parameters accepted by the `/monitoring/queries` endpoint.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct QueryLogParams {
+pub struct QueryLogParams {
     /// Optional FTS search filter.
     #[serde(default)]
     pub search: Option<String>,
@@ -45,7 +43,7 @@ fn default_page() -> u32 {
 
 /// Full-page template (initial load / non-HTMX request).
 #[derive(Template)]
-#[template(path = "monitoring/queries.html")]
+#[template(path = "queries.html")]
 struct QueriesTemplate {
     rows: Vec<SearchQueryRow>,
     search: Option<String>,
@@ -58,7 +56,7 @@ struct QueriesTemplate {
 
 /// Partial template for HTMX-driven updates (just the table + pagination).
 #[derive(Template)]
-#[template(path = "monitoring/queries_partial.html")]
+#[template(path = "queries_partial.html")]
 struct QueriesPartialTemplate {
     rows: Vec<SearchQueryRow>,
     total: i64,
@@ -76,10 +74,10 @@ struct QueriesPartialTemplate {
 ///
 /// Accepts `?search=...&page=N`. When the `HX-Request` header is present,
 /// returns only the table partial (for HTMX swap).
-pub(crate) async fn queries(
+pub async fn queries(
     headers: HeaderMap,
     Query(params): Query<QueryLogParams>,
-    State(repo): State<Arc<Repository>>,
+    State(pool): State<sqlx::Pool<sqlx::Sqlite>>,
 ) -> Result<Html<String>, AppError> {
     let page = params.page.max(1);
     let offset = (i64::from(page) - 1) * QUERIES_PER_PAGE;
@@ -90,9 +88,7 @@ pub(crate) async fn queries(
         .filter(|s| !s.trim().is_empty())
         .map(str::trim);
 
-    let (rows, total) = repo
-        .get_query_log(search_term, QUERIES_PER_PAGE, offset)
-        .await?;
+    let (rows, total) = crate::db::get_query_log(&pool, search_term, QUERIES_PER_PAGE, offset).await?;
 
     let total_pages = if total > 0 {
         ((total - 1) / QUERIES_PER_PAGE + 1) as u32
