@@ -88,7 +88,8 @@ pub async fn queries(
         .filter(|s| !s.trim().is_empty())
         .map(str::trim);
 
-    let (rows, total) = crate::db::get_query_log(&pool, search_term, QUERIES_PER_PAGE, offset).await?;
+    let (rows, total) =
+        crate::db::get_query_log(&pool, search_term, QUERIES_PER_PAGE, offset).await?;
 
     let total_pages = if total > 0 {
         ((total - 1) / QUERIES_PER_PAGE + 1) as u32

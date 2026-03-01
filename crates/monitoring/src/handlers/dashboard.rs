@@ -102,11 +102,7 @@ fn generate_hourly_chart(buckets: &[HourBucket]) -> String {
         .series(
             Bar::new()
                 .data(y_data)
-                .item_style(
-                    ItemStyle::new()
-                        .color("var(--color-primary)")
-                        .border_radius(4.0),
-                )
+                .item_style(ItemStyle::new().color("#3ab87e").border_radius(4.0))
                 .label(
                     Label::new()
                         .show(false)
@@ -160,11 +156,7 @@ fn generate_daily_chart(buckets: &[DayBucket]) -> String {
         .series(
             Bar::new()
                 .data(y_data)
-                .item_style(
-                    ItemStyle::new()
-                        .color("var(--color-primary)")
-                        .border_radius(4.0),
-                )
+                .item_style(ItemStyle::new().color("#3ab87e").border_radius(4.0))
                 .label(
                     Label::new()
                         .show(true)
