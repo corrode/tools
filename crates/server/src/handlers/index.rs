@@ -3,6 +3,7 @@ use axum::{extract::State, response::Html};
 use std::sync::Arc;
 use storage::Repository;
 
+use crate::error::AppErrorExt;
 use types::ContentType;
 use types::search_result::{Article, Podcast, Research, Talk, Video};
 
@@ -55,8 +56,5 @@ pub(crate) async fn index(
         next_page_href: None,
         quote,
     };
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    template.render().map(Html).into_internal_server_error()
 }

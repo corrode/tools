@@ -13,6 +13,7 @@ use charming::{
 };
 use std::sync::Arc;
 
+use crate::error::AppErrorExt;
 use storage::Repository;
 use types::monitoring::{DayBucket, HourBucket, QueryStats, TopQuery};
 
@@ -38,30 +39,23 @@ struct DashboardTemplate {
 pub(crate) async fn dashboard(
     State(repo): State<Arc<Repository>>,
 ) -> Result<Html<String>, StatusCode> {
-    let stats = repo
-        .get_query_stats()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+    let stats = repo.get_query_stats().await.into_internal_server_error()?;
     let hourly = repo
         .get_hourly_histogram(48)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+        .into_internal_server_error()?;
     let daily = repo
         .get_daily_histogram(30)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+        .into_internal_server_error()?;
     let top_queries = repo
         .get_top_queries(None, 20)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+        .into_internal_server_error()?;
     let zero_result_queries = repo
         .get_zero_result_queries(20)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .into_internal_server_error()?;
 
     let hourly_chart_json = generate_hourly_chart(&hourly);
     let daily_chart_json = generate_daily_chart(&daily);
@@ -74,10 +68,7 @@ pub(crate) async fn dashboard(
         zero_result_queries,
     };
 
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    template.render().map(Html).into_internal_server_error()
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +116,11 @@ fn generate_hourly_chart(buckets: &[HourBucket]) -> String {
         .series(
             Bar::new()
                 .data(y_data)
-                .item_style(ItemStyle::new().color("#67c23a").border_radius(4.0))
+                .item_style(
+                    ItemStyle::new()
+                        .color("var(--color-primary)")
+                        .border_radius(4.0),
+                )
                 .label(
                     Label::new()
                         .show(false)
@@ -179,7 +174,11 @@ fn generate_daily_chart(buckets: &[DayBucket]) -> String {
         .series(
             Bar::new()
                 .data(y_data)
-                .item_style(ItemStyle::new().color("#67c23a").border_radius(4.0))
+                .item_style(
+                    ItemStyle::new()
+                        .color("var(--color-primary)")
+                        .border_radius(4.0),
+                )
                 .label(
                     Label::new()
                         .show(true)

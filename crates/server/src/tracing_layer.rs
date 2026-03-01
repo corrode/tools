@@ -105,7 +105,6 @@ impl Visit for FieldVisitor {
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // SqliteLayer
 // ---------------------------------------------------------------------------
@@ -144,7 +143,6 @@ where
         // Extract fields via visitor
         let mut visitor = FieldVisitor::new();
         event.record(&mut visitor);
-
 
         let fields_json =
             serde_json::to_string(&visitor.fields).unwrap_or_else(|_| "{}".to_string());
@@ -198,9 +196,10 @@ async fn drain_loop(mut rx: mpsc::Receiver<EventRecord>, pool: Pool<Sqlite>) {
     }
 
     if !buf.is_empty()
-        && let Err(e) = batch_insert(&pool, &buf).await {
-            eprintln!("monitoring: final batch insert failed: {e}");
-        }
+        && let Err(e) = batch_insert(&pool, &buf).await
+    {
+        eprintln!("monitoring: final batch insert failed: {e}");
+    }
 }
 
 /// Batch-INSERT a slice of events using `sqlx::QueryBuilder::push_values`.
@@ -235,4 +234,3 @@ async fn enforce_retention(pool: &Pool<Sqlite>, max_rows: i64) -> Result<(), sql
     .await?;
     Ok(())
 }
-

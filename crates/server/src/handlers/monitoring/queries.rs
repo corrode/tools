@@ -13,6 +13,7 @@ use axum::{
 use serde::Deserialize;
 use std::sync::Arc;
 
+use crate::error::AppErrorExt;
 use storage::Repository;
 use types::monitoring::SearchQueryRow;
 
@@ -92,7 +93,7 @@ pub(crate) async fn queries(
     let (rows, total) = repo
         .get_query_log(search_term, QUERIES_PER_PAGE, offset)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .into_internal_server_error()?;
 
     let total_pages = if total > 0 {
         ((total - 1) / QUERIES_PER_PAGE + 1) as u32
@@ -122,10 +123,7 @@ pub(crate) async fn queries(
             next_page_href,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        template.render().map(Html).into_internal_server_error()
     } else {
         let template = QueriesTemplate {
             rows,
@@ -137,10 +135,7 @@ pub(crate) async fn queries(
             next_page_href,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        template.render().map(Html).into_internal_server_error()
     }
 }
 

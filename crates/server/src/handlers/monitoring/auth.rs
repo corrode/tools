@@ -4,8 +4,7 @@
 //! `MONITORING_TOKEN` environment variable. The token can be provided via:
 //!
 //! 1. `monitoring_session` cookie (set by the `/monitoring/login` endpoint)
-//! 2. `Authorization: Bearer <token>` header
-//! 3. `?token=<token>` query parameter
+//! 2. `?token=<token>` query parameter
 //!
 //! **Typical browser flow:** visit `/monitoring/login?token=SECRET` once.
 //! This sets an `HttpOnly` cookie and redirects to the dashboard. All
@@ -21,13 +20,12 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 
-
 /// Name of the session cookie.
 const COOKIE_NAME: &str = "monitoring_session";
 
 /// Axum middleware that enforces token authentication.
 ///
-/// Checks (in order): cookie, `Authorization` header, `?token=` query param.
+/// Checks (in order): cookie, `?token=` query param.
 /// Intended to be used with [`axum::middleware::from_fn`] on the monitoring
 /// router's `route_layer`.
 pub(crate) async fn require_monitoring_token(
@@ -36,10 +34,7 @@ pub(crate) async fn require_monitoring_token(
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-
-    let provided = token_from_cookie(&headers)
-        .or_else(|| token_from_header(&headers))
-        .or_else(|| token_from_query(&request));
+    let provided = token_from_cookie(&headers).or_else(|| token_from_query(&request));
 
     match provided {
         Some(token) if token == expected => Ok(next.run(request).await),
@@ -62,11 +57,8 @@ pub(crate) async fn login(
     Extension(expected): Extension<String>,
     request: Request,
 ) -> Result<Response, StatusCode> {
-
-    // Accept token from query param, header, or existing cookie
-    let provided = token_from_query(&request)
-        .or_else(|| token_from_header(&headers))
-        .or_else(|| token_from_cookie(&headers));
+    // Accept token from query param or existing cookie
+    let provided = token_from_query(&request).or_else(|| token_from_cookie(&headers));
 
     match provided {
         Some(token) if token == expected => {
@@ -93,15 +85,6 @@ fn token_from_cookie(headers: &HeaderMap) -> Option<String> {
         .flat_map(|s| s.split(';'))
         .map(str::trim)
         .find_map(|pair| pair.strip_prefix(&format!("{COOKIE_NAME}=")))
-        .map(str::to_string)
-}
-
-/// Extract the token from `Authorization: Bearer <token>`.
-fn token_from_header(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
         .map(str::to_string)
 }
 

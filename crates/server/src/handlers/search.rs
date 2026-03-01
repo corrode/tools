@@ -7,6 +7,7 @@ use axum::{
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::error::AppErrorExt;
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
@@ -220,10 +221,7 @@ pub(crate) async fn search(
             quote,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        template.render().map(Html).into_internal_server_error()
     } else {
         let template = SearchTemplate {
             query: raw_params.q,
@@ -244,9 +242,6 @@ pub(crate) async fn search(
             quote,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        template.render().map(Html).into_internal_server_error()
     }
 }

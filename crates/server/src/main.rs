@@ -5,6 +5,7 @@
 //! from 'This Week in Rust'.
 
 use anyhow::{Context, Result};
+mod error;
 
 mod handlers;
 mod tracing_layer;
@@ -69,6 +70,8 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
+        .route("/monitoring", get(handlers::monitoring::dashboard)) // Allow no trailing slash
+        .route("/monitoring/", get(handlers::monitoring::dashboard)) // Allow trailing slash
         .nest("/monitoring", monitoring_routes)
         .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
         .nest_service("/static", ServeDir::new("static"))
