@@ -6,3 +6,5 @@
 mod rustnation2026;
 
 pub use rustnation2026::RustNation2026;
+mod rustnation2024;
+pub use rustnation2024::RustNation2024;

@@ -6,3 +6,5 @@
 mod oxidize2025;
 
 pub use oxidize2025::Oxidize2025;
+mod oxidize2024;
+pub use oxidize2024::Oxidize2024;
