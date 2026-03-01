@@ -54,9 +54,7 @@ async fn main() -> Result<()> {
     let monitoring_authed = Router::new()
         .route("/", get(monitoring::dashboard))
         .route("/queries", get(monitoring::queries))
-        .route_layer(middleware::from_fn(
-            monitoring::require_monitoring_token,
-        ));
+        .route_layer(middleware::from_fn(monitoring::require_monitoring_token));
 
     let monitoring_routes = Router::new()
         .route("/login", get(monitoring::login))
@@ -69,8 +67,11 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
-        .route("/monitoring", get(|| async { axum::response::Redirect::permanent("/monitoring/") }))
-                        .nest("/monitoring", monitoring_routes)
+        .route(
+            "/monitoring",
+            get(|| async { axum::response::Redirect::permanent("/monitoring/") }),
+        )
+        .nest("/monitoring/", monitoring_routes)
         .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);
