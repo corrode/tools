@@ -14,20 +14,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-/// The tracing target used to mark events for persistence into SQLite.
-///
-/// Any `tracing` event emitted with `target: MONITORING_TARGET` is captured
-/// by the `SqliteLayer` and batch-inserted into the `events` table.
-/// All other events are ignored by the layer (but still reach `fmt`/stdout).
-///
-/// # Usage
-///
-/// ```ignore
-/// use types::monitoring::MONITORING_TARGET;
-/// tracing::info!(target: MONITORING_TARGET, "Search request");
-/// ```
-pub const MONITORING: &str = "monitoring";
-
 /// Log level for a monitoring event.
 ///
 /// Only `INFO` and above are persisted (the `SqliteLayer` filters out

@@ -13,8 +13,8 @@ use axum::{Router, middleware, routing::get};
 use storage::Repository;
 use tower_http::services::ServeDir;
 use tracing_subscriber::Layer;
+use tracing_subscriber::filter::dynamic_filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::filter::{Targets, LevelFilter};
 use tracing_subscriber::util::SubscriberInitExt;
 
 use std::sync::Arc;
@@ -34,12 +34,15 @@ async fn main() -> Result<()> {
 
     let (sqlite_layer, drain_task) = SqliteLayer::new(repo.pool().clone());
 
+    let monitoring_filter = dynamic_filter_fn(|meta, _| {
+        // The event *must* contain the field "is_monitoring"
+        meta.fields().field("is_monitoring").is_some()
+    });
+
     tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer())
-        .with(sqlite_layer.with_filter(
-            Targets::new().with_target("monitoring", LevelFilter::INFO)
-        ))
+        .with(sqlite_layer.with_filter(monitoring_filter))
         .init();
 
     // Spawn the background drain task that batch-INSERTs monitoring events.
