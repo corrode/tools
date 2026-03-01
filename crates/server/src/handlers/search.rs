@@ -1,13 +1,13 @@
 use askama::Template;
 use axum::{
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::Html,
 };
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::error::AppErrorExt;
+use crate::error::AppError;
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
@@ -61,7 +61,7 @@ pub(crate) async fn search(
     headers: HeaderMap,
     Query(raw_params): Query<RawParams>,
     State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     let start = Instant::now();
     let referer = headers
         .get(axum::http::header::REFERER)
@@ -76,7 +76,7 @@ pub(crate) async fn search(
             error = %e,
             "Invalid search params"
         );
-        StatusCode::BAD_REQUEST
+        anyhow::anyhow!("Invalid search params")
     })?;
 
     // Check if query is provided and not empty/whitespace-only
@@ -89,7 +89,7 @@ pub(crate) async fn search(
                 error = %e,
                 "Search query failed"
             );
-            StatusCode::INTERNAL_SERVER_ERROR
+            e
         })?
     } else {
         (vec![], 0)
@@ -221,7 +221,7 @@ pub(crate) async fn search(
             quote,
         };
 
-        template.render().map(Html).into_internal_server_error()
+        Ok(template.render().map(Html)?)
     } else {
         let template = SearchTemplate {
             query: raw_params.q,
@@ -242,6 +242,6 @@ pub(crate) async fn search(
             quote,
         };
 
-        template.render().map(Html).into_internal_server_error()
+        Ok(template.render().map(Html)?)
     }
 }

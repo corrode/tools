@@ -7,13 +7,13 @@
 use askama::Template;
 use axum::{
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::Html,
 };
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::error::AppErrorExt;
+use crate::error::AppError;
 use storage::Repository;
 use types::monitoring::SearchQueryRow;
 
@@ -80,7 +80,7 @@ pub(crate) async fn queries(
     headers: HeaderMap,
     Query(params): Query<QueryLogParams>,
     State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     let page = params.page.max(1);
     let offset = (i64::from(page) - 1) * QUERIES_PER_PAGE;
 
@@ -92,8 +92,7 @@ pub(crate) async fn queries(
 
     let (rows, total) = repo
         .get_query_log(search_term, QUERIES_PER_PAGE, offset)
-        .await
-        .into_internal_server_error()?;
+        .await?;
 
     let total_pages = if total > 0 {
         ((total - 1) / QUERIES_PER_PAGE + 1) as u32
@@ -123,7 +122,7 @@ pub(crate) async fn queries(
             next_page_href,
         };
 
-        template.render().map(Html).into_internal_server_error()
+        Ok(template.render().map(Html)?)
     } else {
         let template = QueriesTemplate {
             rows,
@@ -135,7 +134,7 @@ pub(crate) async fn queries(
             next_page_href,
         };
 
-        template.render().map(Html).into_internal_server_error()
+        Ok(template.render().map(Html)?)
     }
 }
 

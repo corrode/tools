@@ -4,7 +4,7 @@
 //! and zero-result queries.
 
 use askama::Template;
-use axum::{extract::State, http::StatusCode, response::Html};
+use axum::{extract::State, response::Html};
 use charming::{
     Chart,
     component::{Axis, Grid, Title},
@@ -13,7 +13,7 @@ use charming::{
 };
 use std::sync::Arc;
 
-use crate::error::AppErrorExt;
+use crate::error::AppError;
 use storage::Repository;
 use types::monitoring::{DayBucket, HourBucket, QueryStats, TopQuery};
 
@@ -38,24 +38,12 @@ struct DashboardTemplate {
 /// Renders the full monitoring dashboard page.
 pub(crate) async fn dashboard(
     State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, StatusCode> {
-    let stats = repo.get_query_stats().await.into_internal_server_error()?;
-    let hourly = repo
-        .get_hourly_histogram(48)
-        .await
-        .into_internal_server_error()?;
-    let daily = repo
-        .get_daily_histogram(30)
-        .await
-        .into_internal_server_error()?;
-    let top_queries = repo
-        .get_top_queries(None, 20)
-        .await
-        .into_internal_server_error()?;
-    let zero_result_queries = repo
-        .get_zero_result_queries(20)
-        .await
-        .into_internal_server_error()?;
+) -> Result<Html<String>, AppError> {
+    let stats = repo.get_query_stats().await?;
+    let hourly = repo.get_hourly_histogram(48).await?;
+    let daily = repo.get_daily_histogram(30).await?;
+    let top_queries = repo.get_top_queries(None, 20).await?;
+    let zero_result_queries = repo.get_zero_result_queries(20).await?;
 
     let hourly_chart_json = generate_hourly_chart(&hourly);
     let daily_chart_json = generate_daily_chart(&daily);
@@ -68,7 +56,7 @@ pub(crate) async fn dashboard(
         zero_result_queries,
     };
 
-    template.render().map(Html).into_internal_server_error()
+    Ok(template.render().map(Html)?)
 }
 
 // ---------------------------------------------------------------------------
