@@ -21,6 +21,16 @@ impl RustFestEuParser {
     }
 }
 
+impl RustFestEuParser {
+    fn subdomain(&self) -> String {
+        match (self.year, self.city.to_lowercase().as_str()) {
+            (2016, "berlin") => "2016".to_string(),
+            (2017, "kyiv") => "2017".to_string(),
+            _ => self.city.to_lowercase(),
+        }
+    }
+}
+
 #[async_trait]
 impl ScheduleParser for RustFestEuParser {
     fn metadata(&self) -> ConferenceMetadata {
@@ -31,7 +41,7 @@ impl ScheduleParser for RustFestEuParser {
             id: Box::leak(format!("rustfest-{}-{}", city_lower, self.year).into_boxed_str()),
             conference: "RustFest",
             year: Box::leak(self.year.to_string().into_boxed_str()),
-            url: Url::parse(&format!("https://{}.rustfest.eu/talks/", city_lower)).unwrap(),
+            url: Url::parse(&format!("https://{}.rustfest.eu/talks/", self.subdomain())).unwrap(),
             youtube_playlist_url: None,
         }
     }
@@ -57,8 +67,7 @@ impl ScheduleParser for RustFestEuParser {
             .context("Failed to read schedule page body")?;
 
         let document = Html::parse_document(&html);
-        let base_url =
-            Url::parse(&format!("https://{}.rustfest.eu", self.city.to_lowercase())).unwrap();
+        let base_url = Url::parse(&format!("https://{}.rustfest.eu", self.subdomain())).unwrap();
 
         self.parse_schedule(&document, &base_url)
     }
