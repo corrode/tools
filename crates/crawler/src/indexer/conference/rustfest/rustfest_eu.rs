@@ -77,74 +77,118 @@ impl RustFestEuParser {
     fn parse_schedule(&self, document: &Html, base_url: &Url) -> Result<Vec<ParsedTalk>> {
         let mut talks = Vec::new();
 
+        let li_selector = css("ul.talks > li")?;
         let title_selector = css("h2.title")?;
         let a_selector = css("a")?;
+        let name_selector = css(".name")?;
 
-        for title_el in document.select(&title_selector) {
+        for li in document.select(&li_selector) {
+            let title_el = match li.select(&title_selector).next() {
+                Some(el) => el,
+                None => continue,
+            };
+
             let a_el = title_el.select(&a_selector).next();
+
+            let mut speakers_list = Vec::new();
+            let mut talk_title;
+            let mut href = String::new();
+
             if let Some(a) = a_el {
                 let full_title = text(a).trim().to_string();
                 if full_title.is_empty() {
                     continue;
                 }
 
-                let href = a.value().attr("href").unwrap_or("");
-                let website_url = base_url
-                    .join(href)
-                    .map(|u| u.into())
-                    .unwrap_or_else(|_| base_url.clone());
+                href = a.value().attr("href").unwrap_or("").to_string();
 
-                let mut speaker_name = String::new();
-                let mut talk_title = full_title.clone();
-
-                // Common format: "Speaker Name – Talk Title" or "Speaker Name - Talk Title"
+                let mut speaker_str = String::new();
                 if let Some((speaker, title)) = full_title.split_once(" – ") {
-                    speaker_name = speaker.trim().to_string();
+                    speaker_str = speaker.trim().to_string();
                     talk_title = title.trim().to_string();
                 } else if let Some((speaker, title)) = full_title.split_once(" - ") {
-                    speaker_name = speaker.trim().to_string();
+                    speaker_str = speaker.trim().to_string();
                     talk_title = title.trim().to_string();
+                } else {
+                    talk_title = full_title;
+                }
+                if !speaker_str.is_empty() {
+                    speakers_list.push(speaker_str);
+                }
+            } else {
+                let mut title_text = text(title_el).trim().to_string();
+                if title_text.to_lowercase().starts_with("keynote ") {
+                    title_text = title_text[8..].trim().to_string();
+                } else if title_text.to_lowercase().starts_with("special guest ") {
+                    title_text = title_text[14..].trim().to_string();
                 }
 
-                // Skip Master of Ceremony and other non-talk events
-                if talk_title.to_lowercase().contains("master of ceremony") {
+                if title_text.is_empty() {
                     continue;
                 }
+                talk_title = title_text;
 
-                let mut speakers = Vec::new();
-                if !speaker_name.is_empty() {
-                    speakers.push(NewSpeaker {
-                        name: speaker_name.clone(),
-                    });
+                for name_el in li.select(&name_selector) {
+                    let n = text(name_el).trim().to_string();
+                    if !n.is_empty() {
+                        speakers_list.push(n);
+                    }
                 }
 
-                let summary = if !speaker_name.is_empty() {
-                    format!("Talk by {}", speaker_name)
-                } else {
-                    talk_title.clone()
-                };
-
-                let talk = NewTalk {
-                    title: talk_title.clone(),
-                    summary,
-                    transcript: None,
-                    conference: self.metadata().conference.to_string(),
-                    date: self.date,
-                    website_url,
-                    video_url: None,
-                    slides_url: None,
-                    thumbnail_url: None,
-                    duration_seconds: None,
-                };
-
-                debug!(
-                    "Parsed RustFest {} talk: {} ({} speakers)",
-                    self.year,
-                    talk_title,
-                    speakers.len()
-                );
-                talks.push(ParsedTalk { talk, speakers });
+                if let Some(id) = title_el.value().attr("id") {
+                    href = format!("#{}", id);
+                }
             }
+
+            if talk_title.to_lowercase().contains("master of ceremony") {
+                continue;
+            }
+
+            let website_url = if href.is_empty() {
+                base_url.clone()
+            } else if href.starts_with('#') {
+                base_url
+                    .join(&format!("/talks/{}", href))
+                    .map(|u| u.into())
+                    .unwrap_or_else(|_| base_url.clone())
+            } else {
+                base_url
+                    .join(&href)
+                    .map(|u| u.into())
+                    .unwrap_or_else(|_| base_url.clone())
+            };
+
+            let mut speakers = Vec::new();
+            for s in &speakers_list {
+                speakers.push(NewSpeaker { name: s.clone() });
+            }
+
+            let summary = if !speakers_list.is_empty() {
+                format!("Talk by {}", speakers_list.join(", "))
+            } else {
+                talk_title.clone()
+            };
+
+            let talk = NewTalk {
+                title: talk_title.clone(),
+                summary,
+                transcript: None,
+                conference: self.metadata().conference.to_string(),
+                date: self.date,
+                website_url,
+                video_url: None,
+                slides_url: None,
+                thumbnail_url: None,
+                duration_seconds: None,
+            };
+
+            debug!(
+                "Parsed RustFest {} talk: {} ({} speakers)",
+                self.year,
+                talk_title,
+                speakers.len()
+            );
+            talks.push(ParsedTalk { talk, speakers });
         }
 
         if talks.is_empty() {
