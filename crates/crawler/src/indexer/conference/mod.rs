@@ -131,8 +131,6 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(fosdem::FOSDEM2018),
         Box::new(fosdem::FOSDEM2019),
         Box::new(fosdem::FOSDEM2020),
-        Box::new(fosdem::FOSDEM2021),
-        Box::new(fosdem::FOSDEM2022),
         Box::new(fosdem::FOSDEM2023),
         Box::new(fosdem::FOSDEM2024),
         Box::new(fosdem::FOSDEM2025),

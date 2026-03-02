@@ -37,8 +37,6 @@ macro_rules! define_fosdem_year {
 define_fosdem_year!(FOSDEM2018, 2018, 2, 3);
 define_fosdem_year!(FOSDEM2019, 2019, 2, 2);
 define_fosdem_year!(FOSDEM2020, 2020, 2, 1);
-define_fosdem_year!(FOSDEM2021, 2021, 2, 6);
-define_fosdem_year!(FOSDEM2022, 2022, 2, 5);
 define_fosdem_year!(FOSDEM2023, 2023, 2, 4);
 define_fosdem_year!(FOSDEM2024, 2024, 2, 3);
 define_fosdem_year!(FOSDEM2025, 2025, 2, 1);

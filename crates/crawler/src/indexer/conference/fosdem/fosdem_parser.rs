@@ -33,9 +33,7 @@ impl ScheduleParser for FosdemParser {
             year: Box::leak(self.year.to_string().into_boxed_str()),
             // Older years use archive.fosdem.org
             url: if self.year < 2024 {
-                static_url(Box::leak(
-                    format!("https://archive.fosdem.org/{}/", self.year).into_boxed_str(),
-                ))
+                static_url("https://archive.fosdem.org/")
             } else {
                 static_url("https://fosdem.org/")
             },
