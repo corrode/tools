@@ -3,9 +3,9 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info};
 use scraper::Html;
 use std::sync::LazyLock;
+use tracing::{debug, info};
 use types::{NewSpeaker, NewTalk, Url};
 
 use crate::indexer::conference::{ConferenceMetadata, ParsedTalk, ScheduleParser, static_url};
@@ -171,7 +171,7 @@ impl RustLab2024 {
         }
 
         if talks.is_empty() {
-            log::warn!(
+            tracing::warn!(
                 "No talks found in RustLab 2024 schedule data yet (might be too early for the schedule to be released)."
             );
         } else {

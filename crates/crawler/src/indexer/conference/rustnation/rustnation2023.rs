@@ -3,7 +3,7 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use log::{debug, info};
+use tracing::{debug, info};
 use scraper::Html;
 use std::sync::LazyLock;
 use types::{NewSpeaker, NewTalk, Url};
