@@ -195,9 +195,7 @@ impl RustConf2023 {
             }
 
             // For generic keynote labels the description holds the real title.
-            let (title, description_text) = if GENERIC_KEYNOTE_NAMES
-                .iter()
-                .any(|label| lower_name.as_str() == *label)
+            let (title, description_text) = if GENERIC_KEYNOTE_NAMES.contains(&lower_name.as_str())
             {
                 // Description is the real title; we have no separate summary.
                 let desc = event

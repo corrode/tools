@@ -85,12 +85,10 @@ impl RustNation2026 {
                 .trim();
 
             // February 18-19, 2026
-            let date = if day_name.contains("18") {
-                NaiveDate::from_ymd_opt(2026, 2, 18).unwrap()
-            } else if day_name.contains("19") {
+            let date = if day_name.contains("19") {
                 NaiveDate::from_ymd_opt(2026, 2, 19).unwrap()
             } else {
-                NaiveDate::from_ymd_opt(2026, 2, 19).unwrap()
+                NaiveDate::from_ymd_opt(2026, 2, 18).unwrap()
             };
 
             if let Some(slots) = day.get("slots").and_then(|v| v.as_array()) {

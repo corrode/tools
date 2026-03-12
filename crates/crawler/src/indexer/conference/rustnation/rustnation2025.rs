@@ -79,20 +79,14 @@ impl RustNation2025 {
             .context("Could not find schedule in JSON data")?;
 
         for day in schedule {
-            let day_name = day
+            let _day_name = day
                 .get("name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .trim();
 
-            // March 20, 2025
-            let date = if day_name.contains("18") {
-                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
-            } else if day_name.contains("19") {
-                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
-            } else {
-                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
-            };
+            // March 20, 2025 (single-day conference)
+            let date = NaiveDate::from_ymd_opt(2025, 3, 20).unwrap();
 
             if let Some(slots) = day.get("slots").and_then(|v| v.as_array()) {
                 for slot in slots {
