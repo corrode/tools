@@ -131,6 +131,7 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(fosdem::FOSDEM2018),
         Box::new(fosdem::FOSDEM2019),
         Box::new(fosdem::FOSDEM2020),
+        // Note: FOSDEM 2021 and 2022 were online-only years with no Rust devroom.
         Box::new(fosdem::FOSDEM2023),
         Box::new(fosdem::FOSDEM2024),
         Box::new(fosdem::FOSDEM2025),
@@ -151,6 +152,7 @@ pub fn get_all_parsers() -> Vec<Box<dyn ScheduleParser>> {
         Box::new(rustlab::RustLab2023),
         // RustNation editions
         Box::new(rustnation::RustNation2026),
+        Box::new(rustnation::RustNation2025),
         Box::new(rustnation::RustNation2024),
     ]
 }

@@ -14,8 +14,9 @@ use crate::tools::css::{css, text};
 /// Parser for Oxidize 2024
 pub struct Oxidize2024;
 
-static OXIDIZE_2024_BASE_URL: LazyLock<Url> =
-    LazyLock::new(|| static_url("http://web.archive.org/web/20240523055025/https://oxidizeconf.com/"));
+static OXIDIZE_2024_BASE_URL: LazyLock<Url> = LazyLock::new(|| {
+    static_url("http://web.archive.org/web/20240523055025/https://oxidizeconf.com/")
+});
 static OXIDIZE_2024_PLAYLIST_URL: LazyLock<Url> = LazyLock::new(|| {
     static_url("https://www.youtube.com/playlist?list=PL85XCvVPmGQjRuHYLU83tQPvbXwBXdZMI")
 });
@@ -158,4 +159,3 @@ impl Oxidize2024 {
         Ok(talks)
     }
 }
-

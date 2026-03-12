@@ -1,4 +1,4 @@
-//! RustNation 2024 schedule parser.
+//! RustNation 2025 schedule parser.
 
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
@@ -11,30 +11,30 @@ use types::{NewSpeaker, NewTalk, Url};
 use crate::indexer::conference::{ConferenceMetadata, ParsedTalk, ScheduleParser, static_url};
 use crate::tools::css::css;
 
-/// Parser for RustNation 2024
-pub struct RustNation2024;
+/// Parser for RustNation 2025
+pub struct RustNation2025;
 
-static RUSTNATION_2024_BASE_URL: LazyLock<Url> = LazyLock::new(|| {
-    static_url("http://web.archive.org/web/20240329154221/https://www.rustnationuk.com/")
+static RUSTNATION_2025_BASE_URL: LazyLock<Url> = LazyLock::new(|| {
+    static_url("http://web.archive.org/web/20250317050126/https://www.rustnationuk.com/")
 });
-static RUSTNATION_2024_PLAYLIST_URL: LazyLock<Url> = LazyLock::new(|| {
+static RUSTNATION_2025_PLAYLIST_URL: LazyLock<Url> = LazyLock::new(|| {
     static_url("https://www.youtube.com/playlist?list=PL1AoGvxomykSSFFL4Qav3wKzL-dsi9I5L")
 });
 
 #[async_trait]
-impl ScheduleParser for RustNation2024 {
+impl ScheduleParser for RustNation2025 {
     fn metadata(&self) -> ConferenceMetadata {
         ConferenceMetadata {
-            id: "rustnation-2024",
+            id: "rustnation-2025",
             conference: "RustNation",
-            year: "2024",
-            url: (*RUSTNATION_2024_BASE_URL).clone(),
-            youtube_playlist_url: Some((*RUSTNATION_2024_PLAYLIST_URL).clone()),
+            year: "2025",
+            url: (*RUSTNATION_2025_BASE_URL).clone(),
+            youtube_playlist_url: Some((*RUSTNATION_2025_PLAYLIST_URL).clone()),
         }
     }
 
     async fn parse(&self, client: &reqwest::Client) -> Result<Vec<ParsedTalk>> {
-        let base_url = &*RUSTNATION_2024_BASE_URL;
+        let base_url = &*RUSTNATION_2025_BASE_URL;
         let schedule_url = base_url
             .join("schedule")
             .context("Failed to build schedule URL")?;
@@ -60,7 +60,7 @@ impl ScheduleParser for RustNation2024 {
     }
 }
 
-impl RustNation2024 {
+impl RustNation2025 {
     fn parse_schedule(&self, document: &Html, base_url: &Url) -> Result<Vec<ParsedTalk>> {
         let mut talks = Vec::new();
 
@@ -85,13 +85,13 @@ impl RustNation2024 {
                 .unwrap_or("")
                 .trim();
 
-            // February 18-19, 2024
-            let date = if day_name.contains("27") {
-                NaiveDate::from_ymd_opt(2024, 3, 27).unwrap()
-            } else if day_name.contains("28") {
-                NaiveDate::from_ymd_opt(2024, 3, 28).unwrap()
+            // March 20, 2025
+            let date = if day_name.contains("18") {
+                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
+            } else if day_name.contains("19") {
+                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
             } else {
-                NaiveDate::from_ymd_opt(2024, 3, 28).unwrap()
+                NaiveDate::from_ymd_opt(2025, 3, 20).unwrap()
             };
 
             if let Some(slots) = day.get("slots").and_then(|v| v.as_array()) {
@@ -173,7 +173,7 @@ impl RustNation2024 {
                                 };
 
                                 debug!(
-                                    "Parsed RustNation 2024 talk: {} ({} speakers)",
+                                    "Parsed RustNation 2025 talk: {} ({} speakers)",
                                     title,
                                     speakers.len()
                                 );
@@ -199,16 +199,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rustnation_2024_metadata() {
-        let parser = RustNation2024;
+    fn test_rustnation_2025_metadata() {
+        let parser = RustNation2025;
         let metadata = parser.metadata();
-        assert_eq!(metadata.id, "rustnation-2024");
+        assert_eq!(metadata.id, "rustnation-2025");
         assert_eq!(metadata.conference, "RustNation");
-        assert_eq!(metadata.year, "2024");
+        assert_eq!(metadata.year, "2025");
         assert_eq!(
             metadata.url,
-            Url::parse("http://web.archive.org/web/20240329154221/https://www.rustnationuk.com/")
-                .expect("valid RustNation 2024 base URL")
+            Url::parse("http://web.archive.org/web/20250317050126/https://www.rustnationuk.com/")
+                .expect("valid RustNation 2025 base URL")
         );
     }
 }

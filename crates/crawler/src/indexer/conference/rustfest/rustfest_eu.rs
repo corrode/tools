@@ -91,7 +91,7 @@ impl RustFestEuParser {
             let a_el = title_el.select(&a_selector).next();
 
             let mut speakers_list = Vec::new();
-            let mut talk_title;
+            let talk_title;
             let mut href = String::new();
 
             if let Some(a) = a_el {

@@ -37,6 +37,7 @@ macro_rules! define_fosdem_year {
 define_fosdem_year!(FOSDEM2018, 2018, 2, 3);
 define_fosdem_year!(FOSDEM2019, 2019, 2, 2);
 define_fosdem_year!(FOSDEM2020, 2020, 2, 1);
+// Note: FOSDEM 2021 and 2022 were online-only years with no Rust devroom.
 define_fosdem_year!(FOSDEM2023, 2023, 2, 4);
 define_fosdem_year!(FOSDEM2024, 2024, 2, 3);
 define_fosdem_year!(FOSDEM2025, 2025, 2, 1);

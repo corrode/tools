@@ -14,7 +14,8 @@ use crate::tools::css::css;
 /// Parser for RustLab 2024
 pub struct RustLab2024;
 
-static RUSTLAB_2024_BASE_URL: LazyLock<Url> = LazyLock::new(|| static_url("http://web.archive.org/web/20241119164137/https://rustlab.it/"));
+static RUSTLAB_2024_BASE_URL: LazyLock<Url> =
+    LazyLock::new(|| static_url("http://web.archive.org/web/20241119164137/https://rustlab.it/"));
 static RUSTLAB_2024_PLAYLIST_URL: LazyLock<Url> =
     LazyLock::new(|| static_url("https://www.youtube.com/@rustlabconference3671"));
 
@@ -194,7 +195,8 @@ mod tests {
         assert_eq!(metadata.year, "2024");
         assert_eq!(
             metadata.url,
-            Url::parse("http://web.archive.org/web/20241119164137/https://rustlab.it/").expect("valid RustLab 2024 base URL")
+            Url::parse("http://web.archive.org/web/20241119164137/https://rustlab.it/")
+                .expect("valid RustLab 2024 base URL")
         );
         assert_eq!(
             metadata.youtube_playlist_url,
@@ -205,4 +207,3 @@ mod tests {
         );
     }
 }
-
