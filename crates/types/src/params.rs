@@ -14,6 +14,7 @@
 //! - [`RawParams`]: serde-friendly HTTP query parameters.
 //! - [`Params`]: validated/normalized filters (date range, sort, page).
 //! - [`FtsQuery`]: normalized, escaped query string for FTS.
+
 //!
 //! ## Parsing rules (current, intentionally minimal)
 //! - Quotes group phrases: `"async await"` is one term.
@@ -27,6 +28,21 @@
 //! - `site:github.com rust async`
 //! - `rust site:example.com`
 //!
+//! ## FTS query strategy
+//!
+//! ### Phrase-first for multi-word queries
+//! When the user types multiple unquoted words (e.g. `rust memory management`),
+//! the FTS query is structured as:
+//! ```text
+//! "rust memory management" OR ("rust" AND "memory" AND "management")
+//! ```
+//! This means results where the words appear as a contiguous phrase rank higher
+//! (FTS5 BM25 rewards phrase matches), while documents that merely contain all
+//! the words separately are still returned.
+//!
+//! A single word or an explicitly-quoted phrase is passed through as-is.
+//!
+
 //! ## Trade-offs
 //! - We do not support advanced syntax (negation, OR) to keep UX simple.
 //! - We prefer validation errors over silent coercion; callers can fall back
@@ -238,13 +254,43 @@ fn escape_fts_query(terms: &[SearchTerm]) -> Option<FtsQuery> {
         return None;
     }
 
-    let escaped = terms
+    // Single term or explicitly-quoted phrase: pass through as an exact phrase.
+    if terms.len() == 1 {
+        let escaped = format!("\"{}\"", terms[0].as_str().replace('"', "\"\""));
+        return Some(FtsQuery(escaped));
+    }
+
+    // Multiple terms: emit a phrase-first query so that documents where the
+    // words appear contiguously rank above documents that merely contain all
+    // the words scattered throughout the text.
+    //
+    // Example for `rust memory management`:
+    //   "rust memory management" OR ("rust" AND "memory" AND "management")
+    //
+    // FTS5 BM25 scores the phrase match higher, so it naturally floats to the
+    // top, but keyword-only matches are still returned as a fallback.
+    let all_words: Vec<String> = terms
         .iter()
-        .map(|term| format!("\"{}\"", term.as_str().replace('"', "\"\"")))
+        .flat_map(|term| {
+            // A term may itself be a multi-word phrase (from quoted input); split
+            // its words so they participate correctly in both the phrase and the
+            // individual-keyword arms.
+            term.as_str()
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    let phrase = format!("\"{}\"", all_words.join(" ").replace('"', "\"\""));
+
+    let keywords = all_words
+        .iter()
+        .map(|w| format!("\"{}\"", w.replace('"', "\"\"")))
         .collect::<Vec<_>>()
         .join(" AND ");
 
-    Some(FtsQuery(escaped))
+    Some(FtsQuery(format!("{phrase} OR ({keywords})")))
 }
 
 /// Normalized/validated filters derived from params + parsed query.
@@ -295,8 +341,41 @@ impl Params {
     }
 
     /// Returns an escaped FTS query string if there are terms.
+    ///
+    /// For multi-word input this produces a phrase-first query of the form
+    /// `"word1 word2" OR ("word1" AND "word2")`, so that exact-phrase matches
+    /// rank above scattered-keyword matches without excluding either.
     pub fn escaped_fts_query(&self) -> Option<FtsQuery> {
         escape_fts_query(&self.terms)
+    }
+
+    /// Returns a copy of these params with the search terms replaced by
+    /// spellfix-corrected words.
+    ///
+    /// `corrected_words` is a list of replacement strings, one per entry in
+    /// `self.terms`, as returned by `Repository::correct_terms`.  Each string
+    /// may be a single word or a space-separated phrase (for terms that were
+    /// originally quoted phrases).
+    ///
+    /// Returns an error only if a corrected word fails [`SearchTerm`]
+    /// validation (empty string), which should never happen in practice
+    /// because spellfix always returns non-empty suggestions.
+    pub fn with_corrected_terms(&self, corrected_words: Vec<String>) -> Result<Self, ParamsError> {
+        let terms = corrected_words
+            .into_iter()
+            .map(SearchTerm::new)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self {
+            terms,
+            filters: self.filters.clone(),
+            site: self.site.clone(),
+            start_year: self.start_year,
+            end_year: self.end_year,
+            sort_by: self.sort_by,
+            content_type: self.content_type,
+            page: self.page,
+        })
     }
 
     /// Builds a fallback filters value from defaults.
@@ -546,6 +625,45 @@ mod tests {
         assert!(filters.is_empty());
     }
 
+    // --- FTS query building ---
+
+    #[test]
+    fn fts_query_single_word_is_exact_phrase() {
+        let (terms, _) = parse_query("rust").unwrap();
+        let fts = escape_fts_query(&terms).unwrap();
+        assert_eq!(fts.as_str(), "\"rust\"");
+    }
+
+    #[test]
+    fn fts_query_multiple_words_phrase_first() {
+        let (terms, _) = parse_query("rust memory management").unwrap();
+        let fts = escape_fts_query(&terms).unwrap();
+        assert_eq!(
+            fts.as_str(),
+            "\"rust memory management\" OR (\"rust\" AND \"memory\" AND \"management\")"
+        );
+    }
+
+    #[test]
+    fn fts_query_quoted_phrase_plus_words_phrase_first() {
+        // "async await" is a single SearchTerm; "borrow" and "checker" are two more.
+        // All words should participate in the phrase arm.
+        let (terms, _) = parse_query("\"async await\" borrow checker").unwrap();
+        let fts = escape_fts_query(&terms).unwrap();
+        assert_eq!(
+            fts.as_str(),
+            "\"async await borrow checker\" OR (\"async\" AND \"await\" AND \"borrow\" AND \"checker\")"
+        );
+    }
+
+    #[test]
+    fn fts_query_single_quoted_phrase_is_exact_phrase() {
+        let (terms, _) = parse_query("\"async await\"").unwrap();
+        let fts = escape_fts_query(&terms).unwrap();
+        // Single term, so no OR — just the phrase.
+        assert_eq!(fts.as_str(), "\"async await\"");
+    }
+
     #[test]
     fn parse_query_site_inline() {
         let (terms, filters) = parse_query("rust site:github.com").unwrap();
@@ -594,6 +712,7 @@ mod tests {
 
     #[test]
     fn fts_query_escapes_quotes() {
+        // Single-term path: the whole phrase is wrapped in one pair of quotes.
         let terms = vec![SearchTerm("he said \"hi\"".to_string())];
         let fts = escape_fts_query(&terms).unwrap();
         assert_eq!(fts.as_str(), "\"he said \"\"hi\"\"\"");

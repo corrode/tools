@@ -92,6 +92,14 @@ use types::{
     Stats, VideoDurationRecord, VideoStats, YearStats,
 };
 
+/// Returns the path to the compiled spellfix1 shared library.
+///
+/// Reads `SPELLFIX_PATH` from the environment, falling back to `ext/spellfix`
+/// (without extension — SQLite appends `.so` or `.dylib` automatically).
+fn spellfix_extension_path() -> String {
+    std::env::var("SPELLFIX_PATH").unwrap_or_else(|_| "ext/spellfix".to_string())
+}
+
 /// Manages storage and retrieval of search entries
 pub struct Repository {
     pool: Pool<Sqlite>,
@@ -113,7 +121,12 @@ impl Repository {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
         tracing::info!("Opening database at: {database_url}");
 
-        let options = SqliteConnectOptions::from_str(&database_url)?.pragma("trusted_schema", "1");
+        let spellfix_path = spellfix_extension_path();
+        tracing::debug!("Loading spellfix1 extension from: {spellfix_path}");
+
+        let options = SqliteConnectOptions::from_str(&database_url)?
+            .pragma("trusted_schema", "1")
+            .extension(spellfix_path);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(20)
@@ -132,11 +145,88 @@ impl Repository {
         Ok(repo)
     }
 
-    /// Initializes the database schema
+    /// Initializes the database schema.
     async fn init_db(&self) -> Result<()> {
         sqlx::migrate!("../../migrations").run(&self.pool).await?;
-
         Ok(())
+    }
+
+    /// Looks up spelling corrections for each search term using the spellfix1
+    /// `search_vocab` table.
+    ///
+    /// Returns `None` when every term is already known (edit distance 0) or
+    /// when spellfix cannot find a better candidate within a reasonable
+    /// distance, avoiding spurious "corrections" of correctly spelled words.
+    ///
+    /// A `top=1` constraint makes spellfix return only the single best match
+    /// per term, keeping the query fast.
+    pub async fn correct_terms(&self, params: &Params) -> Result<Option<Vec<String>>> {
+        if !params.has_query_terms() {
+            return Ok(None);
+        }
+
+        let mut corrected: Vec<String> = Vec::new();
+        let mut any_changed = false;
+
+        for term in &params.terms {
+            // Multi-word phrases come through as a single SearchTerm; correct
+            // each constituent word independently then rejoin.
+            let words: Vec<&str> = term.as_str().split_whitespace().collect();
+            let mut corrected_words: Vec<String> = Vec::new();
+
+            for word in &words {
+                // Only attempt correction for purely alphabetic words of
+                // reasonable length — numbers, symbols, and very short tokens
+                // are not worth correcting.
+                let is_alpha = word.chars().all(|c| c.is_ascii_alphabetic());
+                if !is_alpha || word.len() < 3 {
+                    corrected_words.push((*word).to_owned());
+                    continue;
+                }
+
+                let row: Option<(String, i64)> = sqlx::query_as(
+                    "SELECT word, distance
+                     FROM search_vocab
+                     WHERE word MATCH ?1
+                       AND top = 1
+                       AND scope = 2",
+                )
+                .bind(word.to_lowercase())
+                .fetch_optional(&self.pool)
+                .await?;
+
+                match row {
+                    // Distance 0 means the word is already in the vocab
+                    // (correctly spelled).  Distance > 200 means the best
+                    // candidate is too far away to be a plausible correction.
+                    Some((suggestion, 0)) | Some((suggestion, _))
+                        if {
+                            // Re-bind to check: distance == 0 counts as "unchanged"
+                            suggestion.to_lowercase() == word.to_lowercase()
+                        } =>
+                    {
+                        corrected_words.push((*word).to_owned());
+                    }
+                    Some((suggestion, distance)) if distance <= 200 => {
+                        tracing::debug!(original = word, correction = %suggestion, distance, "spellfix correction");
+                        corrected_words.push(suggestion);
+                        any_changed = true;
+                    }
+                    _ => {
+                        // No good correction found; keep the original word.
+                        corrected_words.push((*word).to_owned());
+                    }
+                }
+            }
+
+            corrected.push(corrected_words.join(" "));
+        }
+
+        if any_changed {
+            Ok(Some(corrected))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Inserts a new quote
@@ -1125,19 +1215,49 @@ impl Repository {
         offset.min(last_page_offset as u32)
     }
 
-    /// Searches for entries matching the given query
+    /// Searches the index, automatically falling back to spellfix-corrected
+    /// terms when the primary query returns zero results.
     pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
         let page_num = request.params.page.max(1);
         let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
 
-        match request.params.content_type {
+        let (results, count) = match request.params.content_type {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
             Some(ContentType::Podcast) => self.search_podcasts(request, offset).await,
             Some(ContentType::Research) => self.search_research_papers(request, offset).await,
             Some(ContentType::Talks) => self.search_talks(request, offset).await,
             None => self.search_all(request, offset).await,
+        }?;
+
+        // If the primary query found nothing and the user typed search terms,
+        // ask spellfix1 for corrections and retry once with the corrected terms.
+        if count == 0
+            && request.params.has_query_terms()
+            && let Some(corrected_words) = self.correct_terms(request.params).await?
+        {
+            let corrected_params = request.params.with_corrected_terms(corrected_words)?;
+            let corrected_request = SearchRequest {
+                params: &corrected_params,
+            };
+            return match corrected_request.params.content_type {
+                Some(ContentType::Articles) => {
+                    self.search_articles(&corrected_request, offset).await
+                }
+                Some(ContentType::Video) => self.search_videos(&corrected_request, offset).await,
+                Some(ContentType::Podcast) => {
+                    self.search_podcasts(&corrected_request, offset).await
+                }
+                Some(ContentType::Research) => {
+                    self.search_research_papers(&corrected_request, offset)
+                        .await
+                }
+                Some(ContentType::Talks) => self.search_talks(&corrected_request, offset).await,
+                None => self.search_all(&corrected_request, offset).await,
+            };
         }
+
+        Ok((results, count))
     }
 
     fn apply_generic_filters(
