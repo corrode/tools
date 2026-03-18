@@ -134,11 +134,17 @@ impl Repository {
             .await
             .context("Failed to connect to SQLite database")?;
 
-        // Verify trusted_schema is enabled
+        // Verify trusted_schema is enabled — spellfix1 requires it, and if it
+        // somehow wasn't set (e.g. a SQLite build that ignores the pragma) we
+        // want a clear error at startup rather than a cryptic failure later.
         let trusted: i32 = sqlx::query_scalar("PRAGMA trusted_schema")
             .fetch_one(&pool)
             .await?;
         tracing::debug!("trusted_schema = {}", trusted);
+        anyhow::ensure!(
+            trusted == 1,
+            "trusted_schema is not enabled — the spellfix1 extension cannot be used"
+        );
 
         let repo = Self { pool };
         repo.init_db().await?;
@@ -196,17 +202,13 @@ impl Repository {
                 .await?;
 
                 match row {
-                    // Distance 0 means the word is already in the vocab
-                    // (correctly spelled).  Distance > 200 means the best
-                    // candidate is too far away to be a plausible correction.
-                    Some((suggestion, 0)) | Some((suggestion, _))
-                        if {
-                            // Re-bind to check: distance == 0 counts as "unchanged"
-                            suggestion.to_lowercase() == word.to_lowercase()
-                        } =>
-                    {
+                    // The suggestion matches the original word (case-insensitively),
+                    // so there is nothing to correct — keep the user's original casing.
+                    Some((suggestion, _)) if suggestion.to_lowercase() == word.to_lowercase() => {
                         corrected_words.push((*word).to_owned());
                     }
+                    // A plausible correction within the accepted edit-distance budget.
+                    // Distance > 200 is too far away and falls through to the catch-all.
                     Some((suggestion, distance)) if distance <= 200 => {
                         tracing::debug!(original = word, correction = %suggestion, distance, "spellfix correction");
                         corrected_words.push(suggestion);
@@ -1215,20 +1217,30 @@ impl Repository {
         offset.min(last_page_offset as u32)
     }
 
-    /// Searches the index, automatically falling back to spellfix-corrected
-    /// terms when the primary query returns zero results.
-    pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
-        let page_num = request.params.page.max(1);
-        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
-
-        let (results, count) = match request.params.content_type {
+    /// Dispatches a search request to the appropriate per-type query based on
+    /// the `content_type` filter in the request params.
+    async fn search_by_type(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
+        match request.params.content_type {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
             Some(ContentType::Podcast) => self.search_podcasts(request, offset).await,
             Some(ContentType::Research) => self.search_research_papers(request, offset).await,
             Some(ContentType::Talks) => self.search_talks(request, offset).await,
             None => self.search_all(request, offset).await,
-        }?;
+        }
+    }
+
+    /// Searches the index, automatically falling back to spellfix-corrected
+    /// terms when the primary query returns zero results.
+    pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
+        let page_num = request.params.page.max(1);
+        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
+
+        let (results, count) = self.search_by_type(request, offset).await?;
 
         // If the primary query found nothing and the user typed search terms,
         // ask spellfix1 for corrections and retry once with the corrected terms.
@@ -1240,21 +1252,7 @@ impl Repository {
             let corrected_request = SearchRequest {
                 params: &corrected_params,
             };
-            return match corrected_request.params.content_type {
-                Some(ContentType::Articles) => {
-                    self.search_articles(&corrected_request, offset).await
-                }
-                Some(ContentType::Video) => self.search_videos(&corrected_request, offset).await,
-                Some(ContentType::Podcast) => {
-                    self.search_podcasts(&corrected_request, offset).await
-                }
-                Some(ContentType::Research) => {
-                    self.search_research_papers(&corrected_request, offset)
-                        .await
-                }
-                Some(ContentType::Talks) => self.search_talks(&corrected_request, offset).await,
-                None => self.search_all(&corrected_request, offset).await,
-            };
+            return self.search_by_type(&corrected_request, offset).await;
         }
 
         Ok((results, count))
