@@ -340,7 +340,7 @@ impl ThumbnailConfig {
     /// Creates a new thumbnail config with default storage in `data/static/youtube`.
     pub fn new(overwrite: bool) -> Self {
         Self {
-            static_dir: PathBuf::from("data/static/youtube"),
+            static_dir: PathBuf::from(format!("{}/static/youtube", types::get_data_dir())),
             overwrite,
         }
     }
