@@ -24,16 +24,16 @@ html[data-theme="dark-twir"] h1 {
 /* Stats Grid Layout */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-    margin-bottom: 40px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
 }
 
 .stat-card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    padding: 24px;
+    padding: 16px;
     transition: all 0.2s ease;
 }
 
@@ -42,11 +42,11 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .stat-value {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--color-primary);
     font-family: "Martian Mono", monospace;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .stat-label {
@@ -58,7 +58,7 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .section {
-    margin-bottom: 48px;
+    margin-bottom: 32px;
 }
 
 .section-title {
@@ -164,21 +164,11 @@ html[data-theme="dark-twir"] h1 {
 }
 
 /* Domain List */
-.domain-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 12px;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 20px;
-}
-
 .domain-item {
     display: inline-flex;
     align-items: center;
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: 1px solid transparent;
     border-radius: 12px;
     padding: 4px 10px;
     font-size: 0.8rem;
@@ -188,7 +178,7 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .domain-item:hover {
-    border-color: var(--color-primary);
+    background: var(--color-border);
     transform: translateY(-1px);
 }
 
@@ -198,7 +188,7 @@ html[data-theme="dark-twir"] h1 {
     gap: 24px;
 }
 
-.domain-list {
+.domain-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -308,23 +298,19 @@ html[data-theme="dark-twir"] h1 {
 @media (max-width: 600px) {
     .stats-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 12px;
     }
 
     .stat-card {
-        padding: 20px;
+        padding: 16px;
     }
 
     .stat-value {
-        font-size: 2rem;
+        font-size: 1.75rem;
     }
 
     .category-item,
     .year-item {
         padding: 12px 16px;
-    }
-
-    .domain-list {
-        grid-template-columns: 1fr;
     }
 }

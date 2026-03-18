@@ -180,6 +180,29 @@
                 </div>
             </div>
 
+            <!-- Other Formats -->
+            <div class="section">
+                <h2 class="section-title">Other Formats</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.talks.total }}</div>
+                        <div class="stat-label">Talks & Conferences</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.podcasts.total }}</div>
+                        <div class="stat-label">Podcasts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.research.total }}</div>
+                        <div class="stat-label">Research Papers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.rfcs.total }}</div>
+                        <div class="stat-label">RFCs</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Articles Per Month -->
             <div class="section">
                 <div
@@ -298,7 +321,7 @@
                         <h3 class="year-subsection-title">
                             {{ yearly_domains.year }}
                         </h3>
-                        <div class="domain-list">
+                        <div class="domain-tags">
                             {% for domain in yearly_domains.domains %}
                             <a
                                 href="/search?q=site:{{ domain.domain }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance"

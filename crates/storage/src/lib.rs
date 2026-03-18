@@ -702,6 +702,12 @@ impl Repository {
                 SELECT MIN(date) as min_date, MAX(date) as max_date FROM articles
                 UNION ALL
                 SELECT MIN(date) as min_date, MAX(date) as max_date FROM videos
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM podcast_episodes
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM talks
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM research_papers
             )
             "#,
         )
@@ -751,6 +757,54 @@ impl Repository {
                         ELSE url
                     END as domain
                 FROM videos
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(url, INSTR(url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                                END
+                            )
+                        ELSE url
+                    END as domain
+                FROM podcast_episodes
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN website_url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(website_url, INSTR(website_url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(website_url, INSTR(website_url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(website_url, INSTR(website_url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(website_url, INSTR(website_url, '://') + 3))
+                                END
+                            )
+                        ELSE website_url
+                    END as domain
+                FROM talks
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(url, INSTR(url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                                END
+                            )
+                        ELSE url
+                    END as domain
+                FROM research_papers
             )
             "#,
         )
@@ -762,7 +816,25 @@ impl Repository {
         let article_stats = self.get_article_stats().await?;
         let video_stats = self.get_video_stats().await?;
 
-        let total_entries = article_stats.total + video_stats.total;
+        let podcast_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM podcast_episodes")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let talk_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM talks")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let research_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM research_papers")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let rfc_total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category LIKE '%RFC%'")
+                .fetch_one(&self.pool)
+                .await?;
+
+        let total_entries =
+            article_stats.total + video_stats.total + podcast_total + talk_total + research_total;
 
         Ok(Stats {
             total_entries,
@@ -771,6 +843,14 @@ impl Repository {
             total_unique_domains,
             articles: article_stats,
             videos: video_stats,
+            podcasts: types::PodcastStats {
+                total: podcast_total,
+            },
+            talks: types::TalkStats { total: talk_total },
+            research: types::ResearchStats {
+                total: research_total,
+            },
+            rfcs: types::RfcStats { total: rfc_total },
         })
     }
 
