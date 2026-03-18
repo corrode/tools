@@ -8,6 +8,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 RUN touch -t 197001010000 recipe.json
 
 FROM chef AS builder
+ENV DEBIAN_FRONTEND=noninteractive
 # Install build dependencies
 RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev
 
@@ -26,6 +27,8 @@ RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/l
 
 # Runtime stage
 FROM debian:trixie-slim AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies
 # Chromium is required for the crawler
