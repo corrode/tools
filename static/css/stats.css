@@ -24,7 +24,8 @@ html[data-theme="dark-twir"] h1 {
 /* Stats Grid Layout */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-auto-rows: minmax(120px, auto);
     gap: 16px;
     margin-bottom: 32px;
 }
@@ -32,29 +33,51 @@ html[data-theme="dark-twir"] h1 {
 .stat-card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 16px;
-    transition: all 0.2s ease;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme^="dark"] .stat-card {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
 .stat-card:hover {
     border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.05),
+        0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme^="dark"] .stat-card:hover {
+    box-shadow:
+        0 10px 20px -5px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 
 .stat-value {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 2.25rem;
+    font-weight: 800;
     color: var(--color-primary);
-    font-family: "Martian Mono", monospace;
-    margin-bottom: 4px;
+    font-family: "Univers", sans-serif;
+    margin-bottom: 8px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
 }
 
 .stat-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: "Martian Mono", monospace;
+    font-weight: 600;
 }
 
 .section {
@@ -69,13 +92,36 @@ html[data-theme="dark-twir"] h1 {
     font-family: "Univers", sans-serif;
 }
 
+#articles-chart {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme^="dark"] #articles-chart {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
 /* Lists (Categories & Years) */
 .category-list,
 .year-list {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 16px;
     padding: 0;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+html[data-theme^="dark"] .category-list,
+html[data-theme^="dark"] .year-list {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
 .category-item,
@@ -134,11 +180,11 @@ html[data-theme="dark-twir"] h1 {
 
 /* Progress Bars */
 .progress-bar {
-    height: 6px;
+    height: 8px;
     background-color: var(--color-border);
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 .progress-fill {
@@ -148,19 +194,22 @@ html[data-theme="dark-twir"] h1 {
         var(--color-primary-muted),
         var(--color-primary)
     );
-    transition: width 0.3s ease;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
 }
 
 .year-section {
-    margin-bottom: 32px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 
-.year-subsection-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--color-primary);
-    margin-bottom: 16px;
-    font-family: "Martian Mono", monospace;
+html[data-theme^="dark"] .year-section {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Domain List */
@@ -179,7 +228,6 @@ html[data-theme="dark-twir"] h1 {
 
 .domain-item:hover {
     background: var(--color-border);
-    transform: translateY(-1px);
 }
 
 .domains-grid {
@@ -206,11 +254,13 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .year-subsection-title {
-    margin: 0 0 12px 0;
-    font-size: 1.1rem;
-    color: var(--color-text-muted);
+    margin: 0 0 16px 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
     border-bottom: 1px solid var(--color-border);
-    padding-bottom: 8px;
+    padding-bottom: 12px;
+    font-family: "Univers", sans-serif;
 }
 
 .category-icon {
@@ -302,11 +352,19 @@ html[data-theme="dark-twir"] h1 {
     }
 
     .stat-card {
+        padding: 20px;
+    }
+
+    #articles-chart {
+        padding: 16px;
+    }
+
+    .year-section {
         padding: 16px;
     }
 
     .stat-value {
-        font-size: 1.75rem;
+        font-size: 2rem;
     }
 
     .category-item,
