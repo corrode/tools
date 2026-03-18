@@ -10,7 +10,7 @@ RUN touch -t 197001010000 recipe.json
 FROM chef AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 # Install build dependencies
-RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev
+RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev cmake git
 
 COPY --from=planner /app/recipe.json recipe.json
 # Docker caching 
@@ -25,6 +25,11 @@ RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/l
  && cc -fPIC -shared -o ext/spellfix.so ext/spellfix.c -I/usr/include \
  && echo "spellfix.so built OK"
 
+# Build whisper.cpp
+RUN git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper.cpp && \
+    cd /tmp/whisper.cpp && cmake -B build && cmake --build build --config Release && \
+    curl -L -o models/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
+
 # Runtime stage
 FROM debian:trixie-slim AS runtime
 
@@ -38,7 +43,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libsqlite3-0 \
-    curl \ 
+    curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
@@ -53,6 +59,8 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
 COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
 COPY --from=builder --chown=appuser:appuser /app/ext/spellfix.so /app/ext/spellfix.so
+COPY --from=builder /tmp/whisper.cpp/build/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=builder /tmp/whisper.cpp/models/ggml-large-v3-turbo-q5_0.bin /usr/local/share/ggml-large-v3-turbo-q5_0.bin
 COPY --chown=appuser:appuser static /app/static
 
 # Set environment variables
