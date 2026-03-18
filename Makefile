@@ -46,6 +46,10 @@ format fmt: ## Format the code
 dev: $(SPELLFIX_LIB) ## Run the server in watch mode
 	cargo watch -x 'run --bin server'
 
+.PHONY: crawler
+crawler: $(SPELLFIX_LIB) ## Run the TWiR crawler
+	cargo run -p crawler -- --indexer twir
+
 .PHONY: docs
 docs: ## Open documentation 
 	cargo doc --document-private-items --workspace --open 
