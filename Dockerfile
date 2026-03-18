@@ -20,6 +20,11 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --workspace
 
+# Compile the spellfix1 SQLite extension as a shared library
+RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/lists/* \
+ && cc -fPIC -shared -o ext/spellfix.so ext/spellfix.c -I/usr/include \
+ && echo "spellfix.so built OK"
+
 # Runtime stage
 FROM debian:trixie-slim AS runtime
 
@@ -42,15 +47,17 @@ WORKDIR /app
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
-# Copy binaries and assets
+# Copy binaries, assets, and the spellfix extension
 COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
 COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
+COPY --from=builder --chown=appuser:appuser /app/ext/spellfix.so /app/ext/spellfix.so
 COPY --chown=appuser:appuser static /app/static
 
 # Set environment variables
 ENV PORT=3000
 ENV DATA_DIR=/app/data
 ENV CHROME_NO_SANDBOX=true
+ENV SPELLFIX_PATH=/app/ext/spellfix
 
 # Switch to non-root user
 USER appuser

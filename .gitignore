@@ -1,4 +1,6 @@
 /target
+ext/spellfix.so
+ext/spellfix.dylib
 .env
 TODO.md
 data/
