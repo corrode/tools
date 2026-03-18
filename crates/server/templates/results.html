@@ -195,7 +195,8 @@
         "result/talk.html" %} {% endfor %} {% for video in videos %} {% include
         "result/video.html" %} {% endfor %} {% for article in articles %} {%
         include "result/article.html" %} {% endfor %} {% for paper in
-        research_papers %} {% include "result/research.html" %} {% endfor %} {% endif %}
+        research_papers %} {% include "result/research.html" %} {% endfor %} {%
+        endif %}
     </div>
 
     <!-- Pagination -->
@@ -238,7 +239,6 @@
         <span class="pagination-btn disabled">Next →</span>
         {% endif %}
     </div>
-    {% endif %}
 
     <!-- Quote Easter Egg -->
     {% if let Some(q) = quote %}
@@ -252,5 +252,5 @@
             {% else %} — {{ q.author }} {% endif %}
         </div>
     </div>
-    {% endif %} {% endif %}
+    {% endif %} {% endif %} {% endif %}
 </div>

@@ -473,10 +473,14 @@ footer {
 
 .footer-logo {
     flex-shrink: 0;
-    height: 16px;
+    height: 24px;
     width: auto;
-    opacity: 0.8;
     filter: brightness(0) saturate(100%) invert(100%);
+    transition: opacity 0.2s ease;
+}
+
+.footer-logo:hover {
+    opacity: 0.8;
 }
 
 .footer-links {

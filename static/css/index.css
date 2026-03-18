@@ -989,27 +989,22 @@ html[data-theme="dark-twir"] .tag {
 .quote-easter-egg {
     padding: 32px;
     border-top: 1px solid var(--color-border);
-    background: linear-gradient(
-        to bottom,
-        transparent,
-        rgba(72, 213, 151, 0.02)
-    );
     text-align: center;
 }
 
 .quote-content {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-style: italic;
-    color: var(--color-text);
+    color: var(--color-text-muted);
     margin-bottom: 12px;
-    line-height: 1.8;
+    line-height: 1.6;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
 }
 
 .quote-attribution {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
     font-family: "Martian Mono", monospace;
     text-transform: uppercase;
