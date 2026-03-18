@@ -84,6 +84,10 @@ html[data-theme="light-docs-rs"] .logo {
         hue-rotate(208deg) brightness(102%) contrast(101%);
 }
 
+html[data-theme="light-docs-rs"] .footer-logo {
+    filter: brightness(0) saturate(100%);
+}
+
 html[data-theme="light-hacker-news"] {
     --color-background: #f6f6ef;
     --color-surface: #f6f6ef;
@@ -147,6 +151,10 @@ html[data-theme="light-hacker-news"] .logo {
     border-radius: 2px;
 }
 
+html[data-theme="light-hacker-news"] .footer-logo {
+    filter: brightness(0) saturate(100%);
+}
+
 html[data-theme="light-hacker-news"] footer {
     border-top: 2px solid #ff6600;
     background-color: #f6f6ef;
@@ -202,6 +210,11 @@ html[data-theme="dark-twir"] .logo {
     height: 42px;
 }
 
+html[data-theme="dark-twir"] .footer-logo {
+    filter: brightness(0) saturate(100%) invert(64%) sepia(59%) saturate(449%)
+        hue-rotate(358deg) brightness(95%) contrast(92%);
+}
+
 html[data-theme="dark-twir"] .header-link {
     align-items: baseline;
 }
@@ -217,6 +230,11 @@ html[data-theme="dark-cathode"] {
 }
 
 html[data-theme="dark-cathode"] .logo {
+    filter: brightness(0) saturate(100%) invert(77%) sepia(18%) saturate(1366%)
+        hue-rotate(100deg) brightness(95%) contrast(92%);
+}
+
+html[data-theme="dark-cathode"] .footer-logo {
     filter: brightness(0) saturate(100%) invert(77%) sepia(18%) saturate(1366%)
         hue-rotate(100deg) brightness(95%) contrast(92%);
 }
@@ -447,10 +465,11 @@ footer {
     max-width: 45ch;
 }
 
-.footer-ferris {
-    width: 64px;
+.footer-logo {
+    width: 120px;
     height: auto;
     flex-shrink: 0;
+    filter: brightness(0) saturate(100%) invert(100%);
 }
 
 .footer-section p {
