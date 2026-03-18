@@ -3,11 +3,11 @@
     <!-- Content type tabs -->
     <nav class="search-tabs" role="tablist" aria-label="Content type">
         <a
-            href="?q={{ q }}"
+            href="?q={{ q|urlencode }}"
             class="tab {% if content_type.is_none() %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type.is_none() %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}"
+            hx-get="/search?q={{ q|urlencode }}"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -19,11 +19,11 @@
             All
         </a>
         <a
-            href="?q={{ q }}&type=articles"
+            href="?q={{ q|urlencode }}&type=articles"
             class="tab {% if content_type == Some(types::ContentType::Articles) %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type == Some(types::ContentType::Articles) %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}&type=articles"
+            hx-get="/search?q={{ q|urlencode }}&type=articles"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -37,11 +37,11 @@
             Articles
         </a>
         <a
-            href="?q={{ q }}&type=video"
+            href="?q={{ q|urlencode }}&type=video"
             class="tab {% if content_type == Some(types::ContentType::Video) %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type == Some(types::ContentType::Video) %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}&type=video"
+            hx-get="/search?q={{ q|urlencode }}&type=video"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -55,11 +55,11 @@
             Videos
         </a>
         <a
-            href="?q={{ q }}&type=podcast"
+            href="?q={{ q|urlencode }}&type=podcast"
             class="tab {% if content_type == Some(types::ContentType::Podcast) %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type == Some(types::ContentType::Podcast) %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}&type=podcast"
+            hx-get="/search?q={{ q|urlencode }}&type=podcast"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -73,11 +73,11 @@
             Podcasts
         </a>
         <a
-            href="?q={{ q }}&type=research"
+            href="?q={{ q|urlencode }}&type=research"
             class="tab {% if content_type == Some(types::ContentType::Research) %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type == Some(types::ContentType::Research) %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}&type=research"
+            hx-get="/search?q={{ q|urlencode }}&type=research"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"
@@ -91,11 +91,11 @@
             Research
         </a>
         <a
-            href="?q={{ q }}&type=talks"
+            href="?q={{ q|urlencode }}&type=talks"
             class="tab {% if content_type == Some(types::ContentType::Talks) %}tab-active{% endif %}"
             role="tab"
             aria-selected="{% if content_type == Some(types::ContentType::Talks) %}true{% else %}false{% endif %}"
-            hx-get="/search?q={{ q }}&type=talks"
+            hx-get="/search?q={{ q|urlencode }}&type=talks"
             hx-target="#results-container"
             hx-swap="outerHTML"
             hx-push-url="true"

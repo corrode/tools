@@ -299,7 +299,7 @@
                         <div class="domain-tags">
                             {% for domain in yearly_domains.domains %}
                             <a
-                                href="/search?q=site:{{ domain.domain }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance"
+                                href="/search?q=site:{{ domain.domain|urlencode }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance"
                                 target="_blank"
                                 class="domain-item"
                             >
