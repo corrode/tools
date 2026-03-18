@@ -175,21 +175,63 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .domain-item {
-    display: flex;
-    justify-content: space-between;
+    display: inline-flex;
     align-items: center;
-    padding: 10px 14px;
-    background-color: rgba(72, 213, 151, 0.05);
-    border-radius: 4px;
-    transition: all 0.2s ease;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: var(--color-text);
     text-decoration: none;
-    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .domain-item:hover {
-    background-color: rgba(72, 213, 151, 0.1);
-    border: 1px solid var(--color-primary);
-    padding: 9px 13px;
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.domains-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.domain-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.domain-icon {
+    display: flex;
+    align-items: center;
+}
+
+.domain-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+.year-subsection-title {
+    margin: 0 0 12px 0;
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 8px;
+}
+
+.category-icon {
+    display: flex;
+    align-items: center;
+}
+
+.category-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
 }
 
 .domain-name {
@@ -201,16 +243,17 @@ html[data-theme="dark-twir"] h1 {
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .domain-count {
-    font-family: "Martian Mono", monospace;
-    color: var(--color-primary);
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    border-radius: 10px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    font-size: 0.75rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    margin-left: 12px;
-    flex-shrink: 0;
 }
 
 /* Keywords */
