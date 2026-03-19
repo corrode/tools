@@ -1,4 +1,4 @@
-<div id="results-container">
+<div id="results-container" hx-indicator=".search-icon">
     {% if let Some(q) = query %} {% if !q.is_empty() %}
     <!-- Content type tabs -->
     <nav class="search-tabs" role="tablist" aria-label="Content type" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid var(--color-border); margin: 0 0 12px 0; padding: 0;">
