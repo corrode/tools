@@ -220,7 +220,6 @@ mod tests {
             title: title.to_string(),
             description: String::new(),
             published_at: "2024-09-11T00:00:00Z".to_string(),
-            thumbnail_url: None,
         }
     }
 
@@ -660,20 +659,9 @@ impl ConferenceIndexer {
             playlist_item,
         } = &youtube;
 
-        // Thumbnail: prefer playlist metadata, fall back to YouTube default
+        // Derive thumbnail from video ID — YouTube thumbnail URLs are deterministic
         if talk.thumbnail_url.is_none() {
-            if let Some(item) = playlist_item
-                && let Some(url) = item
-                    .thumbnail_url
-                    .as_deref()
-                    .filter(|u| !u.trim().is_empty())
-            {
-                talk.thumbnail_url = Some(url.to_string());
-            }
-            if talk.thumbnail_url.is_none() {
-                talk.thumbnail_url =
-                    Some(format!("https://i.ytimg.com/vi/{}/hqdefault.jpg", video_id));
-            }
+            talk.thumbnail_url = Some(format!("https://i.ytimg.com/vi/{}/hqdefault.jpg", video_id));
         }
 
         if self.debug
@@ -902,7 +890,6 @@ mod playlist_matching_tests {
             title: title.to_string(),
             description: String::new(),
             published_at: String::new(),
-            thumbnail_url: None,
         }
     }
 

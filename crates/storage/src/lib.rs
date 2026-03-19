@@ -86,10 +86,11 @@ use types::NewTalk;
 use types::Speaker;
 use types::Talk;
 use types::Url;
+use types::VideoData;
 use types::params::{Params, SortOrder};
 use types::{
-    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, NewVideo, SearchResult,
-    Stats, VideoDurationRecord, VideoStats, YearStats,
+    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, SearchResult, Stats,
+    VideoDurationRecord, VideoStats, YearStats,
 };
 
 /// Returns the path to the compiled spellfix1 shared library.
@@ -318,7 +319,7 @@ impl Repository {
     }
 
     /// Inserts a new video
-    pub async fn insert_video(&self, video: &NewVideo) -> Result<i64> {
+    pub async fn insert_video(&self, video: &VideoData) -> Result<i64> {
         tracing::debug!("Inserting video: {}", video.metadata.url);
 
         let date_str = video.metadata.date.format("%Y-%m-%d").to_string();

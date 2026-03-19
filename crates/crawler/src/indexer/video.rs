@@ -5,7 +5,7 @@ use chrono::{DateTime, NaiveDate};
 use std::env;
 use storage::Repository;
 use tracing::{debug, info, warn};
-use types::{Metadata, NewVideo, Url};
+use types::{Metadata, Url, VideoData};
 
 use crate::tools::youtube::{
     ParsedPlaylistItem, ThumbnailConfig, YoutubeApi, fetch_transcript, video_watch_url,
@@ -91,29 +91,25 @@ impl Indexer for Youtube {
                 }
             };
 
-            let thumbnail_url = match item.thumbnail_url.as_deref() {
-                Some(url) => match self
-                    .api
-                    .download_thumbnail(
-                        url,
-                        &item.video_id,
-                        &self.thumbnail_config.static_dir,
-                        self.thumbnail_config.overwrite,
-                    )
-                    .await
-                {
-                    Ok(path) => {
-                        if path.is_some() {
-                            stats.thumbnails_downloaded += 1;
-                        }
-                        path
+            let thumbnail_url = match self
+                .api
+                .download_thumbnail_for_video_id(
+                    &item.video_id,
+                    &self.thumbnail_config.static_dir,
+                    self.thumbnail_config.overwrite,
+                )
+                .await
+            {
+                Ok(path) => {
+                    if path.is_some() {
+                        stats.thumbnails_downloaded += 1;
                     }
-                    Err(e) => {
-                        warn!("Failed to download thumbnail for {}: {e}", item.video_id);
-                        None
-                    }
-                },
-                None => None,
+                    path
+                }
+                Err(e) => {
+                    warn!("Failed to download thumbnail for {}: {e}", item.video_id);
+                    None
+                }
             };
 
             let metadata = Metadata {
@@ -141,7 +137,7 @@ impl Indexer for Youtube {
             // Fetch video duration
             let duration_seconds = self.api.fetch_video_duration(&item.video_id).await;
 
-            let video = NewVideo {
+            let video = VideoData {
                 metadata,
                 text: content,
                 thumbnail_url,

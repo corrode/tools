@@ -450,9 +450,6 @@ pub struct Video {
     pub data: VideoData,
 }
 
-/// Payload used when inserting or updating a video.
-pub type NewVideo = VideoData;
-
 /// Podcast episode-specific data fields (shared between PodcastEpisode and NewPodcastEpisode).
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PodcastEpisodeData {
