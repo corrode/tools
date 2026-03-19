@@ -10,7 +10,7 @@ RUN touch -t 197001010000 recipe.json
 FROM chef AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 # Install build dependencies
-RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev cmake git
+RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev cmake git g++ curl
 
 COPY --from=planner /app/recipe.json recipe.json
 # Docker caching 
