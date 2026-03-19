@@ -31,6 +31,7 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
+        .route("/suggestions", get(handlers::suggestions))
         .nest_service(
             "/static/youtube",
             ServeDir::new(format!("{}/static/youtube", types::get_data_dir())),

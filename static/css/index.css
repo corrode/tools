@@ -143,10 +143,6 @@ html[data-theme="light-hacker-news"] .search-icon {
     right: 8px;
 }
 
-
-
-
-
 html[data-theme="light-hacker-news"] .results {
     background-color: #f6f6ef;
     border: none;
@@ -219,9 +215,6 @@ html[data-theme="light-hacker-news"] .tag {
     font-size: 8pt;
     font-family: Verdana, Geneva, sans-serif;
 }
-
-
-
 
 /* Dark TWIR */
 html[data-theme="dark-twir"] .result-title {
@@ -297,6 +290,46 @@ html[data-theme="dark-twir"] .tag {
     color: var(--color-text-muted);
 }
 
+.suggestions-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-top: 4px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.suggestions-container:empty {
+    display: none;
+    border: none;
+    box-shadow: none;
+}
+
+.suggestions-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.suggestion-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--color-text);
+    transition: background-color 0.1s ease;
+}
+
+.suggestion-item:hover,
+.suggestion-item:focus {
+    background-color: rgba(72, 213, 151, 0.1);
+    outline: none;
+}
+
 .search-icon {
     position: absolute;
     right: 12px;
@@ -318,37 +351,7 @@ html[data-theme="dark-twir"] .tag {
     color: var(--color-primary);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* Active filters display */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* Results */
 .results {
@@ -775,7 +778,6 @@ html[data-theme="dark-twir"] .tag {
         font-size: 0.8rem;
     }
 
-
     .result-item {
         padding: 20px;
     }
@@ -808,9 +810,6 @@ html[data-theme="dark-twir"] .tag {
         flex-wrap: wrap;
     }
 
-
-
-
     #search {
         font-size: 16px; /* Prevents auto-zoom on iOS */
     }
@@ -838,6 +837,5 @@ html[data-theme="dark-twir"] .tag {
             padding: 4px 0;
             font-size: 0.75rem;
         }
-
     }
 }

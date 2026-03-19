@@ -23,6 +23,43 @@
         <link rel="stylesheet" href="/static/css/base.css" />
         <link rel="stylesheet" href="/static/css/index.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+        <style>
+            .suggestions-container {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                margin-top: 4px;
+                background-color: var(--color-surface);
+                border: 1px solid var(--color-border);
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                overflow: hidden;
+            }
+            .suggestions-container:empty {
+                display: none;
+                border: none;
+                box-shadow: none;
+            }
+            .suggestions-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .suggestion-item {
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 0.95rem;
+                color: var(--color-text);
+                transition: background-color 0.1s ease;
+            }
+            .suggestion-item:hover,
+            .suggestion-item:focus {
+                background-color: rgba(72, 213, 151, 0.1);
+                outline: none;
+            }
+        </style>
     </head>
     <body class="preload">
         <!-- Hero pattern background -->
@@ -74,8 +111,9 @@
                         value="{{ query.as_deref().unwrap_or("") }}"
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
-                        onkeydown="if(event.key === 'Enter') { setTimeout(() => document.activeElement.blur(), 50); }"
+                        autocomplete="off"
                     />
+                    <div id="suggestions-container" class="suggestions-container"></div>
                     <button
                         type="submit"
                         class="search-icon"
@@ -165,6 +203,95 @@
 
             });
 
+            // Keyboard shortcuts & suggestions navigation
+            document.addEventListener('keydown', function(e) {
+                const searchInput = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                const items = container ? Array.from(container.querySelectorAll('.suggestion-item')) : [];
+                
+                // Focus search on '/' or 'Cmd/Ctrl + K'
+                if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                    return;
+                }
+
+                // If search input or a suggestion is focused
+                if (document.activeElement === searchInput || items.includes(document.activeElement)) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (container) container.innerHTML = '';
+                        searchInput.blur();
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (items.length > 0) {
+                            const currentIndex = items.indexOf(document.activeElement);
+                            const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+                            items[nextIndex].focus();
+                        }
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (items.length > 0) {
+                            const currentIndex = items.indexOf(document.activeElement);
+                            const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+                            if (currentIndex === -1) {
+                                items[items.length - 1].focus();
+                            } else {
+                                items[prevIndex].focus();
+                            }
+                        }
+                    } else if (e.key === 'Enter') {
+                        if (items.includes(document.activeElement)) {
+                            e.preventDefault();
+                            searchInput.value = document.activeElement.textContent;
+                            if (container) container.innerHTML = '';
+                            document.querySelector('.search-container').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                            searchInput.blur();
+                        } else if (document.activeElement === searchInput) {
+                            if (container) container.innerHTML = '';
+                            setTimeout(() => searchInput.blur(), 50);
+                        }
+                    }
+                }
+            });
+
+            // Close suggestions on outside click
+            document.addEventListener('click', function(e) {
+                const container = document.getElementById('suggestions-container');
+                const searchInput = document.getElementById('search');
+                if (container && !container.contains(e.target) && e.target !== searchInput) {
+                    container.innerHTML = '';
+                }
+            });
+
+            // Fetch JSON suggestions
+            (function() {
+                const input = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                let timer;
+                input.addEventListener('input', function() {
+                    clearTimeout(timer);
+                    const q = this.value.trim();
+                    if (q.length < 2) { container.innerHTML = ''; return; }
+                    timer = setTimeout(function() {
+                        fetch('/suggestions?q=' + encodeURIComponent(q))
+                            .then(r => r.json())
+                            .then(phrases => {
+                                if (phrases.length === 0) {
+                                    container.innerHTML = '';
+                                    return;
+                                }
+                                container.innerHTML = '<ul class="suggestions-list">' + phrases
+                                    .map(p => {
+                                        const pEsc = p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                                        return '<li class="suggestion-item" tabindex="0" onmousedown="document.getElementById(\'search\').value=\'' + pEsc + '\'; document.querySelector(\'.search-container\').dispatchEvent(new Event(\'submit\', { cancelable: true, bubbles: true }));">' + pEsc + '</li>';
+                                    })
+                                    .join('') + '</ul>';
+                            })
+                            .catch(() => { container.innerHTML = ''; });
+                    }, 150);
+                });
+            })();
         </script>
     </body>
 </html>

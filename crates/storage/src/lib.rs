@@ -2121,4 +2121,27 @@ impl Repository {
         let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
         Ok((results, total_count))
     }
+
+    /// Returns up to `limit` search suggestions whose phrase starts with `prefix`.
+    ///
+    /// Suggestions are pre-materialised bigrams and trigrams from all indexed
+    /// titles, ranked by co-occurrence frequency. The query is a simple
+    /// index-range scan — sub-millisecond.
+    pub async fn get_suggestions(&self, prefix: &str, limit: u32) -> Result<Vec<String>> {
+        if prefix.trim().is_empty() {
+            return Ok(vec![]);
+        }
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT phrase FROM suggestions
+             WHERE phrase LIKE ? || '%'
+             ORDER BY cnt DESC
+             LIMIT ?",
+        )
+        .bind(prefix.to_lowercase())
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|(phrase,)| phrase).collect())
+    }
 }
