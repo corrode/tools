@@ -10,7 +10,7 @@ use std::time::Instant;
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
-use types::search_result::{Article, Podcast, Research, Talk, Video};
+use types::search_result::{Article, Podcast, Research, Video};
 use types::{ContentType, Quote};
 
 #[derive(Template)]
@@ -21,7 +21,6 @@ struct SearchTemplate {
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
     research_papers: Vec<Research>,
-    talks: Vec<Talk>,
     results_count: i64,
     start_year: Option<i32>,
     end_year: Option<i32>,
@@ -42,7 +41,6 @@ struct ResultsTemplate {
     articles: Vec<Article>,
     podcasts: Vec<Podcast>,
     research_papers: Vec<Research>,
-    talks: Vec<Talk>,
     results_count: i64,
     start_year: Option<i32>,
     content_type: Option<ContentType>,
@@ -127,7 +125,6 @@ pub(crate) async fn search(
     let mut articles = Vec::new();
     let mut podcasts = Vec::new();
     let mut research_papers = Vec::new();
-    let mut talks = Vec::new();
 
     for result in raw_results {
         match result.content_type() {
@@ -136,7 +133,7 @@ pub(crate) async fn search(
                     podcasts.push(podcast);
                 }
             }
-            ContentType::Video => {
+            ContentType::Video | ContentType::Talks => {
                 if let Ok(video) = Video::try_from(result) {
                     videos.push(video);
                 }
@@ -149,11 +146,6 @@ pub(crate) async fn search(
             ContentType::Research => {
                 if let Ok(paper) = Research::try_from(result) {
                     research_papers.push(paper);
-                }
-            }
-            ContentType::Talks => {
-                if let Ok(talk) = Talk::try_from(result) {
-                    talks.push(talk);
                 }
             }
         }
@@ -198,7 +190,6 @@ pub(crate) async fn search(
             articles,
             podcasts,
             research_papers,
-            talks,
             results_count,
             start_year: raw_params.start_year,
             content_type: raw_params.content_type,
@@ -220,7 +211,6 @@ pub(crate) async fn search(
             articles,
             podcasts,
             research_papers,
-            talks,
             results_count,
             start_year: raw_params.start_year,
             end_year: raw_params.end_year,

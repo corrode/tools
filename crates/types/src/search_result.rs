@@ -6,13 +6,14 @@
 use crate::{ArxivCategory, SearchEntry, SearchResult};
 
 /// Video search result for display in templates.
+/// Also used for conference talks, which share the same template.
 #[derive(Debug, Clone)]
 pub struct Video {
     /// Video title
     pub title: String,
     /// Title with search terms highlighted via `<mark>` tags
     pub highlighted_title: Option<String>,
-    /// Video URL
+    /// Primary URL (video URL for plain videos, website URL for talks)
     pub url: String,
     /// Thumbnail URL (if available)
     pub thumbnail_url: Option<String>,
@@ -22,8 +23,16 @@ pub struct Video {
     pub snippet: Option<String>,
     /// Formatted date
     pub date: String,
-    /// Domain name (e.g., "youtube.com")
-    pub domain: String,
+    /// Domain name (e.g., "youtube.com") — None for talks
+    pub domain: Option<String>,
+    /// Conference name — Some for talks, None for plain videos
+    pub conference: Option<String>,
+    /// Talk summary — used as snippet fallback when no FTS snippet is available
+    pub summary: Option<String>,
+    /// Direct video URL — Some for talks that have a recording, always the URL for plain videos
+    pub video_url: Option<String>,
+    /// Slides URL — Some for talks that have slides
+    pub slides_url: Option<String>,
 }
 
 /// Article search result for display in templates.
@@ -186,23 +195,40 @@ impl TryFrom<SearchResult> for Video {
 
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
-        let domain = result.host_str().unwrap_or("youtube.com").to_string();
         let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
-        let SearchEntry::Video(video) = entry else {
-            return Err("expected video result for Video view");
-        };
 
-        Ok(Self {
-            title: video.title().to_string(),
-            highlighted_title,
-            url: video.url().to_string(),
-            thumbnail_url: video.thumbnail_url().map(|s| s.to_string()),
-            duration,
-            date: video.date().to_string(),
-            domain,
-            snippet,
-        })
+        match entry {
+            SearchEntry::Video(video) => Ok(Self {
+                title: video.title().to_string(),
+                highlighted_title,
+                url: video.url().to_string(),
+                thumbnail_url: video.thumbnail_url().map(|s| s.to_string()),
+                duration,
+                date: video.date().to_string(),
+                domain: Some(video.url().host_str().unwrap_or("youtube.com").to_string()),
+                conference: None,
+                summary: None,
+                video_url: None,
+                slides_url: None,
+                snippet,
+            }),
+            SearchEntry::Talk(talk) => Ok(Self {
+                title: talk.title().to_string(),
+                highlighted_title,
+                url: talk.website_url().to_string(),
+                thumbnail_url: talk.thumbnail_url().map(|s| s.to_string()),
+                duration,
+                date: talk.date().to_string(),
+                domain: None,
+                conference: Some(talk.conference().to_string()),
+                summary: Some(talk.summary().to_string()),
+                video_url: talk.video_url().map(|s| s.to_string()),
+                slides_url: talk.slides_url().map(|s| s.to_string()),
+                snippet,
+            }),
+            _ => Err("expected video or talk result for Video view"),
+        }
     }
 }
 
