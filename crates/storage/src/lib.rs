@@ -2037,7 +2037,7 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            substr(a.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM articles a
                         WHERE 1=1"#,
@@ -2064,7 +2064,7 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            substr(v.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM videos v
                         WHERE 1=1"#,
@@ -2091,7 +2091,7 @@ impl Repository {
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            COALESCE(substr(p.summary, 1, 300), substr(p.transcript, 1, 300)) as snippet,
                             NULL as highlighted_title
                         FROM podcast_episodes p
                         WHERE 1=1"#,
