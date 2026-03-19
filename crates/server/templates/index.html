@@ -74,15 +74,14 @@
                         value="{{ query.as_deref().unwrap_or("") }}"
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
-                        oninput="if(this.value.trim().length > 0) document.querySelector('.filter-button').style.display = 'inline-flex';"
-                        onkeydown="if(event.key === 'Enter') { document.getElementById('filter-toggle').checked = false; setTimeout(() => document.activeElement.blur(), 50); }"
+                        onkeydown="if(event.key === 'Enter') { setTimeout(() => document.activeElement.blur(), 50); }"
                     />
                     <button
                         type="submit"
                         class="search-icon"
                         style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
                         aria-label="Search"
-                        onclick="document.getElementById('filter-toggle').checked = false; setTimeout(() => document.getElementById('search').blur(), 50);"
+                        onclick="setTimeout(() => document.getElementById('search').blur(), 50);"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -103,116 +102,9 @@
 
                 <!-- Hidden input for content type filter -->
                 <input type="hidden" id="content-type" {% if let Some(content_type) = content_type %}name="type" value="{{ content_type }}"{% endif %} />
-
-                <input type="checkbox" id="filter-toggle" class="filter-toggle-checkbox" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}checked{% endif %} />
-                <label for="filter-toggle" class="filter-button" style='{% if query.as_deref().unwrap_or("").is_empty() %}display: none;{% endif %}'>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path
-                            d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-                        />
-                    </svg>
-                </label>
-
-                <div id="filter-panel">
-                    <div class="filter-group">
-                        <label class="filter-label">Date Range:</label>
-                        <div class="dual-range-container">
-                            <div class="range-values">
-                                <output id="start-year-display" for="start-year"
-                                    >{{ start_year.unwrap_or(2013) }}</output
-                                >
-                                <span>—</span>
-                                <output id="end-year-display" for="end-year"
-                                    >{{ end_year.unwrap_or(2025) }}</output
-                                >
-                            </div>
-                            <div class="dual-range-slider">
-                                <div class="dual-range-track"></div>
-                                <div
-                                    class="dual-range-selected"
-                                    id="range-selected"
-                                ></div>
-                                <input
-                                    type="range"
-                                    id="start-year"
-                                    name="start-year"
-                                    min="2013"
-                                    max="2025"
-                                    value="{{ start_year.unwrap_or(2013) }}"
-                                    class="dual-range-input"
-                                    oninput="
-                                        let v = parseInt(this.value);
-                                        let other = parseInt(document.getElementById('end-year').value);
-                                        if (v > other) { document.getElementById('end-year').value = v; document.getElementById('end-year-display').value = v; other = v; }
-                                        document.getElementById('start-year-display').value = v;
-                                        
-                                        // Update visuals
-                                        const min = 2013;
-                                        const max = 2025;
-                                        const startPercent = ((v - min) / (max - min)) * 100;
-                                        const endPercent = ((other - min) / (max - min)) * 100;
-                                        const rangeSelected = document.getElementById('range-selected');
-                                        rangeSelected.style.left = startPercent + '%';
-                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
-                                    "
-                                    hx-trigger="change"
-                                    hx-get="/search"
-                                    hx-target="#results-container"
-                                    hx-swap="outerHTML"
-                                    hx-include=".search-container"
-                                />
-                                <input
-                                    type="range"
-                                    id="end-year"
-                                    name="end-year"
-                                    min="2013"
-                                    max="2025"
-                                    value="{{ end_year.unwrap_or(2025) }}"
-                                    class="dual-range-input"
-                                    oninput="
-                                        let v = parseInt(this.value);
-                                        let other = parseInt(document.getElementById('start-year').value);
-                                        if (v < other) { document.getElementById('start-year').value = v; document.getElementById('start-year-display').value = v; other = v; }
-                                        document.getElementById('end-year-display').value = v;
-
-                                        // Update visuals
-                                        const min = 2013;
-                                        const max = 2025;
-                                        const startPercent = ((other - min) / (max - min)) * 100;
-                                        const endPercent = ((v - min) / (max - min)) * 100;
-                                        const rangeSelected = document.getElementById('range-selected');
-                                        rangeSelected.style.left = startPercent + '%';
-                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
-                                    "
-                                    hx-trigger="change"
-                                    hx-get="/search"
-                                    hx-target="#results-container"
-                                    hx-swap="outerHTML"
-                                    hx-include=".search-container"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label" for="sort-by"
-                            >Sort By:</label
-                        >
-                        <select
-                            id="sort-by"
-                            name="sort-by"
-                            class="filter-select"
-                            hx-trigger="change"
-                            hx-get="/search"
-                            hx-target="#results-container"
-                            hx-swap="outerHTML"
-                            hx-include=".search-container"
-                        >
-                            <option value="relevance" {% if sort_by.as_deref().unwrap_or("relevance") == "relevance" %}selected{% endif %}>Relevance</option>
-                            <option value="date-desc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-desc" %}selected{% endif %}>Newest First</option>
-                            <option value="date-asc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-asc" %}selected{% endif %}>Oldest First</option>
-                        </select>
-                    </div>
-                </div>
+                <input type="hidden" id="start-year" {% if let Some(start_year) = start_year %}name="start-year" value="{{ start_year }}"{% endif %} />
+                <input type="hidden" id="end-year" {% if let Some(end_year) = end_year %}name="end-year" value="{{ end_year }}"{% endif %} />
+                <input type="hidden" id="sort-by" {% if let Some(sort_by) = sort_by %}name="sort-by" value="{{ sort_by }}"{% endif %} />
             </form>
 
             {% include "results.html" %}
@@ -253,33 +145,7 @@
                 setTheme(savedTheme);
                 document.getElementById("theme-select").value = savedTheme;
 
-                // Initialize range display visual state on load
-                {
-                    const startInput = document.getElementById("start-year");
-                    const endInput = document.getElementById("end-year");
-                    if (startInput && endInput) {
-                        const min = 2013;
-                        const max = 2025;
-                        const v = parseInt(startInput.value);
-                        const other = parseInt(endInput.value);
-                        const startPercent = ((v - min) / (max - min)) * 100;
-                        const endPercent = ((other - min) / (max - min)) * 100;
-                        const rangeSelected =
-                            document.getElementById("range-selected");
-                        if (rangeSelected) {
-                            rangeSelected.style.left = startPercent + "%";
-                            rangeSelected.style.width =
-                                endPercent - startPercent + "%";
-                        }
 
-                        const startDisplay =
-                            document.getElementById("start-year-display");
-                        const endDisplay =
-                            document.getElementById("end-year-display");
-                        if (startDisplay) startDisplay.value = v;
-                        if (endDisplay) endDisplay.value = other;
-                    }
-                }
 
             });
 
