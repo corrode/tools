@@ -3,6 +3,7 @@
 use crate::cookies::COOKIE_BANNER_SELECTORS;
 use crate::paths;
 use crate::sanitizer::Sanitizer;
+use crate::tools::wayback::{self, WAYBACK_SELECTORS};
 use types::Metadata;
 
 use anyhow::{Result, bail};
@@ -66,6 +67,22 @@ static YOUTUBE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 static YOUTUBE_SHORT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(https?://)?(www\.)?(youtu\.?be)").expect("Invalid YouTube short regex")
 });
+
+/// Phrases that strongly suggest a page is gone or otherwise unusable,
+/// warranting a Wayback Machine fallback.
+///
+/// Matched case-insensitively against the extracted page text. The list is
+/// intentionally conservative — false positives mean we waste a Wayback
+/// lookup, but false negatives mean we silently index a useless 404 page.
+static GONE_PHRASES: &[&str] = &[
+    "404 not found",
+    "page not found",
+    "no longer available",
+    "has been removed",
+    "has been deleted",
+    "this page does not exist",
+    "410 gone",
+];
 
 /// Wrapper around headless Chrome for crawling web pages
 pub struct Browser {
@@ -147,7 +164,17 @@ impl Browser {
             .and_then(|id| url::Url::parse(&format!("https://img.youtube.com/vi/{id}/0.jpg")).ok())
     }
 
-    /// Crawls a webpage and returns its text content
+    /// Returns true if the extracted page text strongly suggests the page is
+    /// gone (404, removed, etc.) and should trigger a Wayback fallback.
+    fn looks_gone(text: &str) -> bool {
+        let lower = text.to_lowercase();
+        GONE_PHRASES.iter().any(|phrase| lower.contains(phrase))
+    }
+
+    /// Crawls a webpage and returns its text content.
+    ///
+    /// If the live page fails to load or appears to be a 404 / removed
+    /// page, automatically retries via the Wayback Machine before giving up.
     pub fn crawl(&self, metadata: &Metadata) -> anyhow::Result<Option<String>> {
         tracing::info!("Crawling {}", metadata.url);
 
@@ -164,6 +191,36 @@ impl Browser {
             return Ok(Some(format!("YouTube video: {}", metadata.title)));
         }
 
+        match self.crawl_url(&target_url, false, Some(metadata)) {
+            Ok(text) if Self::looks_gone(&text) => {
+                tracing::warn!(
+                    "Live page for {} appears to be gone, trying Wayback Machine...",
+                    metadata.url
+                );
+                self.crawl_wayback(&metadata.url)
+            }
+            Ok(text) => Ok(Some(text)),
+            Err(live_err) => {
+                tracing::warn!(
+                    "Live page failed for {} ({live_err}), trying Wayback Machine...",
+                    metadata.url
+                );
+                self.crawl_wayback(&metadata.url)
+            }
+        }
+    }
+
+    /// Performs a single browser crawl of `target_url`.
+    ///
+    /// `is_wayback` controls whether Wayback-specific chrome is stripped from
+    /// the page in addition to cookie banners. `metadata` is used only for
+    /// debug-mode artefact filenames; it's `None` for Wayback retries.
+    fn crawl_url(
+        &self,
+        target_url: &url::Url,
+        is_wayback: bool,
+        metadata: Option<&Metadata>,
+    ) -> Result<String> {
         // Use TabGuard to ensure tab is closed on all paths (success, error, or panic)
         let tab = TabGuard::new(self.inner.new_tab()?);
         tab.set_default_timeout(time::Duration::from_secs(30));
@@ -178,6 +235,9 @@ impl Browser {
         }
         tracing::debug!("Navigation completed successfully");
 
+        if is_wayback {
+            self.remove_wayback_chrome(&tab)?;
+        }
         self.remove_cookie_banner(&tab)?;
 
         // Wait for Cloudflare verification to complete (if present)
@@ -185,7 +245,9 @@ impl Browser {
         let text = self.wait_for_content(&tab, 15)?;
         tracing::debug!("Extracted text: {} chars", text.len());
 
-        if self.debug {
+        if self.debug
+            && let Some(metadata) = metadata
+        {
             let html = tab.get_content()?;
             self.save_raw_html(&html, metadata)?;
             self.take_screenshot(&tab, metadata)?;
@@ -193,7 +255,33 @@ impl Browser {
 
         // Tab is automatically closed when `tab` (TabGuard) is dropped
 
-        Ok(Some(text))
+        Ok(text)
+    }
+
+    /// Looks up the Wayback Machine for an archived copy of `original_url`
+    /// and crawls it. Returns `Ok(None)` if no usable snapshot was found.
+    fn crawl_wayback(&self, original_url: &url::Url) -> Result<Option<String>> {
+        let Some(wayback_url) = wayback::wayback_url_for(original_url) else {
+            tracing::warn!("Could not construct Wayback URL for {original_url}");
+            return Ok(None);
+        };
+
+        tracing::info!("Trying Wayback snapshot: {wayback_url}");
+
+        match self.crawl_url(&wayback_url, true, None) {
+            Ok(text) if Self::looks_gone(&text) => {
+                tracing::warn!("Wayback snapshot for {original_url} also looks gone");
+                Ok(None)
+            }
+            Ok(text) => {
+                tracing::info!("Wayback fallback succeeded for {original_url}");
+                Ok(Some(text))
+            }
+            Err(e) => {
+                tracing::warn!("Wayback snapshot failed for {original_url}: {e}");
+                Ok(None)
+            }
+        }
     }
 
     /// Takes a screenshot of the current page
@@ -256,6 +344,18 @@ impl Browser {
 
         tab.evaluate(&js, false)?;
         tracing::debug!("Attempted to remove cookie banner elements");
+        Ok(())
+    }
+
+    /// Removes Wayback Machine toolbar and other archive.org injected chrome
+    /// from the page so they don't pollute the extracted text.
+    fn remove_wayback_chrome(&self, tab: &TabGuard) -> Result<()> {
+        let all_selectors = WAYBACK_SELECTORS.join(", ");
+        let js =
+            format!(r#"document.querySelectorAll('{all_selectors}').forEach(el => el.remove());"#);
+
+        tab.evaluate(&js, false)?;
+        tracing::debug!("Attempted to remove Wayback Machine chrome");
         Ok(())
     }
 }
