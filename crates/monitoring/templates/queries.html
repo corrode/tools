@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Query Log - Monitoring - Rust Search</title>
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <link rel="stylesheet" href="/static/css/monitoring.css" />
+    </head>
+    <body>
+        <div class="monitoring-container">
+            <div class="monitoring-header">
+                <h1>Query Log</h1>
+                <nav class="monitoring-nav">
+                    <a href="/monitoring/">Dashboard</a>
+                    <a href="/">← Back to Search</a>
+                </nav>
+            </div>
+
+            <!-- Search form -->
+            <form class="search-form" method="GET" action="/monitoring/queries">
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search queries…"
+                    value="{% match search %}{% when Some with (s) %}{{ s }}{% when None %}{% endmatch %}"
+                    autocomplete="off"
+                />
+                <button type="submit">Search</button>
+            </form>
+
+            <div id="query-results">{% include "queries_partial.html" %}</div>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="https://corrode.dev">corrode</a></p>
+        </footer>
+    </body>
+</html>

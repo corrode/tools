@@ -8,6 +8,7 @@ use charming::{
 };
 use std::sync::Arc;
 
+use crate::error::AppError;
 use storage::Repository;
 use types::Stats;
 
@@ -22,27 +23,21 @@ struct StatsTemplate {
 pub(crate) async fn stats(
     headers: HeaderMap,
     State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, axum::http::StatusCode> {
+) -> Result<Html<String>, AppError> {
     let referer = headers
         .get(axum::http::header::REFERER)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("-");
 
-    tracing::info!(referer, "Stats page viewed");
+    tracing::info!(is_monitoring = true, referer, "Stats page viewed");
 
-    let stats = repo
-        .get_stats()
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let stats = repo.get_stats().await?;
 
     // Generate chart configuration
     let chart_json = generate_chart(&stats);
 
     let template = StatsTemplate { stats, chart_json };
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    Ok(template.render().map(Html)?)
 }
 
 fn generate_chart(stats: &Stats) -> String {

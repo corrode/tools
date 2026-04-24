@@ -1,12 +1,13 @@
 use askama::Template;
 use axum::{
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::Html,
 };
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::error::AppError;
 use storage::{Repository, SearchRequest};
 use tracing::{error, info, warn};
 use types::params::{Params, RawParams, SearchDefaults};
@@ -56,7 +57,7 @@ pub(crate) async fn search(
     headers: HeaderMap,
     Query(raw_params): Query<RawParams>,
     State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     let start = Instant::now();
     let referer = headers
         .get(axum::http::header::REFERER)
@@ -66,11 +67,12 @@ pub(crate) async fn search(
     let defaults = SearchDefaults::new(1900, 2050);
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
         warn!(
-            query = ?raw_params.q,
+            is_monitoring = true,
+            query = raw_params.q,
             error = %e,
             "Invalid search params"
         );
-        StatusCode::BAD_REQUEST
+        anyhow::anyhow!("Invalid search params")
     })?;
 
     // Check if query is provided and not empty/whitespace-only
@@ -78,11 +80,12 @@ pub(crate) async fn search(
         let request = SearchRequest { params: &params };
         repo.search(&request).await.map_err(|e| {
             error!(
-                query = ?raw_params.q,
+                is_monitoring = true,
+                query = raw_params.q,
                 error = %e,
                 "Search query failed"
             );
-            StatusCode::INTERNAL_SERVER_ERROR
+            e
         })?
     } else {
         (vec![], 0)
@@ -90,30 +93,35 @@ pub(crate) async fn search(
 
     let elapsed = start.elapsed();
 
-    info!(
-        query = ?raw_params.q,
-        page = params.page,
-        content_type = ?raw_params.content_type,
-        sort_by = ?raw_params.sort_by,
-        start_year = ?raw_params.start_year,
-        end_year = ?raw_params.end_year,
-        results = results_count,
-        duration_ms = elapsed.as_millis() as u64,
-        referer,
-        "Search request"
-    );
+    if params.has_query_terms() {
+        info!(
+            is_monitoring = true,
+            query = raw_params.q,
+            page = params.page,
+            content_type = raw_params.content_type.map(|c| c.to_string()),
+            sort_by = raw_params.sort_by.map(|s| format!("{s:?}")),
+            start_year = raw_params.start_year,
+            end_year = raw_params.end_year,
+            results = results_count,
+            duration_ms = elapsed.as_millis() as u64,
+            referer,
+            "Search request"
+        );
+    }
 
     if results_count == 0 && params.has_query_terms() {
         warn!(
-            query = ?raw_params.q,
-            content_type = ?raw_params.content_type,
+            is_monitoring = true,
+            query = raw_params.q,
+            content_type = raw_params.content_type.map(|c| c.to_string()),
             "Zero results"
         );
     }
 
     if params.page >= 5 {
         info!(
-            query = ?raw_params.q,
+            is_monitoring = true,
+            query = raw_params.q,
             page = params.page,
             "Deep pagination"
         );
@@ -200,10 +208,7 @@ pub(crate) async fn search(
             quote,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        Ok(template.render().map(Html)?)
     } else {
         let template = SearchTemplate {
             query: raw_params.q,
@@ -223,9 +228,6 @@ pub(crate) async fn search(
             quote,
         };
 
-        template
-            .render()
-            .map(Html)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        Ok(template.render().map(Html)?)
     }
 }

@@ -2134,6 +2134,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "monitoring"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "axum",
+ "charming",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "urlencoding",
+]
+
+[[package]]
 name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3327,10 +3345,13 @@ dependencies = [
  "askama",
  "axum",
  "charming",
+ "chrono",
+ "monitoring",
  "pulldown-cmark",
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "sqlx",
  "storage",
  "strum",
  "tempfile",
@@ -3340,6 +3361,7 @@ dependencies = [
  "tracing-subscriber",
  "types",
  "url",
+ "urlencoding",
 ]
 
 [[package]]

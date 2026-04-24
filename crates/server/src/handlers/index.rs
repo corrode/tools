@@ -3,6 +3,7 @@ use axum::{extract::State, response::Html};
 use std::sync::Arc;
 use storage::Repository;
 
+use crate::error::AppError;
 use types::ContentType;
 use types::search_result::{Article, Podcast, Research, Video};
 
@@ -27,9 +28,7 @@ struct SearchTemplate {
 }
 
 /// Handler for the index page
-pub(crate) async fn index(
-    State(repo): State<Arc<Repository>>,
-) -> Result<Html<String>, axum::http::StatusCode> {
+pub(crate) async fn index(State(repo): State<Arc<Repository>>) -> Result<Html<String>, AppError> {
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
         Some(q)
     } else {
@@ -53,8 +52,5 @@ pub(crate) async fn index(
         next_page_href: None,
         quote,
     };
-    template
-        .render()
-        .map(Html)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    Ok(template.render().map(Html)?)
 }
