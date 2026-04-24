@@ -71,9 +71,10 @@ static YOUTUBE_SHORT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Phrases that strongly suggest a page is gone or otherwise unusable,
 /// warranting a Wayback Machine fallback.
 ///
-/// Matched case-insensitively against the extracted page text. The list is
-/// intentionally conservative — false positives mean we waste a Wayback
-/// lookup, but false negatives mean we silently index a useless 404 page.
+/// Matched case-insensitively against the extracted page text, but only
+/// when the page is also shorter than [`GONE_MAX_WORDS`] — a real article
+/// that happens to mention "no longer available" in passing should not
+/// trigger a fallback.
 static GONE_PHRASES: &[&str] = &[
     "404 not found",
     "page not found",
@@ -83,6 +84,11 @@ static GONE_PHRASES: &[&str] = &[
     "this page does not exist",
     "410 gone",
 ];
+
+/// Maximum word count for a page to be considered "gone" when its text
+/// matches one of [`GONE_PHRASES`]. Real articles are virtually always
+/// longer than this; stub error pages are virtually always shorter.
+const GONE_MAX_WORDS: usize = 100;
 
 /// Wrapper around headless Chrome for crawling web pages
 pub struct Browser {
@@ -166,7 +172,15 @@ impl Browser {
 
     /// Returns true if the extracted page text strongly suggests the page is
     /// gone (404, removed, etc.) and should trigger a Wayback fallback.
+    ///
+    /// A page only counts as "gone" if it is *both* short (under
+    /// [`GONE_MAX_WORDS`] words) *and* contains one of [`GONE_PHRASES`].
+    /// This guards against false positives on long-form articles that
+    /// merely mention "no longer available" or similar in passing.
     fn looks_gone(text: &str) -> bool {
+        if text.split_whitespace().count() >= GONE_MAX_WORDS {
+            return false;
+        }
         let lower = text.to_lowercase();
         GONE_PHRASES.iter().any(|phrase| lower.contains(phrase))
     }
@@ -395,5 +409,36 @@ mod tests {
         let rewritten = Browser::rewrite_youtube_url(&url);
 
         assert!(rewritten.is_none());
+    }
+
+    #[test]
+    fn looks_gone_matches_short_404_page() {
+        let text = "404 Not Found. The page you requested could not be found.";
+        assert!(Browser::looks_gone(text));
+    }
+
+    #[test]
+    fn looks_gone_ignores_long_article_mentioning_gone_phrase() {
+        // A real article that happens to mention "no longer available" in
+        // passing should not be treated as a dead page.
+        let mut text = String::from("This is a long article about software longevity. ");
+        // Pad well past GONE_MAX_WORDS.
+        for _ in 0..GONE_MAX_WORDS {
+            text.push_str("word ");
+        }
+        text.push_str(" The original API is no longer available, but a replacement exists.");
+        assert!(!Browser::looks_gone(&text));
+    }
+
+    #[test]
+    fn looks_gone_ignores_short_page_without_gone_phrase() {
+        let text = "Welcome to my homepage. Nothing fancy here yet.";
+        assert!(!Browser::looks_gone(text));
+    }
+
+    #[test]
+    fn looks_gone_is_case_insensitive() {
+        let text = "PAGE NOT FOUND";
+        assert!(Browser::looks_gone(text));
     }
 }
