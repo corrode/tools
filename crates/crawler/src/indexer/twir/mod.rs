@@ -100,7 +100,6 @@ impl Twir {
             "twitter.com",
             "https://t.me",
             "x.com",
-            "vimeo.com",
             "bsky.app",
             "mastodon.social",
             "mibbit.com",
