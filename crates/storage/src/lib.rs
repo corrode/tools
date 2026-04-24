@@ -102,6 +102,7 @@ fn spellfix_extension_path() -> String {
 }
 
 /// Manages storage and retrieval of search entries
+#[derive(Clone)]
 pub struct Repository {
     pool: Pool<Sqlite>,
 }
@@ -127,6 +128,8 @@ impl Repository {
 
         let options = SqliteConnectOptions::from_str(&database_url)?
             .pragma("trusted_schema", "1")
+            .pragma("journal_mode", "WAL")
+            .pragma("busy_timeout", "5000")
             .extension(spellfix_path);
 
         let pool = SqlitePoolOptions::new()
