@@ -162,11 +162,11 @@ impl Indexer for Youtube {
             "  Total Transcript Length: {} chars",
             stats.total_transcript_length
         );
-        if stats.transcripts_found > 0 {
-            info!(
-                "  Avg Transcript Length: {} chars",
-                stats.total_transcript_length / stats.transcripts_found
-            );
+        if let Some(avg) = stats
+            .total_transcript_length
+            .checked_div(stats.transcripts_found)
+        {
+            info!("  Avg Transcript Length: {avg} chars");
         }
         Ok(())
     }

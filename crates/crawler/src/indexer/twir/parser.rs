@@ -286,12 +286,10 @@ impl TwirParser {
                         }
                     }
                 }
-                Event::Code(text) => {
-                    if in_link {
-                        current_title.push('`');
-                        current_title.push_str(&text);
-                        current_title.push('`');
-                    }
+                Event::Code(text) if in_link => {
+                    current_title.push('`');
+                    current_title.push_str(&text);
+                    current_title.push('`');
                 }
                 _ => {}
             }

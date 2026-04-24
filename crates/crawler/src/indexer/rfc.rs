@@ -175,14 +175,13 @@ impl Rfc {
                                 date = Some(d);
                             }
                         }
-                        "Feature Name" => {
+                        "Feature Name"
                             // Ignore N/A or empty feature names
                             if !value.is_empty()
                                 && !value.eq_ignore_ascii_case("n/a")
-                                && !value.eq_ignore_ascii_case("none")
-                            {
-                                title = Some(value.to_string());
-                            }
+                                && !value.eq_ignore_ascii_case("none") =>
+                        {
+                            title = Some(value.to_string());
                         }
                         _ => {}
                     }

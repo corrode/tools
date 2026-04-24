@@ -1024,7 +1024,7 @@ impl Repository {
             .into_iter()
             .map(|(year, domains)| types::YearlyDomainStats { year, domains })
             .collect();
-        top_domains_by_year.sort_by(|a, b| b.year.cmp(&a.year));
+        top_domains_by_year.sort_by_key(|b| std::cmp::Reverse(b.year));
 
         // Top domain overall
         let top_domain = sqlx::query(

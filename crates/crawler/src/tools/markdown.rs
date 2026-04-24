@@ -33,10 +33,8 @@ pub fn to_plaintext(markdown: &str) -> String {
                 tags_stack.pop();
                 end_tag(&tag, &mut buffer, &tags_stack);
             }
-            Event::Text(content) => {
-                if !tags_stack.iter().any(is_strikethrough) {
-                    buffer.push_str(&content);
-                }
+            Event::Text(content) if !tags_stack.iter().any(is_strikethrough) => {
+                buffer.push_str(&content);
             }
             Event::Code(content) => buffer.push_str(&content),
             Event::SoftBreak => buffer.push(' '),
@@ -79,10 +77,8 @@ fn start_tag(tag: &Tag, buffer: &mut String, tags_stack: &mut [Tag]) {
 fn end_tag(tag: &TagEnd, buffer: &mut String, tags_stack: &[Tag]) {
     match tag {
         TagEnd::Paragraph | TagEnd::Heading { .. } => buffer.push('\n'),
-        TagEnd::CodeBlock => {
-            if !buffer.ends_with('\n') {
-                buffer.push('\n');
-            }
+        TagEnd::CodeBlock if !buffer.ends_with('\n') => {
+            buffer.push('\n');
         }
         TagEnd::List(_) => {
             let is_sublist = tags_stack.iter().any(|tag| matches!(tag, Tag::List { .. }));
