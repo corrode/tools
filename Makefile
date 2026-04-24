@@ -1,12 +1,28 @@
+# Detect platform for shared library extension
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    SPELLFIX_LIB := ext/spellfix.dylib
+    SQLITE_INCLUDE := $(shell brew --prefix sqlite)/include
+else
+    SPELLFIX_LIB := ext/spellfix.so
+    SQLITE_INCLUDE := /usr/include
+endif
+
 SERVER_USER := root
 SERVER_IP := 46.225.7.147
 REMOTE_DIR := /data/coolify/applications/search/data
 STATIC_REMOTE_DIR := $(REMOTE_DIR)/static
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 
-.PHONY: help
+.PHONY: help ext
 help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+ext: $(SPELLFIX_LIB) ## Compile the spellfix1 SQLite extension for local development
+
+$(SPELLFIX_LIB): ext/spellfix.c
+	cc -fPIC -shared -o $@ $< -I$(SQLITE_INCLUDE)
+	@echo "Built $@"
 
 .PHONY: lint
 lint: ## Run format check and clippy
@@ -27,8 +43,12 @@ format fmt: ## Format the code
 	cargo fmt --all
 
 .PHONY: dev
-dev: ## Run the server in watch mode
+dev: $(SPELLFIX_LIB) ## Run the server in watch mode
 	cargo watch -x 'run --bin server'
+
+.PHONY: crawler
+crawler: $(SPELLFIX_LIB) ## Run the TWiR crawler
+	cargo run -p crawler -- --indexer twir
 
 .PHONY: docs
 docs: ## Open documentation 

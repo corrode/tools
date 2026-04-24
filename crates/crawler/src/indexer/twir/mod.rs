@@ -1,12 +1,18 @@
 use super::Indexer;
-use crate::{paths, tools::browser::Browser};
+use crate::{
+    paths,
+    tools::{
+        browser::Browser,
+        youtube::{ThumbnailConfig, YoutubeApi, fetch_transcript, video_id_from_watch_url},
+    },
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use std::fs;
+use std::{env, fs};
 use storage::Repository;
 use tracing::info;
-use types::{NewArticle, Url};
+use types::{Metadata, NewArticle, Url, VideoData};
 
 mod parser;
 use parser::TwirParser;
@@ -17,6 +23,8 @@ struct TwirStats {
     articles_processed: usize,
     articles_skipped: usize,
     articles_failed: usize,
+    videos_processed: usize,
+    videos_skipped: usize,
     quotes_processed: usize,
     files_processed: usize,
 }
@@ -25,6 +33,8 @@ struct TwirStats {
 pub struct Twir {
     parser: TwirParser,
     browser: Browser,
+    youtube_api: Option<YoutubeApi>,
+    thumbnail_config: ThumbnailConfig,
     debug: bool,
     crawl_count: usize,
     dry_run: bool,
@@ -35,9 +45,13 @@ pub struct Twir {
 impl Twir {
     /// Creates a new Twir indexer
     pub fn new(browser: Browser) -> Self {
+        let youtube_api = env::var("YOUTUBE_API_KEY").ok().map(YoutubeApi::new);
+
         Self {
             parser: TwirParser::new(),
             browser,
+            youtube_api,
+            thumbnail_config: ThumbnailConfig::new(false),
             debug: false,
             crawl_count: 0,
             dry_run: false,
@@ -55,6 +69,14 @@ impl Twir {
         }
     }
 
+    /// Returns true if the URL points to a YouTube video (watch URL or youtu.be short link).
+    fn is_youtube_video(url: &Url) -> bool {
+        let Some(host) = url.host_str() else {
+            return false;
+        };
+        matches!(host, "www.youtube.com" | "youtube.com" | "youtu.be") && url.path() == "/watch"
+    }
+
     /// Determines if a URL should be processed
     fn should_process_url(url: &Url) -> bool {
         let supported_protocols = ["http", "https"];
@@ -67,6 +89,10 @@ impl Twir {
         }
 
         let ignored_urls = [
+            // Video platforms (YouTube videos are handled separately; other YouTube URLs are skipped)
+            "youtube.com",
+            "youtu.be",
+            "vimeo.com",
             // Social media and forums
             "github.com",
             "reddit.com",
@@ -74,7 +100,6 @@ impl Twir {
             "twitter.com",
             "https://t.me",
             "x.com",
-            "vimeo.com",
             "bsky.app",
             "mastodon.social",
             "mibbit.com",
@@ -86,6 +111,12 @@ impl Twir {
             "rust-lang.org",
             "forge.rust-lang.org",
             "foundation.rust-lang.org",
+            // Dead Mozilla infrastructure
+            "mail.mozilla.org",
+            "irc.mozilla.org",
+            "etherpad.mozilla.org",
+            "air.mozilla.org",
+            "badges.mozilla.org",
             // Event platforms
             "luma.com",
             "lu.ma",
@@ -96,12 +127,6 @@ impl Twir {
             "smartrecruiters.com",
             "bamboohr.com",
             "careers.mozilla.org",
-            // Dead Mozilla infrastructure
-            "mail.mozilla.org",
-            "irc.mozilla.org",
-            "etherpad.mozilla.org",
-            "air.mozilla.org",
-            "badges.mozilla.org",
             // Dead/defunct domains
             "thread.gmane.org",
             "blog.gmane.org",
@@ -139,6 +164,90 @@ impl Twir {
         }
 
         true
+    }
+
+    /// Stores a YouTube video link found in TWiR as a video entry.
+    ///
+    /// Extracts the video ID, fetches the transcript (if available), and
+    /// downloads the thumbnail using the YouTube API if a key is configured.
+    /// Falls back to inserting with just the title and date from the TWiR
+    /// link when no API key is present.
+    async fn index_youtube_video(
+        &mut self,
+        id: &Metadata,
+        repo: &Repository,
+        stats: &mut TwirStats,
+    ) {
+        if repo.url_exists(&id.url).await.unwrap_or(false) {
+            tracing::debug!("Skipping existing video: {}", id.url);
+            stats.videos_skipped += 1;
+            return;
+        }
+
+        if self.dry_run {
+            info!("[DRY RUN] Would store video: {} | {}", id.title, id.url);
+            return;
+        }
+
+        let video_id = match video_id_from_watch_url(&id.url) {
+            Some(vid) => vid,
+            None => {
+                tracing::warn!("Could not extract video ID from URL: {}", id.url);
+                return;
+            }
+        };
+
+        // Try to download thumbnail via API; skip gracefully if no key
+        let thumbnail_url = if let Some(api) = &self.youtube_api {
+            match api
+                .download_thumbnail_for_video_id(
+                    &video_id,
+                    &self.thumbnail_config.static_dir,
+                    self.thumbnail_config.overwrite,
+                )
+                .await
+            {
+                Ok(path) => path,
+                Err(e) => {
+                    tracing::warn!("Failed to download thumbnail for {video_id}: {e}");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // Fetch duration via API if available
+        let duration_seconds = if let Some(api) = &self.youtube_api {
+            api.fetch_video_duration(&video_id).await
+        } else {
+            None
+        };
+
+        // Build text content: start with the title, append transcript if available
+        let mut text = id.title.clone();
+        if let Ok(transcript) = fetch_transcript(&video_id).await {
+            info!("Fetched transcript for TWiR video: {}", id.title);
+            text.push_str("\n\n");
+            text.push_str(&transcript);
+        }
+
+        let video = VideoData {
+            metadata: id.clone(),
+            text,
+            thumbnail_url,
+            duration_seconds,
+        };
+
+        match repo.insert_video(&video).await {
+            Ok(_) => {
+                info!("Stored TWiR video: {}", id.title);
+                stats.videos_processed += 1;
+            }
+            Err(e) => {
+                tracing::warn!("Failed to insert TWiR video {}: {e}", id.url);
+            }
+        }
     }
 }
 
@@ -265,6 +374,12 @@ impl Indexer for Twir {
                     id.url = rewritten_url.into();
                 }
 
+                // YouTube video links are stored as videos, not crawled as articles
+                if Self::is_youtube_video(&id.url) {
+                    self.index_youtube_video(&id, repo, &mut stats).await;
+                    continue;
+                }
+
                 if !Self::should_process_url(&id.url) {
                     continue;
                 }
@@ -360,6 +475,8 @@ impl Indexer for Twir {
         info!("  Articles processed: {}", stats.articles_processed);
         info!("  Articles skipped (existing): {}", stats.articles_skipped);
         info!("  Articles failed: {}", stats.articles_failed);
+        info!("  Videos processed: {}", stats.videos_processed);
+        info!("  Videos skipped (existing): {}", stats.videos_skipped);
         info!("  Quotes processed: {}", stats.quotes_processed);
 
         Ok(())

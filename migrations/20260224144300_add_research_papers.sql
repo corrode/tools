@@ -30,7 +30,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS research_papers_fts USING fts5(
 );
 
 -- Step 4: Populate FTS from existing rows (if any)
-INSERT INTO research_papers_fts(rowid, title, category, authors, abstract_text, text)
+INSERT OR IGNORE INTO research_papers_fts(rowid, title, category, authors, abstract_text, text)
 SELECT id, title, category, authors, abstract_text, text
 FROM research_papers;
 

@@ -57,6 +57,6 @@ jobs:
 
       - name: Trigger Coolify deployment via webhook
         run: |
-          curl --request GET "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_RESOURCE_ID }}&force=false" \
+          curl --request GET "https://admin.corrode.dev/api/v1/deploy?uuid=zskww4wkc4csck08ooog0ggw&force=false" \
                --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
                --fail

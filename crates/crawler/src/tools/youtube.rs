@@ -32,18 +32,6 @@ pub struct ParsedPlaylistItem {
     pub description: String,
     /// Published date (RFC3339).
     pub published_at: String,
-    /// Best thumbnail URL (if available).
-    pub thumbnail_url: Option<String>,
-}
-
-/// Extracts the preferred thumbnail URL from a playlist item snippet.
-pub fn preferred_thumbnail_url(snippet: &Value) -> Option<String> {
-    let thumbnails = &snippet["thumbnails"];
-    thumbnails["high"]["url"]
-        .as_str()
-        .or_else(|| thumbnails["medium"]["url"].as_str())
-        .or_else(|| thumbnails["default"]["url"].as_str())
-        .map(|s| s.to_string())
 }
 
 /// Parses a playlist item into a typed helper struct.
@@ -57,14 +45,12 @@ pub fn parse_playlist_item(item: &Value) -> Option<ParsedPlaylistItem> {
         .unwrap_or_default()
         .to_string();
     let published_at = snippet["publishedAt"].as_str()?.to_string();
-    let thumbnail_url = preferred_thumbnail_url(snippet);
 
     Some(ParsedPlaylistItem {
         video_id,
         title,
         description,
         published_at,
-        thumbnail_url,
     })
 }
 
@@ -187,6 +173,19 @@ impl YoutubeApi {
             Duration::Video(seconds) => i64::from(seconds),
             Duration::ReadingTime(_) => 0,
         })
+    }
+
+    /// Downloads a thumbnail for a video ID, constructing the standard YouTube
+    /// thumbnail URL automatically. Convenience wrapper around [`download_thumbnail`].
+    pub async fn download_thumbnail_for_video_id(
+        &self,
+        video_id: &str,
+        static_dir: &Path,
+        overwrite: bool,
+    ) -> Result<Option<String>> {
+        let url = format!("https://i.ytimg.com/vi/{video_id}/hqdefault.jpg");
+        self.download_thumbnail(&url, video_id, static_dir, overwrite)
+            .await
     }
 
     /// Downloads a thumbnail to the provided directory.
@@ -340,7 +339,7 @@ impl ThumbnailConfig {
     /// Creates a new thumbnail config with default storage in `data/static/youtube`.
     pub fn new(overwrite: bool) -> Self {
         Self {
-            static_dir: PathBuf::from("data/static/youtube"),
+            static_dir: PathBuf::from(format!("{}/static/youtube", types::get_data_dir())),
             overwrite,
         }
     }

@@ -1,5 +1,4 @@
-FROM rust:latest AS chef
-RUN cargo install cargo-chef --locked
+FROM lukemathwalker/cargo-chef:latest-rust-1.94.0-slim-trixie AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -9,8 +8,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 RUN touch -t 197001010000 recipe.json
 
 FROM chef AS builder
+ENV DEBIAN_FRONTEND=noninteractive
 # Install build dependencies
-RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev
+RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev cmake git g++ curl
 
 COPY --from=planner /app/recipe.json recipe.json
 # Docker caching 
@@ -20,8 +20,20 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --workspace
 
+# Compile the spellfix1 SQLite extension as a shared library
+RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/lists/* \
+ && cc -fPIC -shared -o ext/spellfix.so ext/spellfix.c -I/usr/include \
+ && echo "spellfix.so built OK"
+
+# Build whisper.cpp
+RUN git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper.cpp && \
+    cd /tmp/whisper.cpp && cmake -B build && cmake --build build --config Release && \
+    curl -L -o models/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
+
 # Runtime stage
 FROM debian:trixie-slim AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies
 # Chromium is required for the crawler
@@ -31,7 +43,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libsqlite3-0 \
-    curl \ 
+    curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
@@ -42,15 +55,19 @@ WORKDIR /app
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
-# Copy binaries and assets
+# Copy binaries, assets, and the spellfix extension
 COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
 COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
+COPY --from=builder --chown=appuser:appuser /app/ext/spellfix.so /app/ext/spellfix.so
+COPY --from=builder /tmp/whisper.cpp/build/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=builder /tmp/whisper.cpp/models/ggml-large-v3-turbo-q5_0.bin /usr/local/share/ggml-large-v3-turbo-q5_0.bin
 COPY --chown=appuser:appuser static /app/static
 
 # Set environment variables
 ENV PORT=3000
 ENV DATA_DIR=/app/data
 ENV CHROME_NO_SANDBOX=true
+ENV SPELLFIX_PATH=/app/ext/spellfix
 
 # Switch to non-root user
 USER appuser

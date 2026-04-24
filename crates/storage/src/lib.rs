@@ -86,13 +86,23 @@ use types::NewTalk;
 use types::Speaker;
 use types::Talk;
 use types::Url;
+use types::VideoData;
 use types::params::{Params, SortOrder};
 use types::{
-    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, NewVideo, SearchResult,
-    Stats, VideoDurationRecord, VideoStats, YearStats,
+    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, SearchResult, Stats,
+    VideoDurationRecord, VideoStats, YearStats,
 };
 
+/// Returns the path to the compiled spellfix1 shared library.
+///
+/// Reads `SPELLFIX_PATH` from the environment, falling back to `ext/spellfix`
+/// (without extension — SQLite appends `.so` or `.dylib` automatically).
+fn spellfix_extension_path() -> String {
+    std::env::var("SPELLFIX_PATH").unwrap_or_else(|_| "ext/spellfix".to_string())
+}
+
 /// Manages storage and retrieval of search entries
+#[derive(Clone)]
 pub struct Repository {
     pool: Pool<Sqlite>,
 }
@@ -121,7 +131,14 @@ impl Repository {
         let database_url = format!("sqlite://{}?mode=rwc", path.as_ref().display());
         tracing::info!("Opening database at: {database_url}");
 
-        let options = SqliteConnectOptions::from_str(&database_url)?.pragma("trusted_schema", "1");
+        let spellfix_path = spellfix_extension_path();
+        tracing::debug!("Loading spellfix1 extension from: {spellfix_path}");
+
+        let options = SqliteConnectOptions::from_str(&database_url)?
+            .pragma("trusted_schema", "1")
+            .pragma("journal_mode", "WAL")
+            .pragma("busy_timeout", "5000")
+            .extension(spellfix_path);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(20)
@@ -129,23 +146,102 @@ impl Repository {
             .await
             .context("Failed to connect to SQLite database")?;
 
-        // Verify trusted_schema is enabled
+        // Verify trusted_schema is enabled — spellfix1 requires it, and if it
+        // somehow wasn't set (e.g. a SQLite build that ignores the pragma) we
+        // want a clear error at startup rather than a cryptic failure later.
         let trusted: i32 = sqlx::query_scalar("PRAGMA trusted_schema")
             .fetch_one(&pool)
             .await?;
         tracing::debug!("trusted_schema = {}", trusted);
+        anyhow::ensure!(
+            trusted == 1,
+            "trusted_schema is not enabled — the spellfix1 extension cannot be used"
+        );
 
         let repo = Self { pool };
         repo.init_db().await?;
         Ok(repo)
     }
 
-    /// Initializes the database schema
+    /// Initializes the database schema.
     async fn init_db(&self) -> Result<()> {
         tracing::info!("Running database migrations");
         sqlx::migrate!("../../migrations").run(&self.pool).await?;
-
         Ok(())
+    }
+
+    /// Looks up spelling corrections for each search term using the spellfix1
+    /// `search_vocab` table.
+    ///
+    /// Returns `None` when every term is already known (edit distance 0) or
+    /// when spellfix cannot find a better candidate within a reasonable
+    /// distance, avoiding spurious "corrections" of correctly spelled words.
+    ///
+    /// A `top=1` constraint makes spellfix return only the single best match
+    /// per term, keeping the query fast.
+    pub async fn correct_terms(&self, params: &Params) -> Result<Option<Vec<String>>> {
+        if !params.has_query_terms() {
+            return Ok(None);
+        }
+
+        let mut corrected: Vec<String> = Vec::new();
+        let mut any_changed = false;
+
+        for term in &params.terms {
+            // Multi-word phrases come through as a single SearchTerm; correct
+            // each constituent word independently then rejoin.
+            let words: Vec<&str> = term.as_str().split_whitespace().collect();
+            let mut corrected_words: Vec<String> = Vec::new();
+
+            for word in &words {
+                // Only attempt correction for purely alphabetic words of
+                // reasonable length — numbers, symbols, and very short tokens
+                // are not worth correcting.
+                let is_alpha = word.chars().all(|c| c.is_ascii_alphabetic());
+                if !is_alpha || word.len() < 3 {
+                    corrected_words.push((*word).to_owned());
+                    continue;
+                }
+
+                let row: Option<(String, i64)> = sqlx::query_as(
+                    "SELECT word, distance
+                     FROM search_vocab
+                     WHERE word MATCH ?1
+                       AND top = 1
+                       AND scope = 2",
+                )
+                .bind(word.to_lowercase())
+                .fetch_optional(&self.pool)
+                .await?;
+
+                match row {
+                    // The suggestion matches the original word (case-insensitively),
+                    // so there is nothing to correct — keep the user's original casing.
+                    Some((suggestion, _)) if suggestion.to_lowercase() == word.to_lowercase() => {
+                        corrected_words.push((*word).to_owned());
+                    }
+                    // A plausible correction within the accepted edit-distance budget.
+                    // Distance > 200 is too far away and falls through to the catch-all.
+                    Some((suggestion, distance)) if distance <= 200 => {
+                        tracing::debug!(original = word, correction = %suggestion, distance, "spellfix correction");
+                        corrected_words.push(suggestion);
+                        any_changed = true;
+                    }
+                    _ => {
+                        // No good correction found; keep the original word.
+                        corrected_words.push((*word).to_owned());
+                    }
+                }
+            }
+
+            corrected.push(corrected_words.join(" "));
+        }
+
+        if any_changed {
+            Ok(Some(corrected))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Inserts a new quote
@@ -235,7 +331,7 @@ impl Repository {
     }
 
     /// Inserts a new video
-    pub async fn insert_video(&self, video: &NewVideo) -> Result<i64> {
+    pub async fn insert_video(&self, video: &VideoData) -> Result<i64> {
         tracing::debug!("Inserting video: {}", video.metadata.url);
 
         let date_str = video.metadata.date.format("%Y-%m-%d").to_string();
@@ -619,6 +715,12 @@ impl Repository {
                 SELECT MIN(date) as min_date, MAX(date) as max_date FROM articles
                 UNION ALL
                 SELECT MIN(date) as min_date, MAX(date) as max_date FROM videos
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM podcast_episodes
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM talks
+                UNION ALL
+                SELECT MIN(date) as min_date, MAX(date) as max_date FROM research_papers
             )
             "#,
         )
@@ -668,6 +770,54 @@ impl Repository {
                         ELSE url
                     END as domain
                 FROM videos
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(url, INSTR(url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                                END
+                            )
+                        ELSE url
+                    END as domain
+                FROM podcast_episodes
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN website_url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(website_url, INSTR(website_url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(website_url, INSTR(website_url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(website_url, INSTR(website_url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(website_url, INSTR(website_url, '://') + 3))
+                                END
+                            )
+                        ELSE website_url
+                    END as domain
+                FROM talks
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN url LIKE '%://%' THEN 
+                            SUBSTR(
+                                SUBSTR(url, INSTR(url, '://') + 3),
+                                1,
+                                CASE 
+                                    WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0 
+                                    THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+                                    ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+                                END
+                            )
+                        ELSE url
+                    END as domain
+                FROM research_papers
             )
             "#,
         )
@@ -679,7 +829,25 @@ impl Repository {
         let article_stats = self.get_article_stats().await?;
         let video_stats = self.get_video_stats().await?;
 
-        let total_entries = article_stats.total + video_stats.total;
+        let podcast_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM podcast_episodes")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let talk_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM talks")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let research_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM research_papers")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let rfc_total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category LIKE '%RFC%'")
+                .fetch_one(&self.pool)
+                .await?;
+
+        let total_entries =
+            article_stats.total + video_stats.total + podcast_total + talk_total + research_total;
 
         Ok(Stats {
             total_entries,
@@ -688,6 +856,14 @@ impl Repository {
             total_unique_domains,
             articles: article_stats,
             videos: video_stats,
+            podcasts: types::PodcastStats {
+                total: podcast_total,
+            },
+            talks: types::TalkStats { total: talk_total },
+            research: types::ResearchStats {
+                total: research_total,
+            },
+            rfcs: types::RfcStats { total: rfc_total },
         })
     }
 
@@ -1134,11 +1310,13 @@ impl Repository {
         offset.min(last_page_offset as u32)
     }
 
-    /// Searches for entries matching the given query
-    pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
-        let page_num = request.params.page.max(1);
-        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
-
+    /// Dispatches a search request to the appropriate per-type query based on
+    /// the `content_type` filter in the request params.
+    async fn search_by_type(
+        &self,
+        request: &SearchRequest<'_>,
+        offset: u32,
+    ) -> Result<(Vec<SearchResult>, i64)> {
         match request.params.content_type {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
@@ -1147,6 +1325,30 @@ impl Repository {
             Some(ContentType::Talks) => self.search_talks(request, offset).await,
             None => self.search_all(request, offset).await,
         }
+    }
+
+    /// Searches the index, automatically falling back to spellfix-corrected
+    /// terms when the primary query returns zero results.
+    pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
+        let page_num = request.params.page.max(1);
+        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
+
+        let (results, count) = self.search_by_type(request, offset).await?;
+
+        // If the primary query found nothing and the user typed search terms,
+        // ask spellfix1 for corrections and retry once with the corrected terms.
+        if count == 0
+            && request.params.has_query_terms()
+            && let Some(corrected_words) = self.correct_terms(request.params).await?
+        {
+            let corrected_params = request.params.with_corrected_terms(corrected_words)?;
+            let corrected_request = SearchRequest {
+                params: &corrected_params,
+            };
+            return self.search_by_type(&corrected_request, offset).await;
+        }
+
+        Ok((results, count))
     }
 
     fn apply_generic_filters(
@@ -1847,7 +2049,7 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            substr(a.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM articles a
                         WHERE 1=1"#,
@@ -1874,7 +2076,7 @@ impl Repository {
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            substr(v.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM videos v
                         WHERE 1=1"#,
@@ -1901,7 +2103,7 @@ impl Repository {
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
                             0.0 as rank,
-                            NULL as snippet,
+                            COALESCE(substr(p.summary, 1, 300), substr(p.transcript, 1, 300)) as snippet,
                             NULL as highlighted_title
                         FROM podcast_episodes p
                         WHERE 1=1"#,
@@ -1931,6 +2133,29 @@ impl Repository {
 
         let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
         Ok((results, total_count))
+    }
+
+    /// Returns up to `limit` search suggestions whose phrase starts with `prefix`.
+    ///
+    /// Suggestions are pre-materialised bigrams and trigrams from all indexed
+    /// titles, ranked by co-occurrence frequency. The query is a simple
+    /// index-range scan — sub-millisecond.
+    pub async fn get_suggestions(&self, prefix: &str, limit: u32) -> Result<Vec<String>> {
+        if prefix.trim().is_empty() {
+            return Ok(vec![]);
+        }
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT phrase FROM suggestions
+             WHERE phrase LIKE ? || '%'
+             ORDER BY cnt DESC
+             LIMIT ?",
+        )
+        .bind(prefix.to_lowercase())
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|(phrase,)| phrase).collect())
     }
 
     // -----------------------------------------------------------------------

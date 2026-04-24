@@ -37,144 +37,129 @@
             </header>
 
             <!-- Global Overview Stats -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">{{ stats.total_entries }}</div>
-                    <div class="stat-label">Total Entries</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-value">
-                        {% if let Some(earliest) = stats.earliest_date %} {% if
-                        let Some(latest) = stats.latest_date %} {{
-                        earliest.format("%Y") }}-{{ latest.format("%Y") }} {%
-                        endif %} {% else %} N/A {% endif %}
+            <div class="section">
+                <div class="stats-grid">
+                    <div class="stat-card" style="grid-column: span auto">
+                        <div class="stat-value">{{ stats.total_entries }}</div>
+                        <div class="stat-label">Total Entries</div>
                     </div>
-                    <div class="stat-label">Years of Content</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-value">
-                        {{ stats.total_unique_domains }}
+                    <div class="stat-card" style="grid-column: span auto">
+                        <div class="stat-value">
+                            {% if let Some(earliest) = stats.earliest_date %} {%
+                            if let Some(latest) = stats.latest_date %} {{
+                            earliest.format("%Y") }}-{{ latest.format("%Y") }}
+                            {% endif %} {% else %} N/A {% endif %}
+                        </div>
+                        <div class="stat-label">Years of Content</div>
                     </div>
-                    <div class="stat-label">Unique Domains</div>
+                    <div class="stat-card" style="grid-column: span auto">
+                        <div class="stat-value">
+                            {{ stats.total_unique_domains }}
+                        </div>
+                        <div class="stat-label">Unique Domains</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Article Stats -->
+            <!-- Content Formats -->
             <div class="section">
-                <h2 class="section-title">Articles</h2>
+                <h2 class="section-title">Content Formats</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value">{{ stats.articles.total }}</div>
-                        <div class="stat-label">Total Articles</div>
+                        <div class="stat-label">Articles</div>
                     </div>
-
                     <div class="stat-card">
-                        <div class="stat-value">
-                            {% if stats.articles.avg_size_chars > 1000 %} {{
-                            stats.articles.avg_size_chars / 1000 }}K {% else %}
-                            {{ stats.articles.avg_size_chars }} {% endif %}
-                        </div>
-                        <div class="stat-label">Avg Size (chars)</div>
+                        <div class="stat-value">{{ stats.videos.total }}</div>
+                        <div class="stat-label">Videos</div>
                     </div>
-
                     <div class="stat-card">
-                        <div class="stat-value">
-                            {% if stats.articles.total_characters > 1000000 %}
-                            {{ stats.articles.total_characters / 1000000 }}M {%
-                            else %} {{ stats.articles.total_characters / 1000
-                            }}K {% endif %}
-                        </div>
-                        <div class="stat-label">Total Characters</div>
+                        <div class="stat-value">{{ stats.talks.total }}</div>
+                        <div class="stat-label">Talks & Conferences</div>
                     </div>
-
                     <div class="stat-card">
-                        <div class="stat-value">
-                            {{ stats.articles.avg_word_count }}
-                        </div>
-                        <div class="stat-label">Avg Word Count</div>
+                        <div class="stat-value">{{ stats.podcasts.total }}</div>
+                        <div class="stat-label">Podcasts</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.research.total }}</div>
+                        <div class="stat-label">Research Papers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.rfcs.total }}</div>
+                        <div class="stat-label">RFCs</div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Deep Dive: Articles & Videos -->
+            <div class="section">
+                <h2 class="section-title">Insights</h2>
+                <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value">
                             {% if stats.articles.total_words > 1000000 %} {{
                             stats.articles.total_words / 1000000 }}M {% else %}
                             {{ stats.articles.total_words / 1000 }}K {% endif %}
                         </div>
-                        <div class="stat-label">Total Words</div>
+                        <div class="stat-label">Total Words in Articles</div>
                     </div>
-
                     <div class="stat-card">
                         <div class="stat-value">
-                            {% if let Some(top) =
-                            stats.articles.top_domain_overall %} {{ top.count }}
-                            {% else %} 0 {% endif %}
+                            {{ stats.articles.avg_word_count }}
                         </div>
-                        <div class="stat-label">
-                            {% if let Some(top) =
-                            stats.articles.top_domain_overall %} {{ top.domain
-                            }} {% else %} Top Domain {% endif %}
-                        </div>
+                        <div class="stat-label">Avg Words per Article</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Video Stats -->
-            <div class="section">
-                <h2 class="section-title">Videos</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">{{ stats.videos.total }}</div>
-                        <div class="stat-label">Total Videos</div>
-                    </div>
-
                     <div class="stat-card">
                         <div class="stat-value">
                             {{ stats.videos.total_duration_seconds / 3600 }}h
                         </div>
-                        <div class="stat-label">Total Duration</div>
+                        <div class="stat-label">Total Video Duration</div>
                     </div>
-
                     <div class="stat-card">
                         <div class="stat-value">
                             {{ stats.videos.median_duration_seconds / 60 }}m
                         </div>
-                        <div class="stat-label">Median Duration</div>
+                        <div class="stat-label">Median Video Duration</div>
                     </div>
-
-                    <div class="stat-card">
-                        <div class="stat-value">
-                            {% if let Some(longest) = stats.videos.longest_video
-                            %} {{ longest.duration_seconds / 60 }}m {% else %}
-                            N/A {% endif %}
-                        </div>
-                        <div class="stat-label">
-                            {% if let Some(longest) = stats.videos.longest_video
-                            %} Longest {% else %} Longest {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-value">
-                            {% if let Some(shortest) =
-                            stats.videos.shortest_video %} {{
-                            shortest.duration_seconds / 60 }}m {% else %} N/A {%
-                            endif %}
-                        </div>
-                        <div class="stat-label">Shortest</div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-value">
+                    <div class="stat-card" style="grid-column: span 2">
+                        <div
+                            class="stat-value"
+                            style="
+                                font-size: 1.5rem;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                            "
+                        >
                             {% if let Some(top) =
-                            stats.videos.top_channels.first() %} {{
-                            top.video_count }} {% else %} 0 {% endif %}
+                            stats.articles.top_domain_overall %} {{ top.domain
+                            }} {% else %} N/A {% endif %}
                         </div>
                         <div class="stat-label">
+                            Most Prolific Article Domain ({% if let Some(top) =
+                            stats.articles.top_domain_overall %}{{ top.count }}
+                            entries{% else %}0{% endif %})
+                        </div>
+                    </div>
+                    <div class="stat-card" style="grid-column: span 2">
+                        <div
+                            class="stat-value"
+                            style="
+                                font-size: 1.5rem;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                            "
+                        >
                             {% if let Some(top) =
                             stats.videos.top_channels.first() %} {{ top.channel
-                            }} {% else %} Top Channel {% endif %}
+                            }} {% else %} N/A {% endif %}
+                        </div>
+                        <div class="stat-label">
+                            Top Video Channel ({% if let Some(top) =
+                            stats.videos.top_channels.first() %}{{
+                            top.video_count }} videos{% else %}0{% endif %})
                         </div>
                     </div>
                 </div>
@@ -182,9 +167,10 @@
 
             <!-- Articles Per Month -->
             <div class="section">
+                <h2 class="section-title">Timeline</h2>
                 <div
                     id="articles-chart"
-                    style="width: 100%; height: 500px"
+                    style="width: 100%; height: 350px; margin-bottom: 20px"
                 ></div>
             </div>
 
@@ -204,14 +190,25 @@
                         class="toggle-button"
                         style="
                             cursor: pointer;
-                            background: transparent;
+                            background: var(--color-surface);
                             border: 1px solid var(--color-border);
-                            padding: 8px 12px;
-                            border-radius: 4px;
+                            padding: 8px 16px;
+                            border-radius: 8px;
                             color: var(--color-text);
                             display: flex;
                             align-items: center;
                             gap: 8px;
+                            font-family: &quot;Martian Mono&quot;, monospace;
+                            font-size: 0.8rem;
+                            text-transform: uppercase;
+                            font-weight: 600;
+                            transition: all 0.2s ease;
+                        "
+                        onmouseover="
+                            this.style.borderColor = 'var(--color-primary)'
+                        "
+                        onmouseout="
+                            this.style.borderColor = 'var(--color-border)'
                         "
                     >
                         <span id="toggle-text">Show All</span>
@@ -225,6 +222,7 @@
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
+                            style="transition: transform 0.3s ease"
                         >
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
@@ -291,36 +289,64 @@
             <!-- Top Domains by Year (Articles) -->
             <div class="section">
                 <h2 class="section-title">Top Domains by Year (Articles)</h2>
-                {% for yearly_domains in stats.articles.top_domains_by_year %}
-                <div class="year-section">
-                    <h3 class="year-subsection-title">
-                        {{ yearly_domains.year }}
-                    </h3>
-                    <div class="domain-list">
-                        {% for domain in yearly_domains.domains %}
-                        <a
-                            href="/search?q=site:{{ domain.domain }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance"
-                            target="_blank"
-                            class="domain-item"
-                        >
-                            <span class="domain-name">
-                                <span
-                                    class="domain-icon"
-                                    data-domain="{{ domain.domain }}"
-                                ></span>
-                                {{ domain.domain }}
-                            </span>
-                            <span class="domain-count">{{ domain.count }}</span>
-                        </a>
-                        {% endfor %}
+                <div class="domains-grid">
+                    {% for yearly_domains in stats.articles.top_domains_by_year
+                    %}
+                    <div class="year-section">
+                        <h3 class="year-subsection-title">
+                            {{ yearly_domains.year }}
+                        </h3>
+                        <div class="domain-tags">
+                            {% for domain in yearly_domains.domains %}
+                            <a
+                                href="/search?q=site:{{ domain.domain|urlencode }}&start-year={{ yearly_domains.year }}&end-year={{ yearly_domains.year }}&sort-by=relevance"
+                                target="_blank"
+                                class="domain-item"
+                            >
+                                <span class="domain-name">
+                                    <span
+                                        class="domain-icon"
+                                        data-domain="{{ domain.domain }}"
+                                    ></span>
+                                    {{ domain.domain }}
+                                </span>
+                                <span class="domain-count"
+                                    >{{ domain.count }}</span
+                                >
+                            </a>
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
         </div>
 
         <footer>
-            <p>Powered by <a href="https://corrode.dev">corrode</a></p>
+            <div class="footer-container">
+                <div class="footer-links">
+                    <a href="/stats" class="footer-link">Statistics</a>
+                    <a
+                        href="https://github.com/corrode/search/issues"
+                        class="footer-link"
+                        >Report an issue</a
+                    >
+                    <a
+                        href="https://corrode.dev/blog/idiomatic-rust-resources/"
+                        class="footer-link"
+                        >Idiomatic Rust Resources</a
+                    >
+                </div>
+                <div class="footer-section">
+                    <a href="https://corrode.dev" aria-label="corrode.dev">
+                        <img
+                            src="/static/corrode.svg"
+                            alt="Corrode"
+                            class="footer-logo"
+                        />
+                    </a>
+                </div>
+            </div>
         </footer>
 
         <!-- ECharts Library -->
@@ -371,6 +397,9 @@
                 const category = icon.getAttribute('data-category');
                 if (categoryIcons[category]) {
                   icon.innerHTML = categoryIcons[category];
+                } else {
+                  // Default category icon
+                  icon.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>';
                 }
               });
 
@@ -408,16 +437,24 @@
                 function updateChart() {
                   const colors = getThemeColors();
                   const baseOption = {{ chart_json|safe }};
+                  baseOption.backgroundColor = 'transparent';
 
-                  // Override colors with theme colors
-                  baseOption.title[0].textStyle.color = colors.text;
-                  baseOption.xAxis[0].axisLabel = baseOption.xAxis[0].axisLabel || {};
-                  baseOption.xAxis[0].axisLabel.color = colors.textMuted;
-                  baseOption.yAxis[0].axisLabel = { color: colors.textMuted };
-                  baseOption.series[0].itemStyle.color = colors.primary;
-                  baseOption.series[0].label.color = colors.textMuted;
-
+                  // Initialize base option first
                   myChart.setOption(baseOption, true);
+
+                  // Override colors with theme colors safely using ECharts merge
+                  myChart.setOption({
+                    title: { textStyle: { color: colors.text } },
+                    xAxis: { axisLabel: { color: colors.textMuted } },
+                    yAxis: {
+                      axisLabel: { color: colors.textMuted },
+                      splitLine: { lineStyle: { color: colors.border } }
+                    },
+                    series: [{
+                      itemStyle: { color: colors.primary },
+                      label: { color: colors.textMuted }
+                    }]
+                  });
                 }
 
                 // Initial chart render

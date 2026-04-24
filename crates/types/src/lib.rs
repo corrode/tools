@@ -450,9 +450,6 @@ pub struct Video {
     pub data: VideoData,
 }
 
-/// Payload used when inserting or updating a video.
-pub type NewVideo = VideoData;
-
 /// Podcast episode-specific data fields (shared between PodcastEpisode and NewPodcastEpisode).
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PodcastEpisodeData {
@@ -1417,7 +1414,7 @@ impl SearchResult {
 /// Statistics about the indexed content.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stats {
-    /// Total number of indexed entries (articles + videos).
+    /// Total number of indexed entries.
     pub total_entries: i64,
     /// Earliest indexed entry date (across all content types).
     pub earliest_date: Option<NaiveDate>,
@@ -1429,6 +1426,42 @@ pub struct Stats {
     pub articles: ArticleStats,
     /// Video-specific statistics.
     pub videos: VideoStats,
+    /// Podcast-specific statistics.
+    pub podcasts: PodcastStats,
+    /// Talk-specific statistics.
+    pub talks: TalkStats,
+    /// Research paper-specific statistics.
+    pub research: ResearchStats,
+    /// RFC-specific statistics.
+    pub rfcs: RfcStats,
+}
+
+/// Statistics specific to podcasts.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct PodcastStats {
+    /// Total number of podcasts.
+    pub total: i64,
+}
+
+/// Statistics specific to talks.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct TalkStats {
+    /// Total number of talks.
+    pub total: i64,
+}
+
+/// Statistics specific to research papers.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ResearchStats {
+    /// Total number of research papers.
+    pub total: i64,
+}
+
+/// Statistics specific to RFCs.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct RfcStats {
+    /// Total number of RFCs.
+    pub total: i64,
 }
 
 /// Statistics specific to articles.

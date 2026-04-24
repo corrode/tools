@@ -23,6 +23,43 @@
         <link rel="stylesheet" href="/static/css/base.css" />
         <link rel="stylesheet" href="/static/css/index.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+        <style>
+            .suggestions-container {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                margin-top: 4px;
+                background-color: var(--color-surface);
+                border: 1px solid var(--color-border);
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                overflow: hidden;
+            }
+            .suggestions-container:empty {
+                display: none;
+                border: none;
+                box-shadow: none;
+            }
+            .suggestions-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .suggestion-item {
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 0.95rem;
+                color: var(--color-text);
+                transition: background-color 0.1s ease;
+            }
+            .suggestion-item:hover,
+            .suggestion-item:focus {
+                background-color: rgba(72, 213, 151, 0.1);
+                outline: none;
+            }
+        </style>
     </head>
     <body class="preload">
         <!-- Hero pattern background -->
@@ -74,17 +111,18 @@
                         value="{{ query.as_deref().unwrap_or("") }}"
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
-                        oninput="if(this.value.trim().length > 0) document.querySelector('.filter-button').style.display = 'inline-flex';"
-                        onkeydown="if(event.key === 'Enter') { document.getElementById('filter-toggle').checked = false; setTimeout(() => document.activeElement.blur(), 50); }"
+                        autocomplete="off"
                     />
+                    <div id="suggestions-container" class="suggestions-container"></div>
                     <button
                         type="submit"
                         class="search-icon"
                         style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
                         aria-label="Search"
-                        onclick="document.getElementById('filter-toggle').checked = false; setTimeout(() => document.getElementById('search').blur(), 50);"
+                        onclick="setTimeout(() => document.getElementById('search').blur(), 50);"
                     >
                         <svg
+                            class="search-icon-glass"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -98,121 +136,29 @@
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                             />
                         </svg>
+                        <svg
+                            class="search-icon-spinner"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            style="width: 100%; height: 100%; display: none; animation: spin 1s linear infinite;"
+                        >
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle>
+                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <style>
+                            @keyframes spin { to { transform: rotate(360deg); } }
+                            .htmx-request.search-icon .search-icon-glass { display: none !important; }
+                            .htmx-request.search-icon .search-icon-spinner { display: block !important; }
+                        </style>
                     </button>
                 </div>
 
                 <!-- Hidden input for content type filter -->
                 <input type="hidden" id="content-type" {% if let Some(content_type) = content_type %}name="type" value="{{ content_type }}"{% endif %} />
-
-                <input type="checkbox" id="filter-toggle" class="filter-toggle-checkbox" {% if start_year.is_some() || end_year.is_some() || sort_by.is_some() %}checked{% endif %} />
-                <label for="filter-toggle" class="filter-button" style='{% if query.as_deref().unwrap_or("").is_empty() %}display: none;{% endif %}'>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path
-                            d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-                        />
-                    </svg>
-                </label>
-
-                <div id="filter-panel">
-                    <div class="filter-group">
-                        <label class="filter-label">Date Range:</label>
-                        <div class="dual-range-container">
-                            <div class="range-values">
-                                <output id="start-year-display" for="start-year"
-                                    >{{ start_year.unwrap_or(2013) }}</output
-                                >
-                                <span>—</span>
-                                <output id="end-year-display" for="end-year"
-                                    >{{ end_year.unwrap_or(2025) }}</output
-                                >
-                            </div>
-                            <div class="dual-range-slider">
-                                <div class="dual-range-track"></div>
-                                <div
-                                    class="dual-range-selected"
-                                    id="range-selected"
-                                ></div>
-                                <input
-                                    type="range"
-                                    id="start-year"
-                                    name="start-year"
-                                    min="2013"
-                                    max="2025"
-                                    value="{{ start_year.unwrap_or(2013) }}"
-                                    class="dual-range-input"
-                                    oninput="
-                                        let v = parseInt(this.value);
-                                        let other = parseInt(document.getElementById('end-year').value);
-                                        if (v > other) { document.getElementById('end-year').value = v; document.getElementById('end-year-display').value = v; other = v; }
-                                        document.getElementById('start-year-display').value = v;
-                                        
-                                        // Update visuals
-                                        const min = 2013;
-                                        const max = 2025;
-                                        const startPercent = ((v - min) / (max - min)) * 100;
-                                        const endPercent = ((other - min) / (max - min)) * 100;
-                                        const rangeSelected = document.getElementById('range-selected');
-                                        rangeSelected.style.left = startPercent + '%';
-                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
-                                    "
-                                    hx-trigger="change"
-                                    hx-get="/search"
-                                    hx-target="#results-container"
-                                    hx-swap="outerHTML"
-                                    hx-include=".search-container"
-                                />
-                                <input
-                                    type="range"
-                                    id="end-year"
-                                    name="end-year"
-                                    min="2013"
-                                    max="2025"
-                                    value="{{ end_year.unwrap_or(2025) }}"
-                                    class="dual-range-input"
-                                    oninput="
-                                        let v = parseInt(this.value);
-                                        let other = parseInt(document.getElementById('start-year').value);
-                                        if (v < other) { document.getElementById('start-year').value = v; document.getElementById('start-year-display').value = v; other = v; }
-                                        document.getElementById('end-year-display').value = v;
-
-                                        // Update visuals
-                                        const min = 2013;
-                                        const max = 2025;
-                                        const startPercent = ((other - min) / (max - min)) * 100;
-                                        const endPercent = ((v - min) / (max - min)) * 100;
-                                        const rangeSelected = document.getElementById('range-selected');
-                                        rangeSelected.style.left = startPercent + '%';
-                                        rangeSelected.style.width = (endPercent - startPercent) + '%';
-                                    "
-                                    hx-trigger="change"
-                                    hx-get="/search"
-                                    hx-target="#results-container"
-                                    hx-swap="outerHTML"
-                                    hx-include=".search-container"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label" for="sort-by"
-                            >Sort By:</label
-                        >
-                        <select
-                            id="sort-by"
-                            name="sort-by"
-                            class="filter-select"
-                            hx-trigger="change"
-                            hx-get="/search"
-                            hx-target="#results-container"
-                            hx-swap="outerHTML"
-                            hx-include=".search-container"
-                        >
-                            <option value="relevance" {% if sort_by.as_deref().unwrap_or("relevance") == "relevance" %}selected{% endif %}>Relevance</option>
-                            <option value="date-desc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-desc" %}selected{% endif %}>Newest First</option>
-                            <option value="date-asc" {% if sort_by.as_deref().unwrap_or("relevance") == "date-asc" %}selected{% endif %}>Oldest First</option>
-                        </select>
-                    </div>
-                </div>
+                <input type="hidden" id="start-year" {% if let Some(start_year) = start_year %}name="start-year" value="{{ start_year }}"{% endif %} />
+                <input type="hidden" id="end-year" {% if let Some(end_year) = end_year %}name="end-year" value="{{ end_year }}"{% endif %} />
+                <input type="hidden" id="sort-by" {% if let Some(sort_by) = sort_by %}name="sort-by" value="{{ sort_by }}"{% endif %} />
             </form>
 
             {% include "results.html" %}
@@ -220,58 +166,14 @@
 
         <footer>
             <div class="footer-container">
-                <div class="footer-section">
-                    <img
-                        src="/static/ferris.png"
-                        alt="Ferris the Crab"
-                        class="footer-ferris"
-                    />
-                    <p>
-                        This search helps you discover content from
-                        the popular Rust programming newsletter. Browse through
-                        years of curated Rust articles, news, and resources.
-                    </p>
-                </div>
-
                 <div class="footer-links">
-                    <a href="/stats" class="footer-link">
-                        <svg
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            style="
-                                width: 1em;
-                                height: 1em;
-                                vertical-align: -0.125em;
-                                display: inline-block;
-                            "
-                        >
-                            <path d="M3 3v18h18" />
-                            <path d="M18 17V9" />
-                            <path d="M13 17V5" />
-                            <path d="M8 17v-3" />
-                        </svg>
-                        Statistics
-                    </a>
-                    <a
-                        href="https://github.com/corrode/search/issues"
-                        class="footer-link"
-                    >
-                        <span class="icon icon-github"></span>
-                        Report an issue
-                    </a>
-                    <a
-                        href="https://corrode.dev/blog/idiomatic-rust-resources/"
-                        class="footer-link"
-                    >
-                        Learning Material for Idiomatic Rust
-                    </a>
-                    <a href="https://corrode.dev" class="footer-link">
-                        Powered by corrode
+                    <a href="/stats" class="footer-link">Statistics</a>
+                    <a href="https://github.com/corrode/search/issues" class="footer-link">Report an issue</a>
+                    <a href="https://corrode.dev/blog/idiomatic-rust-resources/" class="footer-link">Idiomatic Rust Resources</a>
+                </div>
+                <div class="footer-section">
+                    <a href="https://corrode.dev" aria-label="corrode.dev">
+                        <img src="/static/corrode.svg" alt="Corrode" class="footer-logo" />
                     </a>
                 </div>
             </div>
@@ -297,36 +199,99 @@
                 setTheme(savedTheme);
                 document.getElementById("theme-select").value = savedTheme;
 
-                // Initialize range display visual state on load
-                {
-                    const startInput = document.getElementById("start-year");
-                    const endInput = document.getElementById("end-year");
-                    if (startInput && endInput) {
-                        const min = 2013;
-                        const max = 2025;
-                        const v = parseInt(startInput.value);
-                        const other = parseInt(endInput.value);
-                        const startPercent = ((v - min) / (max - min)) * 100;
-                        const endPercent = ((other - min) / (max - min)) * 100;
-                        const rangeSelected =
-                            document.getElementById("range-selected");
-                        if (rangeSelected) {
-                            rangeSelected.style.left = startPercent + "%";
-                            rangeSelected.style.width =
-                                endPercent - startPercent + "%";
-                        }
 
-                        const startDisplay =
-                            document.getElementById("start-year-display");
-                        const endDisplay =
-                            document.getElementById("end-year-display");
-                        if (startDisplay) startDisplay.value = v;
-                        if (endDisplay) endDisplay.value = other;
-                    }
-                }
 
             });
 
+            // Keyboard shortcuts & suggestions navigation
+            document.addEventListener('keydown', function(e) {
+                const searchInput = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                const items = container ? Array.from(container.querySelectorAll('.suggestion-item')) : [];
+                
+                // Focus search on '/' or 'Cmd/Ctrl + K'
+                if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                    return;
+                }
+
+                // If search input or a suggestion is focused
+                if (document.activeElement === searchInput || items.includes(document.activeElement)) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (container) container.innerHTML = '';
+                        searchInput.blur();
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (items.length > 0) {
+                            const currentIndex = items.indexOf(document.activeElement);
+                            const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+                            items[nextIndex].focus();
+                        }
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (items.length > 0) {
+                            const currentIndex = items.indexOf(document.activeElement);
+                            const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+                            if (currentIndex === -1) {
+                                items[items.length - 1].focus();
+                            } else {
+                                items[prevIndex].focus();
+                            }
+                        }
+                    } else if (e.key === 'Enter') {
+                        if (items.includes(document.activeElement)) {
+                            e.preventDefault();
+                            searchInput.value = document.activeElement.textContent;
+                            if (container) container.innerHTML = '';
+                            document.querySelector('.search-container').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                            searchInput.blur();
+                        } else if (document.activeElement === searchInput) {
+                            if (container) container.innerHTML = '';
+                            setTimeout(() => searchInput.blur(), 50);
+                        }
+                    }
+                }
+            });
+
+            // Close suggestions on outside click
+            document.addEventListener('click', function(e) {
+                const container = document.getElementById('suggestions-container');
+                const searchInput = document.getElementById('search');
+                if (container && !container.contains(e.target) && e.target !== searchInput) {
+                    container.innerHTML = '';
+                }
+            });
+
+            // Fetch JSON suggestions
+            (function() {
+                const input = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                let timer;
+                input.addEventListener('input', function() {
+                    clearTimeout(timer);
+                    const q = this.value.trim();
+                    if (q.length < 2) { container.innerHTML = ''; return; }
+                    timer = setTimeout(function() {
+                        fetch('/suggestions?q=' + encodeURIComponent(q))
+                            .then(r => r.json())
+                            .then(phrases => {
+                                if (phrases.length === 0) {
+                                    container.innerHTML = '';
+                                    return;
+                                }
+                                container.innerHTML = '<ul class="suggestions-list">' + phrases
+                                    .map(p => {
+                                        const pEsc = p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                                        return '<li class="suggestion-item" tabindex="0" onmousedown="document.getElementById(\'search\').value=\'' + pEsc + '\'; document.querySelector(\'.search-container\').dispatchEvent(new Event(\'submit\', { cancelable: true, bubbles: true }));">' + pEsc + '</li>';
+                                    })
+                                    .join('') + '</ul>';
+                            })
+                            .catch(() => { container.innerHTML = ''; });
+                    }, 150);
+                });
+            })();
         </script>
     </body>
 </html>

@@ -1,6 +1,8 @@
 <div class="result-item result-item-video">
+    {% let thumb_href = video.video_url.as_deref().unwrap_or(video.url.as_str())
+    %}
     <a
-        href="{{ video.url }}"
+        href="{{ thumb_href }}"
         target="_blank"
         rel="noopener noreferrer"
         class="video-thumbnail-link"
@@ -32,10 +34,18 @@
                 else %}{{ video.title }}{% endif %}</a
             >
         </div>
+
         {% if let Some(snippet) = video.snippet %}
         <div class="result-snippet">{{ snippet|safe }}</div>
+        {% else if let Some(summary) = video.summary %}
+        <div class="result-snippet">{{ summary }}</div>
         {% endif %}
+
         <div class="result-meta">
+            {% if let Some(conference) = video.conference %}
+            <span class="meta-item">{{ conference }}</span>
+            <span class="meta-item">Talk</span>
+            {% else %} {% if let Some(domain) = video.domain %}
             <span class="meta-item">
                 <span class="domain-icon">
                     <svg
@@ -53,10 +63,36 @@
                         <polygon points="9.75,15.02 15.5,11.75 9.75,8.48" />
                     </svg>
                 </span>
-                <span class="domain">{{ video.domain }}</span>
+                <span class="domain">{{ domain }}</span>
             </span>
+            {% endif %}
             <span class="meta-item">Video</span>
+            {% endif %}
             <span class="meta-item">{{ video.date }}</span>
         </div>
+
+        {% if video.video_url.is_some() || video.slides_url.is_some() %}
+        <div class="tags">
+            {% if let Some(video_url) = video.video_url %}
+            <a
+                class="tag"
+                href="{{ video_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Video
+            </a>
+            {% endif %} {% if let Some(slides_url) = video.slides_url %}
+            <a
+                class="tag"
+                href="{{ slides_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Slides
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>

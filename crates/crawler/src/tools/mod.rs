@@ -11,5 +11,8 @@ pub mod css;
 /// YouTube-specific helpers (playlist parsing, transcript fetching, etc.).
 pub mod youtube;
 
+/// Markdown to plain text conversion.
+pub mod markdown;
+
 /// Slides detection helpers (description + web search).
 pub mod slides;

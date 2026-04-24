@@ -36,6 +36,10 @@ const PODCAST_FEEDS: &[(&str, &str)] = &[
         "Rustacean Station",
         "https://rustacean-station.org/podcast.rss",
     ),
+    (
+        "Netstack.FM",
+        "https://api.riverside.fm/hosting/byhwxe8J.rss",
+    ),
 ];
 
 // Old model
@@ -106,6 +110,21 @@ impl PodcastIndexer {
     ) -> Result<String> {
         // Example:
         //  mlx_whisper --model mlx-community/whisper-large-v3-turbo --output-format txt --output-dir . --output-name transcript --verbose False --task transcribe --language en final-mix-ksat.wav
+
+        let has_mlx = std::process::Command::new("mlx_whisper")
+            .arg("--help")
+            .output()
+            .is_ok();
+
+        let has_whisper_cli = std::process::Command::new("whisper-cli")
+            .arg("--help")
+            .output()
+            .is_ok();
+
+        if !has_mlx && !has_whisper_cli {
+            bail!("Neither mlx_whisper nor whisper-cli is available");
+        }
+
         let temp_dir = tempfile::tempdir()?;
         let audio_path = temp_dir.path().join("audio.mp3");
         info!("[{podcast_name}] [{episode_name}] whisper: downloading audio from {audio_url}");
@@ -136,7 +155,9 @@ impl PodcastIndexer {
         std::fs::write(&audio_path, &bytes).context("Failed to write audio file to disk")?;
 
         let output_path = temp_dir.path().join("transcript");
-        info!("[{podcast_name}] [{episode_name}] whisper: starting transcription with mlx_whisper");
+        let transcript_path = output_path.with_extension("txt");
+
+        info!("[{podcast_name}] [{episode_name}] whisper: starting transcription");
         let running = Arc::new(AtomicBool::new(true));
         let heartbeat_running = Arc::clone(&running);
         let heartbeat_handle = std::thread::spawn(move || {
@@ -149,26 +170,67 @@ impl PodcastIndexer {
             }
         });
 
-        let output = std::process::Command::new("mlx_whisper")
-            .arg("--model")
-            .arg(MLX_WHISPER_MODEL)
-            .arg("--output-format")
-            .arg("txt")
-            .arg("--output-dir")
-            .arg(temp_dir.path())
-            .arg("--output-name")
-            .arg("transcript")
-            .arg("--verbose")
-            .arg("False")
-            .arg("--task")
-            .arg("transcribe")
-            .arg("--language")
-            .arg("en")
-            .arg(&audio_path)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .context("Failed to run mlx_whisper - is it installed?")?;
+        let output = if has_mlx {
+            std::process::Command::new("mlx_whisper")
+                .arg("--model")
+                .arg(MLX_WHISPER_MODEL)
+                .arg("--output-format")
+                .arg("txt")
+                .arg("--output-dir")
+                .arg(temp_dir.path())
+                .arg("--output-name")
+                .arg("transcript")
+                .arg("--verbose")
+                .arg("False")
+                .arg("--task")
+                .arg("transcribe")
+                .arg("--language")
+                .arg("en")
+                .arg(&audio_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .context("Failed to run mlx_whisper")?
+        } else {
+            let wav_path = temp_dir.path().join("audio.wav");
+            let convert_output = std::process::Command::new("ffmpeg")
+                .arg("-i")
+                .arg(&audio_path)
+                .arg("-ar")
+                .arg("16000")
+                .arg("-ac")
+                .arg("1")
+                .arg("-c:a")
+                .arg("pcm_s16le")
+                .arg(&wav_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .context("Failed to run ffmpeg")?;
+
+            if !convert_output.status.success() {
+                let stderr = String::from_utf8_lossy(&convert_output.stderr);
+                bail!("ffmpeg conversion failed:\nstderr: {stderr}");
+            }
+
+            let whisper_model = std::env::var("WHISPER_MODEL_PATH")
+                .unwrap_or_else(|_| "/usr/local/share/ggml-large-v3-turbo-q5_0.bin".to_string());
+
+            std::process::Command::new("whisper-cli")
+                .arg("-m")
+                .arg(&whisper_model)
+                .arg("-f")
+                .arg(&wav_path)
+                .arg("-otxt")
+                .arg("-of")
+                .arg(&output_path)
+                .arg("-l")
+                .arg("en")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .context("Failed to run whisper-cli")?
+        };
 
         running.store(false, Ordering::Relaxed);
         let _ = heartbeat_handle.join();
@@ -182,16 +244,13 @@ impl PodcastIndexer {
                 .code()
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| "unknown".to_string());
-            bail!(
-                "mlx_whisper failed (exit code {exit_code}):\nstderr: {stderr}\nstdout: {stdout}"
-            );
+            bail!("whisper failed (exit code {exit_code}):\nstderr: {stderr}\nstdout: {stdout}");
         }
 
-        let transcript_path = output_path.with_extension("txt");
         if !transcript_path.exists() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             bail!(
-                "mlx_whisper did not produce transcript file at {}\nstderr: {stderr}",
+                "whisper did not produce transcript file at {}\nstderr: {stderr}",
                 transcript_path.display()
             );
         }
@@ -204,7 +263,7 @@ impl PodcastIndexer {
         })?;
 
         if transcript.trim().is_empty() {
-            bail!("mlx_whisper produced an empty transcript");
+            bail!("whisper produced an empty transcript");
         }
 
         info!(
@@ -361,7 +420,10 @@ impl Indexer for PodcastIndexer {
                                 }
                             };
 
-                            let url = match entry.link {
+                            let url = match entry
+                                .link
+                                .or_else(|| entry.enclosures.first().map(|e| e.url.to_string()))
+                            {
                                 Some(u) => u,
                                 None => {
                                     let err_msg =

@@ -24,9 +24,10 @@ html[data-theme="dark-twir"] h1 {
 /* Stats Grid Layout */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-    margin-bottom: 40px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-auto-rows: minmax(120px, auto);
+    gap: 16px;
+    margin-bottom: 32px;
 }
 
 .stat-card {
@@ -34,7 +35,17 @@ html[data-theme="dark-twir"] h1 {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     transition: all 0.2s ease;
+}
+
+html[data-theme="light-docs-rs"] .stat-card {
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 
 .stat-card:hover {
@@ -42,23 +53,25 @@ html[data-theme="dark-twir"] h1 {
 }
 
 .stat-value {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 2.25rem;
+    font-weight: 800;
     color: var(--color-primary);
-    font-family: "Martian Mono", monospace;
+    font-family: "Univers", sans-serif;
     margin-bottom: 8px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
 }
 
 .stat-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: "Martian Mono", monospace;
+    font-weight: 600;
 }
 
 .section {
-    margin-bottom: 48px;
+    margin-bottom: 32px;
 }
 
 .section-title {
@@ -69,6 +82,20 @@ html[data-theme="dark-twir"] h1 {
     font-family: "Univers", sans-serif;
 }
 
+#articles-chart {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 24px;
+}
+
+html[data-theme="light-docs-rs"] #articles-chart {
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
 /* Lists (Categories & Years) */
 .category-list,
 .year-list {
@@ -76,6 +103,15 @@ html[data-theme="dark-twir"] h1 {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 0;
+    overflow: hidden;
+}
+
+html[data-theme="light-docs-rs"] .category-list,
+html[data-theme="light-docs-rs"] .year-list {
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 
 .category-item,
@@ -134,11 +170,11 @@ html[data-theme="dark-twir"] h1 {
 
 /* Progress Bars */
 .progress-bar {
-    height: 6px;
+    height: 8px;
     background-color: var(--color-border);
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 .progress-fill {
@@ -148,48 +184,84 @@ html[data-theme="dark-twir"] h1 {
         var(--color-primary-muted),
         var(--color-primary)
     );
-    transition: width 0.3s ease;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
 }
 
 .year-section {
-    margin-bottom: 32px;
-}
-
-.year-subsection-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--color-primary);
-    margin-bottom: 16px;
-    font-family: "Martian Mono", monospace;
-}
-
-/* Domain List */
-.domain-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 12px;
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    padding: 20px;
+    padding: 24px;
 }
 
+html[data-theme="light-docs-rs"] .year-section {
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+/* Domain List */
 .domain-item {
-    display: flex;
-    justify-content: space-between;
+    display: inline-flex;
     align-items: center;
-    padding: 10px 14px;
-    background-color: rgba(72, 213, 151, 0.05);
-    border-radius: 4px;
-    transition: all 0.2s ease;
+    background: var(--color-surface);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: var(--color-text);
     text-decoration: none;
-    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .domain-item:hover {
-    background-color: rgba(72, 213, 151, 0.1);
-    border: 1px solid var(--color-primary);
-    padding: 9px 13px;
+    background: var(--color-border);
+}
+
+.domains-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.domain-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.domain-icon {
+    display: flex;
+    align-items: center;
+}
+
+.domain-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+.year-subsection-title {
+    margin: 0 0 16px 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 12px;
+    font-family: "Univers", sans-serif;
+}
+
+.category-icon {
+    display: flex;
+    align-items: center;
+}
+
+.category-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
 }
 
 .domain-name {
@@ -201,16 +273,17 @@ html[data-theme="dark-twir"] h1 {
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .domain-count {
-    font-family: "Martian Mono", monospace;
-    color: var(--color-primary);
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    border-radius: 10px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    font-size: 0.75rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    margin-left: 12px;
-    flex-shrink: 0;
 }
 
 /* Keywords */
@@ -265,11 +338,19 @@ html[data-theme="dark-twir"] h1 {
 @media (max-width: 600px) {
     .stats-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 12px;
     }
 
     .stat-card {
         padding: 20px;
+    }
+
+    #articles-chart {
+        padding: 16px;
+    }
+
+    .year-section {
+        padding: 16px;
     }
 
     .stat-value {
@@ -279,9 +360,5 @@ html[data-theme="dark-twir"] h1 {
     .category-item,
     .year-item {
         padding: 12px 16px;
-    }
-
-    .domain-list {
-        grid-template-columns: 1fr;
     }
 }

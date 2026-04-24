@@ -6,6 +6,7 @@
 //! Set the `GITHUB_TOKEN` environment variable to avoid rate limits.
 
 use super::Indexer;
+use crate::tools::markdown;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -336,11 +337,12 @@ impl Indexer for Rfc {
                 date,
             };
 
-            let word_count = clean_content.split_whitespace().count() as i64;
+            let plain_content = markdown::to_plaintext(&clean_content);
+            let word_count = plain_content.split_whitespace().count() as i64;
 
             let article = NewArticle {
                 metadata,
-                text: clean_content,
+                text: plain_content,
                 reference,
                 word_count,
             };

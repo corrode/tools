@@ -67,12 +67,16 @@ async fn main() -> Result<()> {
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::stats))
+        .route("/suggestions", get(handlers::suggestions))
         .route(
             "/monitoring",
             get(|| async { axum::response::Redirect::permanent("/monitoring/") }),
         )
         .nest("/monitoring/", monitoring_routes)
-        .nest_service("/static/youtube", ServeDir::new("data/static/youtube"))
+        .nest_service(
+            "/static/youtube",
+            ServeDir::new(format!("{}/static/youtube", types::get_data_dir())),
+        )
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo);
 

@@ -434,7 +434,6 @@ mod tests {
             title: r#"Speaker: "Making Rust Fast" | RustConf 2024"#.to_string(),
             description: String::new(),
             published_at: "2024-01-01".to_string(),
-            thumbnail_url: None,
         }];
 
         let result = matcher.find_match("Making Rust Fast", &[], &items);
@@ -450,7 +449,6 @@ mod tests {
             title: "John Smith: Some Talk | RustConf 2024".to_string(),
             description: String::new(),
             published_at: "2024-01-01".to_string(),
-            thumbnail_url: None,
         }];
 
         let speakers = vec!["John Smith".to_string()];
