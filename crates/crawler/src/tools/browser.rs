@@ -3,10 +3,10 @@
 use crate::cookies::COOKIE_BANNER_SELECTORS;
 use crate::paths;
 use crate::sanitizer::Sanitizer;
-use crate::tools::wayback::{self, WAYBACK_SELECTORS};
+use crate::tools::wayback;
 use types::Metadata;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use headless_chrome::{
     Browser as ChromeBrowser, LaunchOptionsBuilder, Tab,
     protocol::cdp::Page::CaptureScreenshotFormatOption,
@@ -191,14 +191,7 @@ impl Browser {
             return Ok(Some(format!("YouTube video: {}", metadata.title)));
         }
 
-        match self.crawl_url(&target_url, false, Some(metadata)) {
-            Ok(text) if Self::looks_gone(&text) => {
-                tracing::warn!(
-                    "Live page for {} appears to be gone, trying Wayback Machine...",
-                    metadata.url
-                );
-                self.crawl_wayback(&metadata.url)
-            }
+        match self.crawl_url(&target_url, Some(metadata)) {
             Ok(text) => Ok(Some(text)),
             Err(live_err) => {
                 tracing::warn!(
@@ -212,15 +205,13 @@ impl Browser {
 
     /// Performs a single browser crawl of `target_url`.
     ///
-    /// `is_wayback` controls whether Wayback-specific chrome is stripped from
-    /// the page in addition to cookie banners. `metadata` is used only for
-    /// debug-mode artefact filenames; it's `None` for Wayback retries.
-    fn crawl_url(
-        &self,
-        target_url: &url::Url,
-        is_wayback: bool,
-        metadata: Option<&Metadata>,
-    ) -> Result<String> {
+    /// A page that loads but whose extracted text matches one of the
+    /// `GONE_PHRASES` is reported as an `Err` so the caller can treat it
+    /// the same as an outright navigation failure.
+    ///
+    /// `metadata` is used only for debug-mode artefact filenames; it's
+    /// `None` for Wayback retries.
+    fn crawl_url(&self, target_url: &url::Url, metadata: Option<&Metadata>) -> Result<String> {
         // Use TabGuard to ensure tab is closed on all paths (success, error, or panic)
         let tab = TabGuard::new(self.inner.new_tab()?);
         tab.set_default_timeout(time::Duration::from_secs(30));
@@ -229,15 +220,10 @@ impl Browser {
         tab.navigate_to(target_url.as_str())?;
 
         tracing::debug!("Waiting for navigation to complete (30s timeout)...");
-        if let Err(e) = tab.wait_until_navigated() {
-            tracing::error!("Navigation timeout or error for {}: {e}", target_url);
-            bail!("Navigation failed: {e}");
-        }
+        tab.wait_until_navigated()
+            .with_context(|| format!("Navigation failed for {target_url}"))?;
         tracing::debug!("Navigation completed successfully");
 
-        if is_wayback {
-            self.remove_wayback_chrome(&tab)?;
-        }
         self.remove_cookie_banner(&tab)?;
 
         // Wait for Cloudflare verification to complete (if present)
@@ -255,30 +241,33 @@ impl Browser {
 
         // Tab is automatically closed when `tab` (TabGuard) is dropped
 
+        if Self::looks_gone(&text) {
+            bail!("Page appears to be gone or removed: {target_url}");
+        }
+
         Ok(text)
     }
 
     /// Looks up the Wayback Machine for an archived copy of `original_url`
     /// and crawls it. Returns `Ok(None)` if no usable snapshot was found.
     fn crawl_wayback(&self, original_url: &url::Url) -> Result<Option<String>> {
-        let Some(wayback_url) = wayback::wayback_url_for(original_url) else {
-            tracing::warn!("Could not construct Wayback URL for {original_url}");
-            return Ok(None);
+        let wayback_url = match wayback::wayback_url_for(original_url) {
+            Ok(u) => u,
+            Err(e) => {
+                tracing::warn!("{e}");
+                return Ok(None);
+            }
         };
 
         tracing::info!("Trying Wayback snapshot: {wayback_url}");
 
-        match self.crawl_url(&wayback_url, true, None) {
-            Ok(text) if Self::looks_gone(&text) => {
-                tracing::warn!("Wayback snapshot for {original_url} also looks gone");
-                Ok(None)
-            }
+        match self.crawl_url(&wayback_url, None) {
             Ok(text) => {
                 tracing::info!("Wayback fallback succeeded for {original_url}");
                 Ok(Some(text))
             }
             Err(e) => {
-                tracing::warn!("Wayback snapshot failed for {original_url}: {e}");
+                tracing::warn!("Wayback snapshot unusable for {original_url}: {e}");
                 Ok(None)
             }
         }
@@ -344,18 +333,6 @@ impl Browser {
 
         tab.evaluate(&js, false)?;
         tracing::debug!("Attempted to remove cookie banner elements");
-        Ok(())
-    }
-
-    /// Removes Wayback Machine toolbar and other archive.org injected chrome
-    /// from the page so they don't pollute the extracted text.
-    fn remove_wayback_chrome(&self, tab: &TabGuard) -> Result<()> {
-        let all_selectors = WAYBACK_SELECTORS.join(", ");
-        let js =
-            format!(r#"document.querySelectorAll('{all_selectors}').forEach(el => el.remove());"#);
-
-        tab.evaluate(&js, false)?;
-        tracing::debug!("Attempted to remove Wayback Machine chrome");
         Ok(())
     }
 }

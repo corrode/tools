@@ -1,53 +1,38 @@
 //! Wayback Machine integration for fetching archived versions of dead pages.
 //!
-//! Uses the `web/0/` shorthand:
-//! `https://web.archive.org/web/0/<url>`
+//! Builds URLs of the form:
 //!
-//! Wayback Machine interprets timestamp `0` as "give me the best (newest)
-//! available snapshot", redirecting to the actual timestamped URL. This is
-//! simpler and more reliable than the Availability JSON API, which is heavily
-//! rate-limited and frequently returns empty results for pages that are clearly
-//! archived.
+//! ```text
+//! https://web.archive.org/web/0if_/<url>
+//! ```
+//!
+//! Two URL modifiers are in play here:
+//!
+//! - **`0`** as the timestamp tells Wayback "give me the best (newest)
+//!   available snapshot" — it serves a redirect to the actual timestamped
+//!   URL, so the browser just follows it. Simpler and far more reliable
+//!   than the Availability JSON API, which is heavily rate-limited and
+//!   frequently returns empty results for pages that are clearly archived.
+//!
+//! - **`if_`** is the "iframe" render flag. It tells Wayback to omit its
+//!   navigational toolbar / donation banner / "About this capture" overlay
+//!   while still rewriting CSS and image references to the archived
+//!   originals. Without it, we'd have to strip the injected chrome from
+//!   the DOM ourselves; with it, the page renders cleanly out of the box.
+//!
+//! See <https://help.archive.org/help/using-the-wayback-machine/> and the
+//! community documentation on render flags (`id_`, `if_`, `ij_`).
 
-/// Selectors for Wayback Machine-injected chrome that should be stripped before
-/// extracting text content from an archived page.
-pub static WAYBACK_SELECTORS: &[&str] = &[
-    // Main toolbar
-    "#wm-ipp-base",
-    "#wm-ipp",
-    // Donation/fundraising banner
-    "#donato",
-    "#wm-donate",
-    // "About this capture" overlay
-    "#wmtb",
-    // Close/nav buttons injected into the archived page
-    "#wm-tb-tg",
-    // Any remaining archive.org injected wrappers
-    "#playback",
-    "#wm-share",
-    "#wm-save",
-];
+use anyhow::{Context, Result};
 
-/// Constructs a Wayback Machine URL for the best available snapshot of `url`.
+/// Constructs a Wayback Machine URL for the best available snapshot of `url`,
+/// rendered without the Wayback toolbar (`if_` iframe flag).
 ///
-/// Wayback interprets timestamp `0` as "newest available snapshot" and issues
-/// a redirect to the actual timestamped URL. We return the constructed URL
-/// directly — the browser will follow the redirect naturally.
-///
-/// Returns `None` only if the URL cannot be serialised into the Wayback path,
-/// which should never happen in practice.
-pub fn wayback_url_for(url: &url::Url) -> Option<url::Url> {
-    let wayback = format!("https://web.archive.org/web/0/{}", url.as_str());
-    match url::Url::parse(&wayback) {
-        Ok(u) => {
-            tracing::debug!("Wayback URL for {url}: {u}");
-            Some(u)
-        }
-        Err(e) => {
-            tracing::warn!("Failed to construct Wayback URL for {url}: {e}");
-            None
-        }
-    }
+/// Returns an error only if the URL cannot be serialised into the Wayback
+/// path, which should never happen for any URL the crawler produces.
+pub fn wayback_url_for(url: &url::Url) -> Result<url::Url> {
+    let wayback = format!("https://web.archive.org/web/0if_/{url}");
+    url::Url::parse(&wayback).with_context(|| format!("Failed to construct Wayback URL for {url}"))
 }
 
 #[cfg(test)]
@@ -55,21 +40,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wayback_url_construction() {
+    fn url_uses_iframe_flag_and_zero_timestamp() {
         let url = url::Url::parse("http://edunham.net/2016/04/11/plushie_rustacean_pattern.html")
             .unwrap();
-        let wayback = wayback_url_for(&url).unwrap();
         assert_eq!(
-            wayback.as_str(),
-            "https://web.archive.org/web/0/http://edunham.net/2016/04/11/plushie_rustacean_pattern.html"
+            wayback_url_for(&url).unwrap().as_str(),
+            "https://web.archive.org/web/0if_/http://edunham.net/2016/04/11/plushie_rustacean_pattern.html"
         );
     }
 
     #[test]
-    fn test_wayback_selectors_are_valid() {
-        // Smoke-test: all selectors are non-empty strings
-        for selector in WAYBACK_SELECTORS {
-            assert!(!selector.is_empty());
-        }
+    fn url_with_query_string_is_preserved() {
+        let url = url::Url::parse("https://example.com/page?id=42&lang=en").unwrap();
+        let wayback = wayback_url_for(&url).unwrap();
+        assert!(wayback.as_str().ends_with("?id=42&lang=en"));
+        assert!(wayback.as_str().contains("/web/0if_/"));
     }
 }
