@@ -3,9 +3,10 @@
 use crate::cookies::COOKIE_BANNER_SELECTORS;
 use crate::paths;
 use crate::sanitizer::Sanitizer;
+use crate::tools::wayback;
 use types::Metadata;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use headless_chrome::{
     Browser as ChromeBrowser, LaunchOptionsBuilder, Tab,
     protocol::cdp::Page::CaptureScreenshotFormatOption,
@@ -66,6 +67,28 @@ static YOUTUBE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 static YOUTUBE_SHORT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(https?://)?(www\.)?(youtu\.?be)").expect("Invalid YouTube short regex")
 });
+
+/// Phrases that strongly suggest a page is gone or otherwise unusable,
+/// warranting a Wayback Machine fallback.
+///
+/// Matched case-insensitively against the extracted page text, but only
+/// when the page is also shorter than [`GONE_MAX_WORDS`] — a real article
+/// that happens to mention "no longer available" in passing should not
+/// trigger a fallback.
+static GONE_PHRASES: &[&str] = &[
+    "404 not found",
+    "page not found",
+    "no longer available",
+    "has been removed",
+    "has been deleted",
+    "this page does not exist",
+    "410 gone",
+];
+
+/// Maximum word count for a page to be considered "gone" when its text
+/// matches one of [`GONE_PHRASES`]. Real articles are virtually always
+/// longer than this; stub error pages are virtually always shorter.
+const GONE_MAX_WORDS: usize = 100;
 
 /// Wrapper around headless Chrome for crawling web pages
 pub struct Browser {
@@ -147,7 +170,25 @@ impl Browser {
             .and_then(|id| url::Url::parse(&format!("https://img.youtube.com/vi/{id}/0.jpg")).ok())
     }
 
-    /// Crawls a webpage and returns its text content
+    /// Returns true if the extracted page text strongly suggests the page is
+    /// gone (404, removed, etc.) and should trigger a Wayback fallback.
+    ///
+    /// A page only counts as "gone" if it is *both* short (under
+    /// [`GONE_MAX_WORDS`] words) *and* contains one of [`GONE_PHRASES`].
+    /// This guards against false positives on long-form articles that
+    /// merely mention "no longer available" or similar in passing.
+    fn looks_gone(text: &str) -> bool {
+        if text.split_whitespace().count() >= GONE_MAX_WORDS {
+            return false;
+        }
+        let lower = text.to_lowercase();
+        GONE_PHRASES.iter().any(|phrase| lower.contains(phrase))
+    }
+
+    /// Crawls a webpage and returns its text content.
+    ///
+    /// If the live page fails to load or appears to be a 404 / removed
+    /// page, automatically retries via the Wayback Machine before giving up.
     pub fn crawl(&self, metadata: &Metadata) -> anyhow::Result<Option<String>> {
         tracing::info!("Crawling {}", metadata.url);
 
@@ -164,6 +205,27 @@ impl Browser {
             return Ok(Some(format!("YouTube video: {}", metadata.title)));
         }
 
+        match self.crawl_url(&target_url, Some(metadata)) {
+            Ok(text) => Ok(Some(text)),
+            Err(live_err) => {
+                tracing::warn!(
+                    "Live page failed for {} ({live_err}), trying Wayback Machine...",
+                    metadata.url
+                );
+                self.crawl_wayback(&metadata.url)
+            }
+        }
+    }
+
+    /// Performs a single browser crawl of `target_url`.
+    ///
+    /// A page that loads but whose extracted text matches one of the
+    /// `GONE_PHRASES` is reported as an `Err` so the caller can treat it
+    /// the same as an outright navigation failure.
+    ///
+    /// `metadata` is used only for debug-mode artefact filenames; it's
+    /// `None` for Wayback retries.
+    fn crawl_url(&self, target_url: &url::Url, metadata: Option<&Metadata>) -> Result<String> {
         // Use TabGuard to ensure tab is closed on all paths (success, error, or panic)
         let tab = TabGuard::new(self.inner.new_tab()?);
         tab.set_default_timeout(time::Duration::from_secs(30));
@@ -172,10 +234,8 @@ impl Browser {
         tab.navigate_to(target_url.as_str())?;
 
         tracing::debug!("Waiting for navigation to complete (30s timeout)...");
-        if let Err(e) = tab.wait_until_navigated() {
-            tracing::error!("Navigation timeout or error for {}: {e}", target_url);
-            bail!("Navigation failed: {e}");
-        }
+        tab.wait_until_navigated()
+            .with_context(|| format!("Navigation failed for {target_url}"))?;
         tracing::debug!("Navigation completed successfully");
 
         self.remove_cookie_banner(&tab)?;
@@ -185,7 +245,9 @@ impl Browser {
         let text = self.wait_for_content(&tab, 15)?;
         tracing::debug!("Extracted text: {} chars", text.len());
 
-        if self.debug {
+        if self.debug
+            && let Some(metadata) = metadata
+        {
             let html = tab.get_content()?;
             self.save_raw_html(&html, metadata)?;
             self.take_screenshot(&tab, metadata)?;
@@ -193,7 +255,36 @@ impl Browser {
 
         // Tab is automatically closed when `tab` (TabGuard) is dropped
 
-        Ok(Some(text))
+        if Self::looks_gone(&text) {
+            bail!("Page appears to be gone or removed: {target_url}");
+        }
+
+        Ok(text)
+    }
+
+    /// Looks up the Wayback Machine for an archived copy of `original_url`
+    /// and crawls it. Returns `Ok(None)` if no usable snapshot was found.
+    fn crawl_wayback(&self, original_url: &url::Url) -> Result<Option<String>> {
+        let wayback_url = match wayback::wayback_url_for(original_url) {
+            Ok(u) => u,
+            Err(e) => {
+                tracing::warn!("{e}");
+                return Ok(None);
+            }
+        };
+
+        tracing::info!("Trying Wayback snapshot: {wayback_url}");
+
+        match self.crawl_url(&wayback_url, None) {
+            Ok(text) => {
+                tracing::info!("Wayback fallback succeeded for {original_url}");
+                Ok(Some(text))
+            }
+            Err(e) => {
+                tracing::warn!("Wayback snapshot unusable for {original_url}: {e}");
+                Ok(None)
+            }
+        }
     }
 
     /// Takes a screenshot of the current page
@@ -318,5 +409,36 @@ mod tests {
         let rewritten = Browser::rewrite_youtube_url(&url);
 
         assert!(rewritten.is_none());
+    }
+
+    #[test]
+    fn looks_gone_matches_short_404_page() {
+        let text = "404 Not Found. The page you requested could not be found.";
+        assert!(Browser::looks_gone(text));
+    }
+
+    #[test]
+    fn looks_gone_ignores_long_article_mentioning_gone_phrase() {
+        // A real article that happens to mention "no longer available" in
+        // passing should not be treated as a dead page.
+        let mut text = String::from("This is a long article about software longevity. ");
+        // Pad well past GONE_MAX_WORDS.
+        for _ in 0..GONE_MAX_WORDS {
+            text.push_str("word ");
+        }
+        text.push_str(" The original API is no longer available, but a replacement exists.");
+        assert!(!Browser::looks_gone(&text));
+    }
+
+    #[test]
+    fn looks_gone_ignores_short_page_without_gone_phrase() {
+        let text = "Welcome to my homepage. Nothing fancy here yet.";
+        assert!(!Browser::looks_gone(text));
+    }
+
+    #[test]
+    fn looks_gone_is_case_insensitive() {
+        let text = "PAGE NOT FOUND";
+        assert!(Browser::looks_gone(text));
     }
 }

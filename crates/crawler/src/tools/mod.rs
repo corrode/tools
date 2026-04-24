@@ -16,3 +16,6 @@ pub mod markdown;
 
 /// Slides detection helpers (description + web search).
 pub mod slides;
+
+/// Wayback Machine integration for fetching archived versions of dead pages.
+pub mod wayback;
