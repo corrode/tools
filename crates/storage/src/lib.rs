@@ -83,6 +83,7 @@ use std::str::FromStr;
 use types::NewPodcastEpisode;
 use types::NewSpeaker;
 use types::NewTalk;
+use types::PodcastEpisode;
 use types::Speaker;
 use types::Talk;
 use types::Url;
@@ -606,6 +607,51 @@ impl Repository {
         .await?;
 
         Ok(talk)
+    }
+
+    /// Gets a podcast episode by its primary key.
+    pub async fn get_podcast_episode_by_id(&self, id: i64) -> Result<Option<PodcastEpisode>> {
+        let episode = sqlx::query_as::<_, PodcastEpisode>(
+            r#"
+            SELECT
+                id,
+                episode_name as title,
+                url,
+                'Podcast' as category,
+                date,
+                podcast_name,
+                episode_name,
+                summary,
+                thumbnail_url,
+                duration_seconds,
+                transcript
+            FROM podcast_episodes
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(episode)
+    }
+
+    /// Gets the names of all guests linked to a podcast episode.
+    pub async fn get_podcast_episode_guests(&self, episode_id: i64) -> Result<Vec<String>> {
+        let names: Vec<String> = sqlx::query_scalar(
+            r#"
+            SELECT g.name
+            FROM podcast_guests g
+            JOIN podcast_episode_guests eg ON eg.guest_id = g.id
+            WHERE eg.episode_id = ?
+            ORDER BY g.name
+            "#,
+        )
+        .bind(episode_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(names)
     }
 
     /// Inserts or updates a speaker in the database, returning the speaker ID

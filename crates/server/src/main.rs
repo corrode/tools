@@ -67,7 +67,6 @@ async fn main() -> Result<()> {
         .route("/", get(handlers::index))
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
-        .route("/podcast/{id}", get(handlers::podcast))
         .route("/stats", get(handlers::stats))
         .route("/suggestions", get(handlers::suggestions))
         .route(
