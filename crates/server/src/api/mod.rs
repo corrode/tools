@@ -1,9 +1,9 @@
 //! Public JSON API for the search index.
 //!
-//! Mounted under `/api/v1`. See [`docs/PUBLIC_API.md`] for the design
-//! rationale. All routes here return JSON; the HTML/HTMX handlers live in
-//! [`crate::handlers`] and are mounted at the top-level paths used by the
-//! browser.
+//! Mounted by the caller via [`Router::merge`]; all routes carry their full
+//! `/api/v1/...` path internally so that Swagger UI's `index.html` redirect
+//! resolves correctly. See `crates/server/src/api/README.md` for the design
+//! rationale.
 //!
 //! The OpenAPI 3.1 specification is built at startup from the route
 //! registrations and the `ToSchema` / `IntoParams` derives on the DTOs and
@@ -60,8 +60,11 @@ mod suggestions;
 )]
 struct ApiDoc;
 
-/// Builds the API sub-router and the OpenAPI document, returning them both
-/// so the caller can `nest` the router and serve the spec from a fixed path.
+/// Builds the complete `/api/v1/*` router (JSON endpoints + Swagger UI +
+/// raw OpenAPI spec). The returned router is meant to be `merge`d into the
+/// top-level app router, not nested: Swagger UI's internal redirect target
+/// is absolute, so the path it's registered under must match the path it's
+/// served from.
 pub(crate) fn build(state: Arc<Repository>) -> Router {
     let (router, openapi) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::health))
@@ -80,7 +83,7 @@ pub(crate) fn build(state: Arc<Repository>) -> Router {
         .allow_headers(Any);
 
     Router::new()
-        .merge(router)
-        .merge(SwaggerUi::new("/docs").url("/openapi.json", openapi))
+        .nest("/api/v1", router)
+        .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", openapi))
         .layer(cors)
 }

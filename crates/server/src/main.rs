@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
         )
         .nest_service("/static", ServeDir::new("static"))
         .with_state(repo.clone())
-        .nest("/api/v1", api::build(repo));
+        .merge(api::build(repo));
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{port}");
