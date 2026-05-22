@@ -67,25 +67,37 @@ use crate::ContentType;
 /// This struct should remain serde-friendly and be used at the Axum boundary.
 /// It is intentionally permissive; validation happens during normalization.
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema, utoipa::IntoParams))]
+#[cfg_attr(feature = "openapi", into_params(parameter_in = Query))]
 #[serde(rename_all = "kebab-case")]
 pub struct RawParams {
     /// Raw query string from the user.
+    ///
+    /// Supports:
+    /// - Plain words: `async runtime`
+    /// - Quoted phrases: `"async await"` (treated as one contiguous match)
+    /// - A single `site:` filter: `site:github.com tokio`
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "openapi", param(example = "async runtime"))]
     pub q: Option<String>,
-    /// Optional start year filter.
+    /// Optional inclusive lower bound for the publication year (1900–2050).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "openapi", param(example = 2020))]
     pub start_year: Option<i32>,
-    /// Optional end year filter.
+    /// Optional inclusive upper bound for the publication year (1900–2050).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "openapi", param(example = 2024))]
     pub end_year: Option<i32>,
-    /// Optional sort order requested by the user.
+    /// Sort order. Defaults to `relevance` when omitted.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<SortOrder>,
-    /// Content type filter: "articles", "video", "podcast", or "talks".
+    /// Content type filter: `articles`, `video`, `podcast`, `talks`, or `research`.
+    /// Omitting this returns results across all content types.
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     pub content_type: Option<ContentType>,
-    /// Optional page number.
+    /// 1-based page number. Defaults to 1.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "openapi", param(example = 1, minimum = 1))]
     pub page: Option<u32>,
 }
 
@@ -139,6 +151,7 @@ pub type SearchFilters = Params;
 
 /// Sort order for search results.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum SortOrder {
     /// Rank by textual relevance.

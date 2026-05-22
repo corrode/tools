@@ -7,6 +7,7 @@
 use anyhow::{Context, Result};
 mod error;
 
+mod api;
 mod handlers;
 
 use axum::{Router, middleware, routing::get};
@@ -66,6 +67,7 @@ async fn main() -> Result<()> {
         .route("/", get(handlers::index))
         .route("/health", get(|| async { "OK" }))
         .route("/search", get(handlers::search))
+        .route("/podcast/{id}", get(handlers::podcast))
         .route("/stats", get(handlers::stats))
         .route("/suggestions", get(handlers::suggestions))
         .route(
@@ -78,7 +80,8 @@ async fn main() -> Result<()> {
             ServeDir::new(format!("{}/static/youtube", types::get_data_dir())),
         )
         .nest_service("/static", ServeDir::new("static"))
-        .with_state(repo);
+        .with_state(repo.clone())
+        .nest("/api/v1", api::build(repo));
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{port}");
