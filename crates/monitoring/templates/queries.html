@@ -17,7 +17,7 @@
                 </nav>
             </div>
 
-            <!-- Search form -->
+            <!-- Search + filter form -->
             <form class="search-form" method="GET" action="/monitoring/queries">
                 <input
                     type="text"
@@ -26,7 +26,41 @@
                     value="{% match search %}{% when Some with (s) %}{{ s }}{% when None %}{% endmatch %}"
                     autocomplete="off"
                 />
-                <button type="submit">Search</button>
+                <select name="source" aria-label="Filter by source">
+                    <option value="">All sources</option>
+                    {% for opt in source_options %}
+                    <option
+                        value="{{ opt.value }}"
+                        {%
+                        if
+                        opt.selected
+                        %}
+                        selected{%
+                        endif
+                        %}
+                    >
+                        {{ opt.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <select name="type" aria-label="Filter by content type">
+                    <option value="">All types</option>
+                    {% for opt in content_type_options %}
+                    <option
+                        value="{{ opt.value }}"
+                        {%
+                        if
+                        opt.selected
+                        %}
+                        selected{%
+                        endif
+                        %}
+                    >
+                        {{ opt.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Filter</button>
             </form>
 
             <div id="query-results">{% include "queries_partial.html" %}</div>

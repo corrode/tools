@@ -9,6 +9,7 @@
     <thead>
         <tr>
             <th>Time</th>
+            <th>Source</th>
             <th>Query</th>
             <th>Content Type</th>
             <th class="num">Results</th>
@@ -21,6 +22,11 @@
         <tr>
             <td class="timestamp">
                 {{ row.timestamp.format("%Y-%m-%d %H:%M:%S") }}
+            </td>
+            <td>
+                <span class="source-tag source-tag--{{ row.source }}"
+                    >{{ row.source }}</span
+                >
             </td>
             <td class="query-text" title="{{ row.query }}">{{ row.query }}</td>
             <td>

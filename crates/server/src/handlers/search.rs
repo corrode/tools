@@ -96,6 +96,7 @@ pub(crate) async fn search(
     if params.has_query_terms() {
         info!(
             is_monitoring = true,
+            source = "ui",
             query = raw_params.q,
             page = params.page,
             content_type = raw_params.content_type.map(|c| c.to_string()),

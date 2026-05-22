@@ -71,7 +71,7 @@ pub(crate) async fn search(
     let params = Params::try_from((raw_params.clone(), defaults)).map_err(|e| {
         warn!(
             is_monitoring = true,
-            api = true,
+            source = "api",
             query = raw_params.q,
             error = %e,
             "Invalid API search params"
@@ -84,7 +84,7 @@ pub(crate) async fn search(
         repo.search(&request).await.map_err(|e| {
             error!(
                 is_monitoring = true,
-                api = true,
+                source = "api",
                 query = raw_params.q,
                 error = %e,
                 "API search query failed"
@@ -101,7 +101,7 @@ pub(crate) async fn search(
     if params.has_query_terms() {
         info!(
             is_monitoring = true,
-            api = true,
+            source = "api",
             query = raw_params.q,
             page = params.page,
             content_type = raw_params.content_type.map(|c| c.to_string()),
@@ -110,7 +110,7 @@ pub(crate) async fn search(
             end_year = raw_params.end_year,
             results = results_count,
             duration_ms = took_ms,
-            "API search request"
+            "Search request"
         );
     }
 

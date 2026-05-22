@@ -6,65 +6,84 @@ use sqlx::Row;
 // Monitoring query methods
 // -----------------------------------------------------------------------
 
-/// Paginated list of recent search queries, optionally filtered by FTS.
+/// Paginated list of recent search queries, optionally filtered by FTS,
+/// source (`"ui"` / `"api"`), and/or content type.
 ///
 /// Returns `(rows, total_count)` so the caller can render pagination.
 /// When `search` is `Some`, the query is matched against `events_fts`.
+/// When `source` or `content_type` are `Some`, an exact-match WHERE clause
+/// is appended.
 pub async fn get_query_log(
     pool: &sqlx::Pool<sqlx::Sqlite>,
     search: Option<&str>,
+    source: Option<&str>,
+    content_type: Option<&str>,
     limit: i64,
     offset: i64,
 ) -> Result<(Vec<SearchQueryRow>, i64)> {
-    let (rows, total) = if let Some(term) = search.filter(|s| !s.is_empty()) {
-        let fts_pattern = format!("{term}*");
+    // Build the shared WHERE / JOIN fragments and bind values dynamically so
+    // every combination of (search, source, content_type) reuses one code
+    // path. `QueryBuilder` would also work but the conditions are simple
+    // enough that hand-rolling keeps the SQL inspectable.
+    let fts_pattern = search
+        .filter(|s| !s.is_empty())
+        .map(|term| format!("{term}*"));
 
-        let total: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM search_queries sq \
-                 JOIN events_fts ON events_fts.rowid = sq.id \
-                 WHERE events_fts MATCH ?",
-        )
-        .bind(&fts_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        let rows = sqlx::query(
-            "SELECT sq.id, sq.timestamp, sq.query, sq.result_count, \
-                        sq.latency_ms, sq.page, sq.referer, \
-                        sq.content_type, sq.sort_by, sq.start_year, sq.end_year \
-                 FROM search_queries sq \
-                 JOIN events_fts ON events_fts.rowid = sq.id \
-                 WHERE events_fts MATCH ? \
-                 ORDER BY sq.timestamp DESC \
-                 LIMIT ? OFFSET ?",
-        )
-        .bind(&fts_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        (rows, total)
+    let join_fts = if fts_pattern.is_some() {
+        "JOIN events_fts ON events_fts.rowid = sq.id"
     } else {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM search_queries")
-            .fetch_one(pool)
-            .await?;
-
-        let rows = sqlx::query(
-            "SELECT id, timestamp, query, result_count, \
-                        latency_ms, page, referer, \
-                        content_type, sort_by, start_year, end_year \
-                 FROM search_queries \
-                 ORDER BY timestamp DESC \
-                 LIMIT ? OFFSET ?",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        (rows, total)
+        ""
     };
+
+    let mut conditions: Vec<&str> = Vec::new();
+    if fts_pattern.is_some() {
+        conditions.push("events_fts MATCH ?");
+    }
+    if source.is_some() {
+        conditions.push("sq.source = ?");
+    }
+    if content_type.is_some() {
+        conditions.push("sq.content_type = ?");
+    }
+    let where_clause = if conditions.is_empty() {
+        String::new()
+    } else {
+        format!("WHERE {}", conditions.join(" AND "))
+    };
+
+    let count_sql = format!("SELECT COUNT(*) FROM search_queries sq {join_fts} {where_clause}");
+    let rows_sql = format!(
+        "SELECT sq.id, sq.timestamp, sq.query, sq.result_count, \
+                sq.latency_ms, sq.page, sq.referer, \
+                sq.content_type, sq.sort_by, sq.start_year, sq.end_year, sq.source \
+         FROM search_queries sq {join_fts} {where_clause} \
+         ORDER BY sq.timestamp DESC \
+         LIMIT ? OFFSET ?"
+    );
+
+    let mut count_q = sqlx::query_scalar::<_, i64>(&count_sql);
+    if let Some(p) = fts_pattern.as_deref() {
+        count_q = count_q.bind(p);
+    }
+    if let Some(s) = source {
+        count_q = count_q.bind(s);
+    }
+    if let Some(c) = content_type {
+        count_q = count_q.bind(c);
+    }
+    let total: i64 = count_q.fetch_one(pool).await?;
+
+    let mut rows_q = sqlx::query(&rows_sql);
+    if let Some(p) = fts_pattern.as_deref() {
+        rows_q = rows_q.bind(p);
+    }
+    if let Some(s) = source {
+        rows_q = rows_q.bind(s);
+    }
+    if let Some(c) = content_type {
+        rows_q = rows_q.bind(c);
+    }
+    let rows = rows_q.bind(limit).bind(offset).fetch_all(pool).await?;
 
     let parsed = rows
         .iter()
@@ -83,6 +102,7 @@ pub async fn get_query_log(
                 row.get("sort_by"),
                 row.get("start_year"),
                 row.get("end_year"),
+                row.get("source"),
             )
         })
         .collect();

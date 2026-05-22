@@ -143,6 +143,10 @@ pub struct SearchQueryRow {
     pub start_year: Option<i32>,
     /// End-year filter, if set by the user.
     pub end_year: Option<i32>,
+    /// Origin of the request: `"ui"` for the browser UI, `"api"` for the
+    /// JSON API. Defaults to `"ui"` for legacy events emitted before the
+    /// `source` field was added.
+    pub source: String,
 }
 
 impl SearchQueryRow {
@@ -160,6 +164,7 @@ impl SearchQueryRow {
         sort_by: Option<String>,
         start_year: Option<i32>,
         end_year: Option<i32>,
+        source: String,
     ) -> Self {
         Self {
             id,
@@ -173,6 +178,7 @@ impl SearchQueryRow {
             sort_by,
             start_year,
             end_year,
+            source,
         }
     }
 }
