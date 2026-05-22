@@ -98,6 +98,18 @@ storage = { path = "crates/storage" }
 # Faster debug builds on macOS by not bundling debug info into one file
 split-debuginfo = "unpacked"
 
+[profile.release]
+# Strip symbols and debug info from release binaries to shrink the
+# production Docker image (~30 MB saved across server + crawler).
+strip = "symbols"
+# Slightly smaller binaries and better runtime perf at the cost of
+# longer link time. `fat` LTO would be smaller still, but noticeably slower
+# to build in CI; `thin` is a good balance.
+lto = "thin"
+# A single codegen unit gives the optimizer more to work with and
+# produces smaller binaries (the build is already release-only in CI).
+codegen-units = 1
+
 # Uncomment these for larger projects where proc-macro execution is slow:
 # [profile.dev.build-override]
 # opt-level = 3

@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM lukemathwalker/cargo-chef:latest-rust-1.94.0-slim-trixie AS chef
 WORKDIR /app
 
@@ -9,71 +11,76 @@ RUN touch -t 197001010000 recipe.json
 
 FROM chef AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-# Install build dependencies
-RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev cmake git g++ curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        pkg-config libssl-dev libsqlite3-dev cmake git g++ curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=planner /app/recipe.json recipe.json
-# Docker caching 
 RUN cargo chef cook --release --recipe-path recipe.json
 
-# Build application
 COPY . .
 RUN cargo build --release --workspace
 
 # Compile the spellfix1 SQLite extension as a shared library
-RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/lists/* \
- && cc -fPIC -shared -o ext/spellfix.so ext/spellfix.c -I/usr/include \
- && echo "spellfix.so built OK"
+RUN cc -fPIC -shared -o ext/spellfix.so ext/spellfix.c -I/usr/include
 
-# Build whisper.cpp
-RUN git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper.cpp && \
-    cd /tmp/whisper.cpp && cmake -B build && cmake --build build --config Release && \
-    curl -L -o models/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
+# whisper.cpp builder (isolated so its toolchain doesn't leak into runtime)
+FROM debian:trixie-slim AS whisper-builder
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates git cmake g++ make \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git /tmp/whisper.cpp \
+    && cd /tmp/whisper.cpp \
+    && cmake -B build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build --config Release --target whisper-cli -j
 
-# Runtime stage
 FROM debian:trixie-slim AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies
-# Chromium is required for the crawler
-# curl is required for health checks
-RUN apt-get update && apt-get install -y \
-    chromium \
-    ca-certificates \
-    libssl3 \
-    libsqlite3-0 \
-    curl \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Runtime dependencies. `--no-install-recommends` saves >150 MB on chromium's
+# recommended packages alone.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        chromium \
+        ca-certificates \
+        libssl3 \
+        libsqlite3-0 \
+        curl \
+        ffmpeg \
+        fonts-liberation \
+    # Vulkan validation layer is a dev/debug aid only (~22 MB).
+    && rm -f /usr/lib/chromium/libVkLayer_khronos_validation.so \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Create a non-root user
 RUN useradd -m -u 1000 -U -s /bin/bash appuser
 
 WORKDIR /app
-
-# Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
-# Copy binaries, assets, and the spellfix extension
+# Download the whisper model directly in the runtime stage. Because this RUN
+# step is cache-keyed on the command string alone, the resulting layer blob
+# hash is stable across rebuilds, so the Coolify host only downloads this
+# ~548 MB layer once instead of on every deploy.
+ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
+RUN curl --fail --location --silent --show-error \
+        -o /usr/local/share/ggml-large-v3-turbo-q5_0.bin \
+        "${WHISPER_MODEL_URL}"
+
+COPY --from=whisper-builder /tmp/whisper.cpp/build/bin/whisper-cli /usr/local/bin/whisper-cli
+
+COPY --from=builder --chown=appuser:appuser /app/ext/spellfix.so /app/ext/spellfix.so
+COPY --chown=appuser:appuser static /app/static
 COPY --from=builder --chown=appuser:appuser /app/target/release/server /app/bin/server
 COPY --from=builder --chown=appuser:appuser /app/target/release/crawler /app/bin/crawler
-COPY --from=builder --chown=appuser:appuser /app/ext/spellfix.so /app/ext/spellfix.so
-COPY --from=builder /tmp/whisper.cpp/build/bin/whisper-cli /usr/local/bin/whisper-cli
-COPY --from=builder /tmp/whisper.cpp/models/ggml-large-v3-turbo-q5_0.bin /usr/local/share/ggml-large-v3-turbo-q5_0.bin
-COPY --chown=appuser:appuser static /app/static
 
-# Set environment variables
-ENV PORT=3000
-ENV DATA_DIR=/app/data
-ENV CHROME_NO_SANDBOX=true
-ENV SPELLFIX_PATH=/app/ext/spellfix
+ENV PORT=3000 \
+    DATA_DIR=/app/data \
+    CHROME_NO_SANDBOX=true \
+    SPELLFIX_PATH=/app/ext/spellfix
 
-# Switch to non-root user
 USER appuser
-
-# Expose the port
 EXPOSE 3000
 
-# Set entrypoint
 CMD ["/app/bin/server"]
