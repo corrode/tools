@@ -21,8 +21,11 @@
 //! 5. Drop overlapping passages, keeping the one with more matches (and
 //!    earlier start as tiebreak). Return up to `max` of the remaining
 //!    passages, ordered by descending match count.
-//! 6. Wrap matches in `<mark>...</mark>` for the returned snippet, leaving
-//!    the raw text intact for `text` if callers want both.
+//!
+//! Passages are returned as plain text. The API surface does not include
+//! a pre-marked copy — callers that need highlighting can use the
+//! character offsets and the (already-known) query terms to render it
+//! themselves.
 
 use std::cmp::Ordering;
 
@@ -35,10 +38,8 @@ pub(crate) struct Passage {
     pub char_start: usize,
     /// Character end offset (exclusive).
     pub char_end: usize,
-    /// The raw passage text (no `<mark>` wrapping).
+    /// The raw passage text (no markup).
     pub text: String,
-    /// The passage with each query-term occurrence wrapped in `<mark>...</mark>`.
-    pub highlighted: String,
     /// Number of (possibly overlapping) term matches in the passage.
     pub match_count: usize,
 }
@@ -123,12 +124,10 @@ pub(crate) fn extract(text: &str, terms: &[&str], max: usize, window: usize) -> 
         let (snap_start, snap_end) = snap_to_whitespace(&chars, raw_start, raw_end);
 
         let passage_text: String = chars[snap_start..snap_end].iter().collect();
-        let highlighted = highlight_passage(&passage_text, &terms);
         passages.push(Passage {
             char_start: snap_start,
             char_end: snap_end,
             text: passage_text,
-            highlighted,
             match_count: cluster.len(),
         });
     }
@@ -165,61 +164,6 @@ fn snap_to_whitespace(chars: &[char], mut start: usize, mut end: usize) -> (usiz
     (start, end.min(chars.len()))
 }
 
-/// Wraps every case-insensitive occurrence of each term in `<mark>...</mark>`.
-/// Longest terms are matched first so overlapping prefixes don't double-wrap.
-fn highlight_passage(text: &str, terms: &[String]) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    let lower: String = text.to_lowercase();
-    let mut sorted_terms: Vec<&String> = terms.iter().collect();
-    sorted_terms.sort_by_key(|t| std::cmp::Reverse(t.chars().count()));
-
-    // Build a bitmap over chars marking which positions are inside a match.
-    let mut covered = vec![false; chars.len()];
-    for term in sorted_terms {
-        let term_chars = term.chars().count();
-        if term_chars == 0 {
-            continue;
-        }
-        let mut byte_cursor = 0usize;
-        while let Some(found_byte) = lower[byte_cursor..].find(term.as_str()) {
-            let abs_byte = byte_cursor + found_byte;
-            let char_start = lower[..abs_byte].chars().count();
-            let char_end = char_start + term_chars;
-            // Skip if any of these chars are already covered (longer term wins).
-            if covered[char_start..char_end.min(covered.len())]
-                .iter()
-                .any(|c| *c)
-            {
-                byte_cursor = abs_byte + term.len().max(1);
-                continue;
-            }
-            let covered_len = covered.len();
-            for c in &mut covered[char_start..char_end.min(covered_len)] {
-                *c = true;
-            }
-            byte_cursor = abs_byte + term.len().max(1);
-        }
-    }
-
-    // Emit the text with `<mark>` wrapping every maximal run of covered chars.
-    let mut out = String::with_capacity(text.len() + 16);
-    let mut i = 0;
-    while i < chars.len() {
-        if covered[i] {
-            out.push_str("<mark>");
-            while i < chars.len() && covered[i] {
-                out.push(chars[i]);
-                i += 1;
-            }
-            out.push_str("</mark>");
-        } else {
-            out.push(chars[i]);
-            i += 1;
-        }
-    }
-    out
-}
-
 /// Rough token estimate using a 4-chars-per-token heuristic. Cheap, language-
 /// agnostic, and good enough for budgeting LLM context windows.
 #[must_use]
@@ -239,7 +183,10 @@ mod tests {
                     Some other unrelated content lives here for filler.";
         let p = extract(text, &["borrow", "tokio"], 5, 80);
         assert!(!p.is_empty());
-        assert!(p[0].highlighted.contains("<mark>"));
+        // Top hit should be the borrow-checker cluster (two matches).
+        assert!(p[0].text.to_lowercase().contains("borrow"));
+        // Plain text — no markup leaks through.
+        assert!(!p[0].text.contains("<mark>"));
     }
 
     #[test]
@@ -253,8 +200,10 @@ mod tests {
     fn highlights_case_insensitively() {
         let p = extract("Async Rust is fun. async is a keyword.", &["async"], 3, 60);
         assert_eq!(p.len(), 1);
-        assert!(p[0].highlighted.contains("<mark>Async</mark>"));
-        assert!(p[0].highlighted.contains("<mark>async</mark>"));
+        // Both cases are inside the single returned passage.
+        let lower = p[0].text.to_lowercase();
+        assert!(lower.matches("async").count() >= 2);
+        assert!(!p[0].text.contains("<mark>"));
     }
 
     #[test]
