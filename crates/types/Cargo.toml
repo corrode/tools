@@ -12,10 +12,11 @@ strum = { workspace = true }
 url = { workspace = true }
 urlencoding = { workspace = true }
 utoipa = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [features]
 default = []
-openapi = ["dep:utoipa"]
+openapi = ["dep:utoipa", "dep:serde_json"]
 
 [dev-dependencies]
 tempfile = { workspace = true }

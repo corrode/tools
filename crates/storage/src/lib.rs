@@ -90,8 +90,8 @@ use types::Url;
 use types::VideoData;
 use types::params::{Params, SortOrder};
 use types::{
-    ArticleStats, CategoryStats, ChannelStats, ContentType, NewArticle, SearchResult, Stats,
-    VideoDurationRecord, VideoStats, YearStats,
+    Article, ArticleStats, CategoryStats, ChannelStats, ContentType, DocumentKind, NewArticle,
+    ResearchPaper, SearchResult, Stats, Video, VideoDurationRecord, VideoStats, YearStats,
 };
 
 /// Returns the path to the compiled spellfix1 shared library.
@@ -116,8 +116,14 @@ pub struct SearchRequest<'a> {
 }
 
 impl Repository {
-    /// Number of results per page
+    /// Default page size when `params.per_page` is not provided.
+    ///
+    /// Retained as a `pub const` so external callers (HTML handlers) keep
+    /// working; per-request overrides come from [`Params::per_page`].
     pub const RESULTS_PER_PAGE: u32 = 20;
+
+    /// Maximum number of documents allowed in a single batch fetch.
+    pub const MAX_BATCH_DOCUMENTS: usize = 25;
 
     /// Returns a reference to the underlying SQLite connection pool.
     ///
@@ -607,6 +613,72 @@ impl Repository {
         .await?;
 
         Ok(talk)
+    }
+
+    /// Gets an article by its primary key, including full text.
+    pub async fn get_article_by_id(&self, id: i64) -> Result<Option<Article>> {
+        let article = sqlx::query_as::<_, Article>(
+            r#"
+            SELECT id, title, url, category, date, text, reference, word_count
+            FROM articles
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(article)
+    }
+
+    /// Gets a video by its primary key, including full transcript/text.
+    pub async fn get_video_by_id(&self, id: i64) -> Result<Option<Video>> {
+        let video = sqlx::query_as::<_, Video>(
+            r#"
+            SELECT id, title, url, category, date, text, thumbnail_url, duration_seconds
+            FROM videos
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(video)
+    }
+
+    /// Gets a talk by its primary key, including full transcript.
+    pub async fn get_talk_by_id(&self, id: i64) -> Result<Option<Talk>> {
+        let talk = sqlx::query_as::<_, Talk>(
+            r#"
+            SELECT id, title, summary, transcript, conference, date,
+                   website_url, video_url, slides_url, thumbnail_url, duration_seconds
+            FROM talks
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(talk)
+    }
+
+    /// Gets a research paper by its primary key, including full text.
+    pub async fn get_research_paper_by_id(&self, id: i64) -> Result<Option<ResearchPaper>> {
+        let paper = sqlx::query_as::<_, ResearchPaper>(
+            r#"
+            SELECT id, title, url, category, date, authors, abstract_text, text,
+                   paper_id, publication
+            FROM research_papers
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(paper)
     }
 
     /// Gets a podcast episode by its primary key.
@@ -1347,22 +1419,67 @@ impl Repository {
     ///
     /// When `total_count` is known ahead of the data query we can avoid
     /// scanning past the end of the result set entirely.
-    fn clamp_offset(offset: u32, total_count: i64) -> u32 {
+    fn clamp_offset(offset: u32, total_count: i64, per_page: u32) -> u32 {
         if total_count <= 0 {
             return 0;
         }
-        let last_page_offset =
-            ((total_count - 1) / Self::RESULTS_PER_PAGE as i64) * Self::RESULTS_PER_PAGE as i64;
+        let per_page = i64::from(per_page.max(1));
+        let last_page_offset = ((total_count - 1) / per_page) * per_page;
         offset.min(last_page_offset as u32)
     }
 
+    /// Pushes ` AND <alias>.<id_column> IN (?, ?, ...)` (or a tautologically
+    /// empty match if the scope contains zero ids for this kind) onto the
+    /// query.
+    ///
+    /// Returns `Some(true)` when results are possible, `Some(false)` when the
+    /// scope explicitly excludes this kind (caller should short-circuit), and
+    /// `None` when no scope filter is active.
+    fn apply_id_scope(
+        query: &mut QueryBuilder<'_, Sqlite>,
+        params: &Params,
+        kind: DocumentKind,
+        alias: &str,
+        id_column: &str,
+    ) -> Option<bool> {
+        let scope = params.id_scope.as_ref()?;
+        let Some(ids) = scope.ids_for(kind) else {
+            // Scope is set but excludes this kind entirely.
+            query.push(" AND 0=1");
+            return Some(false);
+        };
+        if ids.is_empty() {
+            query.push(" AND 0=1");
+            return Some(false);
+        }
+        query.push(format!(" AND {alias}.{id_column} IN ("));
+        let mut sep = query.separated(", ");
+        for id in ids {
+            sep.push_bind(*id);
+        }
+        query.push(")");
+        Some(true)
+    }
+
     /// Dispatches a search request to the appropriate per-type query based on
-    /// the `content_type` filter in the request params.
+    /// the `content_type` filter in the request params. Honors any `id_scope`
+    /// in `params` by short-circuiting kinds that are excluded.
     async fn search_by_type(
         &self,
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
+        // If an id_scope is set with a specific content type and that kind
+        // isn't in the scope, return empty results without hitting the DB.
+        if let Some(scope) = request.params.id_scope.as_ref()
+            && let Some(ct) = request.params.content_type
+        {
+            let kind = DocumentKind::from_content_type(ct);
+            if scope.ids_for(kind).is_none_or(<[i64]>::is_empty) {
+                return Ok((vec![], 0));
+            }
+        }
+
         match request.params.content_type {
             Some(ContentType::Articles) => self.search_articles(request, offset).await,
             Some(ContentType::Video) => self.search_videos(request, offset).await,
@@ -1377,7 +1494,8 @@ impl Repository {
     /// terms when the primary query returns zero results.
     pub async fn search(&self, request: &SearchRequest<'_>) -> Result<(Vec<SearchResult>, i64)> {
         let page_num = request.params.page.max(1);
-        let offset = (page_num - 1) * Self::RESULTS_PER_PAGE;
+        let per_page = request.params.per_page.max(1);
+        let offset = (page_num - 1) * per_page;
 
         let (results, count) = self.search_by_type(request, offset).await?;
 
@@ -1459,6 +1577,13 @@ impl Repository {
         count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "a");
+        Self::apply_id_scope(
+            &mut count_query,
+            request.params,
+            DocumentKind::Article,
+            "a",
+            "id",
+        );
 
         let total_count: i64 = count_query
             .build_query_as::<(i64,)>()
@@ -1466,7 +1591,7 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1486,6 +1611,7 @@ impl Repository {
         query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "a");
+        Self::apply_id_scope(&mut query, request.params, DocumentKind::Article, "a", "id");
 
         match request.params.sort_by {
             SortOrder::DateDesc => query.push(" ORDER BY a.date DESC"),
@@ -1494,7 +1620,7 @@ impl Repository {
         };
 
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
@@ -1534,6 +1660,13 @@ impl Repository {
         count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "v");
+        Self::apply_id_scope(
+            &mut count_query,
+            request.params,
+            DocumentKind::Video,
+            "v",
+            "id",
+        );
 
         let total_count: i64 = count_query
             .build_query_as::<(i64,)>()
@@ -1541,7 +1674,7 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1561,6 +1694,7 @@ impl Repository {
         query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "v");
+        Self::apply_id_scope(&mut query, request.params, DocumentKind::Video, "v", "id");
 
         match request.params.sort_by {
             SortOrder::DateDesc => query.push(" ORDER BY v.date DESC"),
@@ -1569,7 +1703,7 @@ impl Repository {
         };
 
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
@@ -1609,6 +1743,13 @@ impl Repository {
         count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "p");
+        Self::apply_id_scope(
+            &mut count_query,
+            request.params,
+            DocumentKind::Podcast,
+            "p",
+            "id",
+        );
 
         let total_count: i64 = count_query
             .build_query_as::<(i64,)>()
@@ -1616,7 +1757,7 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1639,6 +1780,7 @@ impl Repository {
         query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "p");
+        Self::apply_id_scope(&mut query, request.params, DocumentKind::Podcast, "p", "id");
 
         match request.params.sort_by {
             SortOrder::DateDesc => query.push(" ORDER BY p.date DESC"),
@@ -1647,7 +1789,7 @@ impl Repository {
         };
 
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
@@ -1687,6 +1829,13 @@ impl Repository {
         count_query.push_bind(fts_query.clone());
 
         self.apply_generic_filters(&mut count_query, request.params, "r");
+        Self::apply_id_scope(
+            &mut count_query,
+            request.params,
+            DocumentKind::Research,
+            "r",
+            "id",
+        );
 
         let total_count: i64 = count_query
             .build_query_as::<(i64,)>()
@@ -1694,7 +1843,7 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1715,6 +1864,13 @@ impl Repository {
         query.push_bind(fts_query);
 
         self.apply_generic_filters(&mut query, request.params, "r");
+        Self::apply_id_scope(
+            &mut query,
+            request.params,
+            DocumentKind::Research,
+            "r",
+            "id",
+        );
 
         match request.params.sort_by {
             SortOrder::DateDesc => query.push(" ORDER BY r.date DESC"),
@@ -1723,7 +1879,7 @@ impl Repository {
         };
 
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
@@ -1763,6 +1919,13 @@ impl Repository {
         count_query.push_bind(fts_query.clone());
 
         self.apply_talk_filters(&mut count_query, request.params, "t");
+        Self::apply_id_scope(
+            &mut count_query,
+            request.params,
+            DocumentKind::Talk,
+            "t",
+            "id",
+        );
 
         let total_count: i64 = count_query
             .build_query_as::<(i64,)>()
@@ -1770,7 +1933,7 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // 2. Get Results
         let mut query = QueryBuilder::new(
@@ -1793,6 +1956,7 @@ impl Repository {
         query.push_bind(fts_query);
 
         self.apply_talk_filters(&mut query, request.params, "t");
+        Self::apply_id_scope(&mut query, request.params, DocumentKind::Talk, "t", "id");
 
         match request.params.sort_by {
             SortOrder::DateDesc => query.push(" ORDER BY t.date DESC"),
@@ -1801,7 +1965,7 @@ impl Repository {
         };
 
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
         query.push_bind(offset as i64);
 
@@ -1815,7 +1979,8 @@ impl Repository {
         Ok((results, total_count))
     }
 
-    /// Searches articles, videos, and podcasts, merging results by BM25 rank.
+    /// Searches all five kinds (articles, videos, podcasts, talks, research
+    /// papers) and merges results by BM25 rank.
     ///
     /// # Performance: Top-N Optimization
     ///
@@ -1823,7 +1988,8 @@ impl Repository {
     /// score every match—it uses the index to find the N best and stops early.
     ///
     /// A naive `UNION ALL` defeats this: SQLite must materialize ALL matches from
-    /// both tables, sort them, then take the top N. This is orders of magnitude slower.
+    /// each table, sort them, then take the top N. This is orders of magnitude
+    /// slower.
     ///
     /// The fix is to "push down" the LIMIT into each subquery:
     /// ```sql
@@ -1831,41 +1997,55 @@ impl Repository {
     ///     SELECT ... FROM articles_fts ... ORDER BY rank LIMIT 20
     ///     UNION ALL
     ///     SELECT ... FROM videos_fts ... ORDER BY rank LIMIT 20
+    ///     UNION ALL
+    ///     ...
     /// )
     /// ORDER BY rank LIMIT 20
     /// ```
     ///
     /// This way each FTS query uses Top-N optimization (fast), and we only sort
-    /// 40 rows instead of potentially thousands.
+    /// at most `N * num_kinds` rows instead of potentially thousands.
     async fn search_all(
         &self,
         request: &SearchRequest<'_>,
         offset: u32,
     ) -> Result<(Vec<SearchResult>, i64)> {
-        // Determine sort order for inner queries
-        let (inner_order, outer_order) = match request.params.sort_by {
+        // Determine sort order for inner queries (one per alias) and outer.
+        let (inner_order_a, outer_order) = match request.params.sort_by {
             SortOrder::DateDesc => ("ORDER BY a.date DESC", "ORDER BY date DESC"),
             SortOrder::DateAsc => ("ORDER BY a.date ASC", "ORDER BY date ASC"),
             _ => ("ORDER BY rank", "ORDER BY rank"),
         };
-        let (inner_order_v, _) = match request.params.sort_by {
-            SortOrder::DateDesc => ("ORDER BY v.date DESC", ""),
-            SortOrder::DateAsc => ("ORDER BY v.date ASC", ""),
-            _ => ("ORDER BY rank", ""),
+        let inner_order_v = match request.params.sort_by {
+            SortOrder::DateDesc => "ORDER BY v.date DESC",
+            SortOrder::DateAsc => "ORDER BY v.date ASC",
+            _ => "ORDER BY rank",
         };
-        let (inner_order_p, _) = match request.params.sort_by {
-            SortOrder::DateDesc => ("ORDER BY p.date DESC", ""),
-            SortOrder::DateAsc => ("ORDER BY p.date ASC", ""),
-            _ => ("ORDER BY rank", ""),
+        let inner_order_p = match request.params.sort_by {
+            SortOrder::DateDesc => "ORDER BY p.date DESC",
+            SortOrder::DateAsc => "ORDER BY p.date ASC",
+            _ => "ORDER BY rank",
         };
-        let (_inner_order_t, _) = match request.params.sort_by {
-            SortOrder::DateDesc => ("ORDER BY t.date DESC", ""),
-            SortOrder::DateAsc => ("ORDER BY t.date ASC", ""),
-            _ => ("ORDER BY rank", ""),
+        let inner_order_t = match request.params.sort_by {
+            SortOrder::DateDesc => "ORDER BY t.date DESC",
+            SortOrder::DateAsc => "ORDER BY t.date ASC",
+            _ => "ORDER BY rank",
+        };
+        let inner_order_r = match request.params.sort_by {
+            SortOrder::DateDesc => "ORDER BY r.date DESC",
+            SortOrder::DateAsc => "ORDER BY r.date ASC",
+            _ => "ORDER BY rank",
         };
 
-        // Separate query to count total results
+        // Separate query to count total results across all five kinds.
         let mut count_query = if request.params.has_query_terms() {
+            let fts_query = request
+                .params
+                .escaped_fts_query()
+                .unwrap()
+                .as_str()
+                .to_string();
+
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT SUM(count) FROM (
@@ -1873,16 +2053,9 @@ impl Repository {
                     JOIN articles a ON articles_fts.rowid = a.id
                     WHERE articles_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "a");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Article, "a", "id");
 
             q.push(
                 r#"
@@ -1891,16 +2064,9 @@ impl Repository {
                     JOIN videos v ON videos_fts.rowid = v.id
                     WHERE videos_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "v");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Video, "v", "id");
 
             q.push(
                 r#"
@@ -1909,16 +2075,31 @@ impl Repository {
                     JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
                     WHERE podcast_episodes_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "p");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Podcast, "p", "id");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM talks_fts
+                    JOIN talks t ON talks_fts.rowid = t.id
+                    WHERE talks_fts MATCH "#,
+            );
+            q.push_bind(fts_query.clone());
+            self.apply_talk_filters(&mut q, request.params, "t");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Talk, "t", "id");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM research_papers_fts
+                    JOIN research_papers r ON research_papers_fts.rowid = r.id
+                    WHERE research_papers_fts MATCH "#,
+            );
+            q.push_bind(fts_query);
+            self.apply_generic_filters(&mut q, request.params, "r");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Research, "r", "id");
 
             q.push(")");
             q
@@ -1928,24 +2109,40 @@ impl Repository {
                 SELECT SUM(count) FROM (
                     SELECT COUNT(*) as count FROM articles a WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "a");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Article, "a", "id");
 
             q.push(
                 r#"
                     UNION ALL
                     SELECT COUNT(*) as count FROM videos v WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "v");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Video, "v", "id");
 
             q.push(
                 r#"
                     UNION ALL
                     SELECT COUNT(*) as count FROM podcast_episodes p WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "p");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Podcast, "p", "id");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM talks t WHERE 1=1"#,
+            );
+            self.apply_talk_filters(&mut q, request.params, "t");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Talk, "t", "id");
+
+            q.push(
+                r#"
+                    UNION ALL
+                    SELECT COUNT(*) as count FROM research_papers r WHERE 1=1"#,
+            );
+            self.apply_generic_filters(&mut q, request.params, "r");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Research, "r", "id");
 
             q.push(")");
             q
@@ -1957,13 +2154,20 @@ impl Repository {
             .await?
             .0;
 
-        let offset = Self::clamp_offset(offset, total_count);
+        let offset = Self::clamp_offset(offset, total_count, request.params.per_page);
 
         // We need to fetch enough results from each table to satisfy pagination.
-        // For page N with 20 results per page, we need offset + limit results.
-        let inner_limit = offset as i64 + Self::RESULTS_PER_PAGE as i64;
+        // For page N with per_page results, we need offset + per_page results.
+        let inner_limit = i64::from(offset) + i64::from(request.params.per_page);
 
         let mut query = if request.params.has_query_terms() {
+            let fts_query = request
+                .params
+                .escaped_fts_query()
+                .unwrap()
+                .as_str()
+                .to_string();
+
             let mut q = QueryBuilder::new(
                 r#"
                 SELECT * FROM (
@@ -1976,6 +2180,9 @@ impl Repository {
                             a.reference, a.word_count,
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             bm25(articles_fts, 10.0, 1.0, 1.0) as rank,
                             snippet(articles_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
                             highlight(articles_fts, 0, '<mark>', '</mark>') as highlighted_title
@@ -1983,21 +2190,11 @@ impl Repository {
                         JOIN articles a ON articles_fts.rowid = a.id
                         WHERE articles_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
-            // Add article filters
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "a");
-
-            // Push down ORDER BY and LIMIT for Top-N optimization
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Article, "a", "id");
             q.push(" ");
-            q.push(inner_order);
+            q.push(inner_order_a);
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 
@@ -2013,6 +2210,9 @@ impl Repository {
                             NULL as reference, NULL as word_count,
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             bm25(videos_fts, 10.0, 1.0, 1.0) as rank,
                             snippet(videos_fts, 2, '<mark>', '</mark>', '...', 50) as snippet,
                             highlight(videos_fts, 0, '<mark>', '</mark>') as highlighted_title
@@ -2020,19 +2220,9 @@ impl Repository {
                         JOIN videos v ON videos_fts.rowid = v.id
                         WHERE videos_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
-            // Add video filters
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "v");
-
-            // Push down ORDER BY and LIMIT for Top-N optimization
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Video, "v", "id");
             q.push(" ");
             q.push(inner_order_v);
             q.push(" LIMIT ");
@@ -2046,10 +2236,13 @@ impl Repository {
                             'podcast' as content_type,
                             p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
                             p.podcast_name, p.episode_name,
-                            p.transcript,
+                            p.transcript as text,
                             NULL as reference, NULL as word_count,
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             bm25(podcast_episodes_fts, 2.0, 8.0, 2.0, 1.0) as rank,
                             CASE
                                 WHEN length(p.transcript) > 0 THEN snippet(podcast_episodes_fts, 3, '<mark>', '</mark>', '...', 50)
@@ -2060,21 +2253,75 @@ impl Repository {
                         JOIN podcast_episodes p ON podcast_episodes_fts.rowid = p.id
                         WHERE podcast_episodes_fts MATCH "#,
             );
-            q.push_bind(
-                request
-                    .params
-                    .escaped_fts_query()
-                    .unwrap()
-                    .as_str()
-                    .to_string(),
-            );
-
-            // Add podcast filters
+            q.push_bind(fts_query.clone());
             self.apply_generic_filters(&mut q, request.params, "p");
-
-            // Push down ORDER BY and LIMIT for Top-N optimization
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Podcast, "p", "id");
             q.push(" ");
             q.push(inner_order_p);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'talk' as content_type,
+                            t.id, t.title, t.website_url as url, NULL as category, t.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            NULL as text,
+                            NULL as reference, NULL as word_count,
+                            t.summary, t.transcript,
+                            t.thumbnail_url, t.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            t.conference, t.video_url, t.slides_url,
+                            bm25(talks_fts, 10.0, 2.0, 1.0, 1.0) as rank,
+                            CASE
+                                WHEN length(t.transcript) > 0 THEN snippet(talks_fts, 2, '<mark>', '</mark>', '...', 50)
+                                ELSE snippet(talks_fts, 1, '<mark>', '</mark>', '...', 50)
+                            END as snippet,
+                            highlight(talks_fts, 0, '<mark>', '</mark>') as highlighted_title
+                        FROM talks_fts
+                        JOIN talks t ON talks_fts.rowid = t.id
+                        WHERE talks_fts MATCH "#,
+            );
+            q.push_bind(fts_query.clone());
+            self.apply_talk_filters(&mut q, request.params, "t");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Talk, "t", "id");
+            q.push(" ");
+            q.push(inner_order_t);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'research' as content_type,
+                            r.id, r.title, r.url, r.category, r.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            r.text,
+                            NULL as reference, NULL as word_count,
+                            NULL as summary, NULL as transcript,
+                            NULL as thumbnail_url, NULL as duration_seconds,
+                            r.authors,
+                            snippet(research_papers_fts, 3, '', '', '...', 32) as abstract_text,
+                            r.paper_id, r.publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
+                            bm25(research_papers_fts, 10.0, 1.0, 1.0, 4.0, 2.0) as rank,
+                            snippet(research_papers_fts, 3, '<mark>', '</mark>', '...', 32) as snippet,
+                            highlight(research_papers_fts, 0, '<mark>', '</mark>') as highlighted_title
+                        FROM research_papers_fts
+                        JOIN research_papers r ON research_papers_fts.rowid = r.id
+                        WHERE research_papers_fts MATCH "#,
+            );
+            q.push_bind(fts_query);
+            self.apply_generic_filters(&mut q, request.params, "r");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Research, "r", "id");
+            q.push(" ");
+            q.push(inner_order_r);
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 
@@ -2094,18 +2341,19 @@ impl Repository {
                             a.reference, a.word_count,
                             NULL as summary, NULL as transcript,
                             NULL as thumbnail_url, NULL as duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             0.0 as rank,
                             substr(a.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM articles a
                         WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "a");
-
-            // Push down ORDER BY and LIMIT
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Article, "a", "id");
             q.push(" ");
-            q.push(inner_order);
+            q.push(inner_order_a);
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 
@@ -2121,16 +2369,17 @@ impl Repository {
                             NULL as reference, NULL as word_count,
                             NULL as summary, NULL as transcript,
                             v.thumbnail_url, v.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             0.0 as rank,
                             substr(v.text, 1, 300) as snippet,
                             NULL as highlighted_title
                         FROM videos v
                         WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "v");
-
-            // Push down ORDER BY and LIMIT
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Video, "v", "id");
             q.push(" ");
             q.push(inner_order_v);
             q.push(" LIMIT ");
@@ -2144,22 +2393,80 @@ impl Repository {
                             'podcast' as content_type,
                             p.id, p.episode_name as title, p.url, 'Podcast' as category, p.date,
                             p.podcast_name, p.episode_name,
-                            p.transcript,
+                            p.transcript as text,
                             NULL as reference, NULL as word_count,
                             p.summary, p.transcript,
                             p.thumbnail_url, p.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
                             0.0 as rank,
                             COALESCE(substr(p.summary, 1, 300), substr(p.transcript, 1, 300)) as snippet,
                             NULL as highlighted_title
                         FROM podcast_episodes p
                         WHERE 1=1"#,
             );
-
             self.apply_generic_filters(&mut q, request.params, "p");
-
-            // Push down ORDER BY and LIMIT
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Podcast, "p", "id");
             q.push(" ");
             q.push(inner_order_p);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'talk' as content_type,
+                            t.id, t.title, t.website_url as url, NULL as category, t.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            NULL as text,
+                            NULL as reference, NULL as word_count,
+                            t.summary, t.transcript,
+                            t.thumbnail_url, t.duration_seconds,
+                            NULL as authors, NULL as abstract_text,
+                            NULL as paper_id, NULL as publication,
+                            t.conference, t.video_url, t.slides_url,
+                            0.0 as rank,
+                            substr(t.summary, 1, 300) as snippet,
+                            NULL as highlighted_title
+                        FROM talks t
+                        WHERE 1=1"#,
+            );
+            self.apply_talk_filters(&mut q, request.params, "t");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Talk, "t", "id");
+            q.push(" ");
+            q.push(inner_order_t);
+            q.push(" LIMIT ");
+            q.push_bind(inner_limit);
+
+            q.push(
+                r#")
+                    UNION ALL
+                    SELECT * FROM (
+                        SELECT
+                            'research' as content_type,
+                            r.id, r.title, r.url, r.category, r.date,
+                            NULL as podcast_name, NULL as episode_name,
+                            r.text,
+                            NULL as reference, NULL as word_count,
+                            NULL as summary, NULL as transcript,
+                            NULL as thumbnail_url, NULL as duration_seconds,
+                            r.authors,
+                            substr(r.abstract_text, 1, 300) as abstract_text,
+                            r.paper_id, r.publication,
+                            NULL as conference, NULL as video_url, NULL as slides_url,
+                            0.0 as rank,
+                            substr(r.abstract_text, 1, 300) as snippet,
+                            NULL as highlighted_title
+                        FROM research_papers r
+                        WHERE 1=1"#,
+            );
+            self.apply_generic_filters(&mut q, request.params, "r");
+            Self::apply_id_scope(&mut q, request.params, DocumentKind::Research, "r", "id");
+            q.push(" ");
+            q.push(inner_order_r);
             q.push(" LIMIT ");
             q.push_bind(inner_limit);
 
@@ -2167,15 +2474,15 @@ impl Repository {
             q
         };
 
-        // Outer ORDER BY sorts the combined results from both subqueries
+        // Outer ORDER BY sorts the combined results from all subqueries
         query.push(" ");
         query.push(outer_order);
 
         // Final pagination
         query.push(" LIMIT ");
-        query.push_bind(Self::RESULTS_PER_PAGE as i64);
+        query.push_bind(i64::from(request.params.per_page));
         query.push(" OFFSET ");
-        query.push_bind(offset as i64);
+        query.push_bind(i64::from(offset));
 
         let results: Vec<SearchResult> = query.build_query_as().fetch_all(&self.pool).await?;
         Ok((results, total_count))

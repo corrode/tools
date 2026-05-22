@@ -253,6 +253,194 @@ pub enum ContentType {
     Talks,
 }
 
+/// Kind of indexed document.
+///
+/// Closely related to [`ContentType`] but uses singular names so that the
+/// public API's `doc_id` syntax reads naturally (`article:42`, not
+/// `articles:42`). Lives in `types` because both storage and the API need to
+/// parse it.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, Display,
+)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum DocumentKind {
+    /// Article (blog post, RFC, TWiR issue, etc.).
+    Article,
+    /// Video (YouTube and similar).
+    Video,
+    /// Podcast episode.
+    Podcast,
+    /// Conference or meetup talk.
+    Talk,
+    /// Academic research paper.
+    Research,
+}
+
+impl DocumentKind {
+    /// All known document kinds, in stable order.
+    #[must_use]
+    pub fn all() -> &'static [DocumentKind] {
+        &[
+            Self::Article,
+            Self::Video,
+            Self::Podcast,
+            Self::Talk,
+            Self::Research,
+        ]
+    }
+
+    /// Maps to the corresponding plural [`ContentType`] filter.
+    #[must_use]
+    pub fn content_type(self) -> ContentType {
+        match self {
+            Self::Article => ContentType::Articles,
+            Self::Video => ContentType::Video,
+            Self::Podcast => ContentType::Podcast,
+            Self::Talk => ContentType::Talks,
+            Self::Research => ContentType::Research,
+        }
+    }
+
+    /// Inverse of [`Self::content_type`].
+    #[must_use]
+    pub fn from_content_type(ct: ContentType) -> Self {
+        match ct {
+            ContentType::Articles => Self::Article,
+            ContentType::Video => Self::Video,
+            ContentType::Podcast => Self::Podcast,
+            ContentType::Talks => Self::Talk,
+            ContentType::Research => Self::Research,
+        }
+    }
+
+    /// Lowercase string slug used in `doc_id` strings.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Article => "article",
+            Self::Video => "video",
+            Self::Podcast => "podcast",
+            Self::Talk => "talk",
+            Self::Research => "research",
+        }
+    }
+}
+
+impl std::str::FromStr for DocumentKind {
+    type Err = InvalidDocumentRef;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "article" => Ok(Self::Article),
+            "video" => Ok(Self::Video),
+            "podcast" => Ok(Self::Podcast),
+            "talk" => Ok(Self::Talk),
+            "research" => Ok(Self::Research),
+            other => Err(InvalidDocumentRef(format!(
+                "unknown document kind `{other}` (expected one of: article, video, podcast, talk, research)"
+            ))),
+        }
+    }
+}
+
+/// A stable, kind-prefixed reference to a single indexed document.
+///
+/// The wire format is `"{kind}:{id}"`, e.g. `"article:42"`. This is the
+/// canonical identifier used across the public JSON API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct DocumentRef {
+    /// Document kind.
+    pub kind: DocumentKind,
+    /// Numeric primary key within that kind's table.
+    pub id: i64,
+}
+
+impl DocumentRef {
+    /// Constructs a new reference.
+    #[must_use]
+    pub fn new(kind: DocumentKind, id: i64) -> Self {
+        Self { kind, id }
+    }
+}
+
+impl fmt::Display for DocumentRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.kind.as_str(), self.id)
+    }
+}
+
+impl std::str::FromStr for DocumentRef {
+    type Err = InvalidDocumentRef;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (kind_str, id_str) = s.split_once(':').ok_or_else(|| {
+            InvalidDocumentRef(format!(
+                "document reference `{s}` is missing a `:` separator (expected `kind:id`)"
+            ))
+        })?;
+        let kind = kind_str.parse::<DocumentKind>()?;
+        let id = id_str.parse::<i64>().map_err(|_| {
+            InvalidDocumentRef(format!("document reference `{s}` has a non-integer id"))
+        })?;
+        if id <= 0 {
+            return Err(InvalidDocumentRef(format!(
+                "document reference `{s}` has a non-positive id"
+            )));
+        }
+        Ok(Self { kind, id })
+    }
+}
+
+impl Serialize for DocumentRef {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for DocumentRef {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(feature = "openapi")]
+impl utoipa::PartialSchema for DocumentRef {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
+        ObjectBuilder::new()
+            .schema_type(SchemaType::Type(Type::String))
+            .pattern(Some("^(article|video|podcast|talk|research):[1-9][0-9]*$"))
+            .examples([serde_json::json!("article:42")])
+            .description(Some(
+                "Kind-prefixed document identifier of the form `kind:id`, e.g. `article:42`. \
+                 Stable across releases.",
+            ))
+            .into()
+    }
+}
+
+#[cfg(feature = "openapi")]
+impl utoipa::ToSchema for DocumentRef {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("DocumentRef")
+    }
+}
+
+/// Returned when a [`DocumentRef`] or [`DocumentKind`] string fails to parse.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidDocumentRef(pub String);
+
+impl fmt::Display for InvalidDocumentRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for InvalidDocumentRef {}
+
 /// Duration abstraction used for display.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Duration {

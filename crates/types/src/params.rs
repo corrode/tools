@@ -58,9 +58,20 @@
 //! to default filters if parsing fails.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fmt;
+use std::str::FromStr;
 
-use crate::ContentType;
+use crate::{ContentType, DocumentKind, DocumentRef, InvalidDocumentRef};
+
+/// Minimum page size accepted from clients.
+pub const MIN_PER_PAGE: u32 = 1;
+/// Maximum page size accepted from clients.
+pub const MAX_PER_PAGE: u32 = 100;
+/// Default page size when [`RawParams::per_page`] is not provided.
+pub const DEFAULT_PER_PAGE: u32 = 20;
+/// Maximum number of document IDs accepted in the `in=` filter.
+pub const MAX_ID_SCOPE: usize = 200;
 
 /// HTTP query parameters for `/search`.
 ///
@@ -99,6 +110,23 @@ pub struct RawParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "openapi", param(example = 1, minimum = 1))]
     pub page: Option<u32>,
+    /// Results per page. Defaults to 20; capped server-side at 100.
+    /// Useful for LLM clients that want a wider candidate set in one request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "openapi", param(example = 20, minimum = 1, maximum = 100))]
+    pub per_page: Option<u32>,
+    /// Restrict the search to a comma-separated list of `doc_id`s, e.g.
+    /// `article:1,podcast:42,research:7`. When set, only documents in this
+    /// list are considered. Up to 200 ids per request.
+    ///
+    /// This is named `in` on the wire. The Rust field uses `r#in` because
+    /// `in` is a keyword.
+    #[serde(rename = "in", default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(
+        feature = "openapi",
+        param(example = "article:1,podcast:42", value_type = Option<String>)
+    )]
+    pub r#in: Option<String>,
 }
 
 impl RawParams {
@@ -325,6 +353,59 @@ pub struct Params {
     pub content_type: Option<ContentType>,
     /// 1-based page number.
     pub page: u32,
+    /// Validated page size. Always between [`MIN_PER_PAGE`] and [`MAX_PER_PAGE`].
+    pub per_page: u32,
+    /// Optional restriction of results to a specific set of documents,
+    /// grouped by kind. `None` means "no restriction".
+    pub id_scope: Option<IdScope>,
+}
+
+/// Per-kind set of document IDs the caller wants results limited to.
+///
+/// Constructed from the comma-separated `in=` query parameter. Empty kinds
+/// are not included; the storage layer interprets a `Some(IdScope)` with no
+/// entry for a given kind as "exclude this kind entirely".
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct IdScope {
+    by_kind: BTreeMap<DocumentKind, Vec<i64>>,
+}
+
+impl IdScope {
+    /// Builds a scope from a slice of [`DocumentRef`]s, deduplicating ids.
+    #[must_use]
+    pub fn from_refs(refs: &[DocumentRef]) -> Self {
+        let mut by_kind: BTreeMap<DocumentKind, Vec<i64>> = BTreeMap::new();
+        for r in refs {
+            let entry = by_kind.entry(r.kind).or_default();
+            if !entry.contains(&r.id) {
+                entry.push(r.id);
+            }
+        }
+        Self { by_kind }
+    }
+
+    /// Returns the deduplicated id list for a given kind, if any.
+    #[must_use]
+    pub fn ids_for(&self, kind: DocumentKind) -> Option<&[i64]> {
+        self.by_kind.get(&kind).map(Vec::as_slice)
+    }
+
+    /// Iterates over `(kind, ids)` pairs in stable kind order.
+    pub fn iter(&self) -> impl Iterator<Item = (DocumentKind, &[i64])> + '_ {
+        self.by_kind.iter().map(|(k, v)| (*k, v.as_slice()))
+    }
+
+    /// Total number of ids across all kinds.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.by_kind.values().map(Vec::len).sum()
+    }
+
+    /// True when no kinds have ids.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.by_kind.is_empty()
+    }
 }
 
 impl Params {
@@ -388,6 +469,8 @@ impl Params {
             sort_by: self.sort_by,
             content_type: self.content_type,
             page: self.page,
+            per_page: self.per_page,
+            id_scope: self.id_scope.clone(),
         })
     }
 
@@ -402,8 +485,28 @@ impl Params {
             sort_by: defaults.default_sort,
             content_type: None,
             page: defaults.default_page,
+            per_page: DEFAULT_PER_PAGE,
+            id_scope: None,
         }
     }
+}
+
+fn parse_id_scope(raw: &str) -> Result<IdScope, ParamsError> {
+    let mut refs = Vec::new();
+    for token in raw.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        let r = DocumentRef::from_str(token).map_err(ParamsError::InvalidDocumentRef)?;
+        refs.push(r);
+    }
+    if refs.is_empty() {
+        return Ok(IdScope::default());
+    }
+    if refs.len() > MAX_ID_SCOPE {
+        return Err(ParamsError::TooManyIdScope {
+            requested: refs.len(),
+            max: MAX_ID_SCOPE,
+        });
+    }
+    Ok(IdScope::from_refs(&refs))
 }
 
 impl TryFrom<(RawParams, SearchDefaults)> for Params {
@@ -447,6 +550,22 @@ impl TryFrom<(RawParams, SearchDefaults)> for Params {
             return Err(ParamsError::InvalidPage(page));
         }
 
+        let per_page = match params.per_page {
+            Some(n) if !(MIN_PER_PAGE..=MAX_PER_PAGE).contains(&n) => {
+                return Err(ParamsError::InvalidPerPage(n));
+            }
+            Some(n) => n,
+            None => DEFAULT_PER_PAGE,
+        };
+
+        let id_scope = match params.r#in.as_deref().map(str::trim) {
+            Some(raw) if !raw.is_empty() => {
+                let scope = parse_id_scope(raw)?;
+                if scope.is_empty() { None } else { Some(scope) }
+            }
+            _ => None,
+        };
+
         Ok(Self {
             terms,
             filters,
@@ -456,6 +575,8 @@ impl TryFrom<(RawParams, SearchDefaults)> for Params {
             sort_by,
             content_type: params.content_type,
             page,
+            per_page,
+            id_scope,
         })
     }
 }
@@ -536,6 +657,17 @@ pub enum ParamsError {
     YearOutOfBounds(i32),
     /// The page number was invalid (must be >= 1).
     InvalidPage(u32),
+    /// `per_page` value outside the accepted range.
+    InvalidPerPage(u32),
+    /// More document ids in `in=` than the server accepts.
+    TooManyIdScope {
+        /// Number of ids the client supplied.
+        requested: usize,
+        /// Maximum number of ids accepted.
+        max: usize,
+    },
+    /// A document id in `in=` failed to parse.
+    InvalidDocumentRef(InvalidDocumentRef),
 }
 
 impl fmt::Display for ParamsError {
@@ -551,6 +683,15 @@ impl fmt::Display for ParamsError {
             } => write!(f, "invalid year range: {start_year}..{end_year}"),
             Self::YearOutOfBounds(value) => write!(f, "year out of bounds: {value}"),
             Self::InvalidPage(value) => write!(f, "invalid page: {value}"),
+            Self::InvalidPerPage(value) => write!(
+                f,
+                "invalid per_page: {value} (must be between {MIN_PER_PAGE} and {MAX_PER_PAGE})"
+            ),
+            Self::TooManyIdScope { requested, max } => write!(
+                f,
+                "too many document ids in `in=`: {requested} (maximum is {max})"
+            ),
+            Self::InvalidDocumentRef(err) => write!(f, "invalid document id: {err}"),
         }
     }
 }
@@ -741,6 +882,8 @@ mod tests {
             sort_by: None,
             content_type: None,
             page: None,
+            per_page: None,
+            r#in: None,
         };
 
         let err = Params::try_from((params, defaults)).unwrap_err();
@@ -757,6 +900,8 @@ mod tests {
             sort_by: None,
             content_type: None,
             page: Some(0),
+            per_page: None,
+            r#in: None,
         };
 
         let err = Params::try_from((params, defaults)).unwrap_err();
@@ -773,6 +918,8 @@ mod tests {
             sort_by: None,
             content_type: None,
             page: Some(10_000),
+            per_page: None,
+            r#in: None,
         };
 
         let result = Params::try_from((params, defaults)).unwrap();

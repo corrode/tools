@@ -21,9 +21,11 @@ use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
 
+mod documents;
 mod dto;
 mod error;
 mod health;
+mod passages;
 mod podcast;
 mod search;
 mod stats;
@@ -55,6 +57,7 @@ mod suggestions;
         (name = "suggestions", description = "Query autocomplete."),
         (name = "stats",       description = "Aggregate index statistics."),
         (name = "podcasts",    description = "Podcast episode detail with transcript."),
+        (name = "documents",   description = "Full document fetch, batch fetch, and search-within-document for LLM clients."),
         (name = "meta",        description = "Service metadata (health, etc.)."),
     ),
 )]
@@ -72,6 +75,9 @@ pub(crate) fn build(state: Arc<Repository>) -> Router {
         .routes(routes!(suggestions::suggestions))
         .routes(routes!(stats::stats))
         .routes(routes!(podcast::get_podcast))
+        .routes(routes!(documents::get_document))
+        .routes(routes!(documents::search_in_document))
+        .routes(routes!(documents::batch_documents))
         .with_state(state)
         .split_for_parts();
 
@@ -79,7 +85,7 @@ pub(crate) fn build(state: Arc<Repository>) -> Router {
     // arbitrary origins.
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET])
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers(Any);
 
     Router::new()
