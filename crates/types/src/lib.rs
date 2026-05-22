@@ -237,6 +237,7 @@ impl fmt::Display for PlaylistId {
 
 /// Top-level content filters used by the UI/API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Display)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ContentType {
@@ -634,7 +635,8 @@ pub type NewResearchPaper = ResearchPaperData;
 ///
 /// These are the primary Computer Science subcategories from arXiv.
 /// See <https://arxiv.org/category_taxonomy> for the full taxonomy.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum ArxivCategory {
     /// cs.AI — Artificial Intelligence
     CsAI,
@@ -1004,6 +1006,7 @@ impl Talk {
 
 /// Quote of the Week.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Quote {
     /// Quote text.
     pub text: String,
@@ -1413,6 +1416,7 @@ impl SearchResult {
 
 /// Statistics about the indexed content.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Stats {
     /// Total number of indexed entries.
     pub total_entries: i64,
@@ -1438,6 +1442,7 @@ pub struct Stats {
 
 /// Statistics specific to podcasts.
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PodcastStats {
     /// Total number of podcasts.
     pub total: i64,
@@ -1445,6 +1450,7 @@ pub struct PodcastStats {
 
 /// Statistics specific to talks.
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct TalkStats {
     /// Total number of talks.
     pub total: i64,
@@ -1452,6 +1458,7 @@ pub struct TalkStats {
 
 /// Statistics specific to research papers.
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ResearchStats {
     /// Total number of research papers.
     pub total: i64,
@@ -1459,6 +1466,7 @@ pub struct ResearchStats {
 
 /// Statistics specific to RFCs.
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct RfcStats {
     /// Total number of RFCs.
     pub total: i64,
@@ -1466,6 +1474,7 @@ pub struct RfcStats {
 
 /// Statistics specific to articles.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ArticleStats {
     /// Total number of articles.
     pub total: i64,
@@ -1491,6 +1500,7 @@ pub struct ArticleStats {
 
 /// Statistics specific to videos.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct VideoStats {
     /// Total number of videos.
     pub total: i64,
@@ -1514,6 +1524,7 @@ pub struct VideoStats {
 
 /// A record of a video with its duration (for longest/shortest tracking).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct VideoDurationRecord {
     /// Video title.
     pub title: String,
@@ -1525,6 +1536,7 @@ pub struct VideoDurationRecord {
 
 /// Statistics for a video channel/source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ChannelStats {
     /// Channel or domain name.
     pub channel: String,
@@ -1536,6 +1548,7 @@ pub struct ChannelStats {
 
 /// Category statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct CategoryStats {
     /// Category name.
     pub category: String,
@@ -1547,6 +1560,7 @@ pub struct CategoryStats {
 
 /// Year statistics.
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct YearStats {
     /// Year.
     pub year: i32,
@@ -1558,6 +1572,7 @@ pub struct YearStats {
 
 /// Month statistics (year-month breakdown).
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct MonthStats {
     /// Year-month label (e.g., "2024-01").
     pub year_month: String,
@@ -1573,6 +1588,7 @@ pub struct MonthStats {
 
 /// Domain statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DomainStats {
     /// Domain name.
     pub domain: String,
@@ -1582,6 +1598,7 @@ pub struct DomainStats {
 
 /// Top domains by year.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct YearlyDomainStats {
     /// Year.
     pub year: i32,
@@ -1591,6 +1608,7 @@ pub struct YearlyDomainStats {
 
 /// Keyword statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct KeywordStats {
     /// Keyword.
     pub keyword: String,
@@ -1600,6 +1618,7 @@ pub struct KeywordStats {
 
 /// Top keywords by year.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct YearlyKeywordStats {
     /// Year.
     pub year: i32,
