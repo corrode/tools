@@ -39,8 +39,10 @@ parentheses. We may add them later under explicit feature flags.
   Useful for follow-up queries: shortlist documents with `/search`, then
   drill in with `/search?q=...&in=...`.
 - `snippets` — when set to `N` (1–5), each result includes up to `N`
-  additional ranked passages in a `passages` array, with character offsets
-  and `<mark>` highlights. The default FTS `snippet` is still returned.
+  additional ranked passages in a `passages` array, with character
+  offsets into the document body. Returned as plain text — no markup,
+  so the response stays compact for LLM consumers. The default FTS
+  `snippet` field is still returned (also plain text).
 
 ## Documents (full content)
 

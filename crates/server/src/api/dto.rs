@@ -101,7 +101,7 @@ pub(crate) struct ArticleHit {
     pub reading_minutes: Option<u32>,
     /// Word count, if known.
     pub word_count: Option<i64>,
-    /// FTS snippet with `<mark>...</mark>` highlights, if available.
+    /// Short plain-text excerpt of the matching passage, if available. No markup.
     pub snippet: Option<String>,
     /// FTS relevance rank. Lower is better. Comparable only within one
     /// response.
@@ -129,7 +129,7 @@ pub(crate) struct VideoHit {
     pub thumbnail_url: Option<String>,
     /// Duration in seconds, if known.
     pub duration_seconds: Option<u32>,
-    /// FTS snippet with `<mark>...</mark>` highlights, if available.
+    /// Short plain-text excerpt of the matching passage, if available. No markup.
     pub snippet: Option<String>,
     /// FTS relevance rank. Lower is better.
     pub rank: f64,
@@ -162,7 +162,7 @@ pub(crate) struct TalkHit {
     pub thumbnail_url: Option<String>,
     /// Duration in seconds, if known.
     pub duration_seconds: Option<u32>,
-    /// FTS snippet with `<mark>...</mark>` highlights, if available.
+    /// Short plain-text excerpt of the matching passage, if available. No markup.
     pub snippet: Option<String>,
     /// FTS relevance rank. Lower is better.
     pub rank: f64,
@@ -198,7 +198,7 @@ pub(crate) struct PodcastHit {
     pub thumbnail_url: Option<String>,
     /// Duration in seconds, if known.
     pub duration_seconds: Option<u32>,
-    /// FTS snippet with `<mark>...</mark>` highlights, if available.
+    /// Short plain-text excerpt of the matching passage, if available. No markup.
     pub snippet: Option<String>,
     /// FTS relevance rank. Lower is better.
     pub rank: f64,
@@ -235,7 +235,7 @@ pub(crate) struct ResearchHit {
     pub paper_id: Option<String>,
     /// Publication venue, if available.
     pub publication: Option<String>,
-    /// FTS snippet with `<mark>...</mark>` highlights, if available.
+    /// Short plain-text excerpt of the matching passage, if available. No markup.
     pub snippet: Option<String>,
     /// FTS relevance rank. Lower is better.
     pub rank: f64,
@@ -326,6 +326,13 @@ impl SearchHit {
             snippet,
             ..
         } = result;
+
+        // The storage layer wraps FTS matches in `<mark>...</mark>` for the
+        // HTML UI. Strip them at the API boundary so JSON consumers (LLMs in
+        // particular) get plain text — the query terms are echoed back in
+        // the response and the `passages` array still carries char offsets
+        // for clients that need precise highlighting.
+        let snippet = snippet.map(|s| strip_mark_tags(&s));
 
         // Pull passages off the entry's text *before* consuming the entry.
         let passages = if n_snippets == 0 || terms.is_empty() {
@@ -827,8 +834,23 @@ impl DocumentDetail {
 // Passage / search-within-document DTOs.
 // =====================================================================
 
+/// Strip `<mark>` / `</mark>` tags from an FTS snippet so API consumers
+/// receive plain text. The HTML UI relies on the same tags for styling,
+/// so we only remove them at the API boundary (in [`SearchHit::from_result_with_passages`]).
+fn strip_mark_tags(s: &str) -> String {
+    // Replace is allocation-light here: snippets are <= ~300 chars and
+    // typically contain at most a handful of `<mark>` pairs.
+    s.replace("<mark>", "").replace("</mark>", "")
+}
+
 /// One excerpt from a document's body, with stable char offsets so clients
 /// can highlight or link to the same region.
+///
+/// We deliberately do *not* include a pre-highlighted (`<mark>`-wrapped)
+/// copy of the passage: it would roughly double the payload size for LLM
+/// consumers without adding any information, since the query terms are
+/// already known to the caller and the `text` + offsets are enough to
+/// re-mark client-side.
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct PassageHit {
     /// Character offset of the passage start in the document body
@@ -838,8 +860,6 @@ pub(crate) struct PassageHit {
     pub char_end: u32,
     /// Raw passage text (no markup).
     pub text: String,
-    /// Passage text with each query-term occurrence wrapped in `<mark>...</mark>`.
-    pub highlighted: String,
     /// Number of (possibly overlapping) query-term hits inside the passage.
     /// Higher is more relevant.
     pub match_count: u32,
@@ -851,7 +871,6 @@ impl From<Passage> for PassageHit {
             char_start: u32::try_from(p.char_start).unwrap_or(u32::MAX),
             char_end: u32::try_from(p.char_end).unwrap_or(u32::MAX),
             text: p.text,
-            highlighted: p.highlighted,
             match_count: u32::try_from(p.match_count).unwrap_or(u32::MAX),
         }
     }
