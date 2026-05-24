@@ -154,38 +154,84 @@ pub struct Talk {
     pub duration: Option<String>,
 }
 
-fn sanitize_podcast_snippet(snippet: Option<String>) -> Option<String> {
+/// Sanitise an FTS5 snippet/highlight for safe rendering with `|safe`.
+///
+/// FTS5 wraps matched terms in `<mark>...</mark>` but the surrounding text
+/// is the raw document body, which can contain characters the browser
+/// interprets as HTML (e.g. Rust generics like `<S: Marker>`, which the
+/// parser happily treats as an `<s>` strikethrough start tag and bleeds
+/// styling into subsequent results). We HTML-escape `<`, `>`, and `&`
+/// everywhere except for the `<mark>` / `</mark>` markers themselves.
+pub(crate) fn sanitize_snippet(snippet: Option<String>) -> Option<String> {
     let value = snippet?;
-    if !value.contains('<') {
+    if !value.contains('<') && !value.contains('>') && !value.contains('&') {
         return Some(value);
     }
 
+    let bytes = value.as_bytes();
     let mut output = String::with_capacity(value.len());
-    let mut chars = value.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '<' {
-            let mut tag = String::new();
-            while let Some(&next) = chars.peek() {
-                chars.next();
-                tag.push(next);
-                if next == '>' {
-                    break;
-                }
-            }
-
-            let tag = tag.to_ascii_lowercase();
-            if tag == "mark>" {
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == b'<' {
+            // Check for `<mark>` / `</mark>` (case-insensitive) and pass
+            // them through verbatim; everything else gets escaped so it
+            // renders as literal text instead of an HTML tag.
+            if matches_ci(&bytes[i..], b"<mark>") {
                 output.push_str("<mark>");
-            } else if tag == "/mark>" {
-                output.push_str("</mark>");
+                i += 6;
+                continue;
             }
+            if matches_ci(&bytes[i..], b"</mark>") {
+                output.push_str("</mark>");
+                i += 7;
+                continue;
+            }
+            output.push_str("&lt;");
+            i += 1;
+        } else if b == b'>' {
+            output.push_str("&gt;");
+            i += 1;
+        } else if b == b'&' {
+            output.push_str("&amp;");
+            i += 1;
         } else {
-            output.push(c);
+            // Copy one UTF-8 char. `b` is a leading byte; figure out how
+            // many continuation bytes follow.
+            let len = utf8_char_len(b);
+            let end = (i + len).min(bytes.len());
+            // Safety net: if `len` is wrong somehow, fall back to 1 byte.
+            match std::str::from_utf8(&bytes[i..end]) {
+                Ok(s) => output.push_str(s),
+                Err(_) => output.push(b as char),
+            }
+            i = end;
         }
     }
 
     Some(output)
+}
+
+fn matches_ci(haystack: &[u8], needle: &[u8]) -> bool {
+    haystack.len() >= needle.len()
+        && haystack[..needle.len()]
+            .iter()
+            .zip(needle.iter())
+            .all(|(a, b)| a.eq_ignore_ascii_case(b))
+}
+
+fn utf8_char_len(b: u8) -> usize {
+    if b < 0x80 {
+        1
+    } else if b < 0xC0 {
+        1 // continuation byte mid-stream; treat defensively
+    } else if b < 0xE0 {
+        2
+    } else if b < 0xF0 {
+        3
+    } else {
+        4
+    }
 }
 
 impl TryFrom<SearchResult> for Video {
@@ -193,8 +239,9 @@ impl TryFrom<SearchResult> for Video {
 
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
-        let highlighted_title = result.highlighted_title.clone();
+        let highlighted_title = sanitize_snippet(result.highlighted_title.clone());
         let SearchResult { entry, snippet, .. } = result;
+        let snippet = sanitize_snippet(snippet);
 
         match entry {
             SearchEntry::Video(video) => Ok(Self {
@@ -236,7 +283,7 @@ impl TryFrom<SearchResult> for Podcast {
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
-        let highlighted_title = result.highlighted_title.clone();
+        let highlighted_title = sanitize_snippet(result.highlighted_title.clone());
         let SearchResult { entry, snippet, .. } = result;
         let summary = entry.summary().map(|s| s.to_string());
         let SearchEntry::Podcast(podcast) = entry else {
@@ -253,7 +300,7 @@ impl TryFrom<SearchResult> for Podcast {
             episode_name,
             thumbnail_url: podcast.thumbnail_url().map(|s| s.to_string()),
             duration,
-            snippet: sanitize_podcast_snippet(snippet),
+            snippet: sanitize_snippet(snippet),
             date: podcast.date().to_string(),
             domain,
             summary,
@@ -266,8 +313,9 @@ impl TryFrom<SearchResult> for Talk {
 
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let duration = result.duration().map(|d| d.to_string());
-        let highlighted_title = result.highlighted_title.clone();
+        let highlighted_title = sanitize_snippet(result.highlighted_title.clone());
         let SearchResult { entry, snippet, .. } = result;
+        let snippet = sanitize_snippet(snippet);
         let SearchEntry::Talk(talk) = entry else {
             return Err("expected talk result for Talk view");
         };
@@ -297,8 +345,9 @@ impl TryFrom<SearchResult> for Article {
             .map(|d| d.to_string())
             .unwrap_or_else(|| "~1 min read".to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
-        let highlighted_title = result.highlighted_title.clone();
+        let highlighted_title = sanitize_snippet(result.highlighted_title.clone());
         let SearchResult { entry, snippet, .. } = result;
+        let snippet = sanitize_snippet(snippet);
         let SearchEntry::Article(article) = entry else {
             return Err("expected article result for Article view");
         };
@@ -322,8 +371,9 @@ impl TryFrom<SearchResult> for Research {
 
     fn try_from(result: SearchResult) -> Result<Self, Self::Error> {
         let domain = result.host_str().unwrap_or("unknown").to_string();
-        let highlighted_title = result.highlighted_title.clone();
+        let highlighted_title = sanitize_snippet(result.highlighted_title.clone());
         let SearchResult { entry, snippet, .. } = result;
+        let snippet = sanitize_snippet(snippet);
         let SearchEntry::Research(paper) = entry else {
             return Err("expected research result for Research view");
         };
@@ -341,5 +391,61 @@ impl TryFrom<SearchResult> for Research {
             paper_id: paper.paper_id().map(|s| s.to_string()),
             publication: paper.publication().map(|s| s.to_string()),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_snippet;
+
+    #[test]
+    fn passes_through_plain_text() {
+        assert_eq!(
+            sanitize_snippet(Some("hello world".into())),
+            Some("hello world".into())
+        );
+    }
+
+    #[test]
+    fn preserves_mark_tags() {
+        assert_eq!(
+            sanitize_snippet(Some("find <mark>rust</mark> here".into())),
+            Some("find <mark>rust</mark> here".into())
+        );
+    }
+
+    #[test]
+    fn escapes_rust_generics_that_look_like_s_tag() {
+        // Regression: `<S: Marker>` in an article body was parsed by the
+        // browser as an `<s>` strikethrough start tag and bled into all
+        // following results.
+        assert_eq!(
+            sanitize_snippet(Some("impl<S: Marker> for HttpResponse".into())),
+            Some("impl&lt;S: Marker&gt; for HttpResponse".into())
+        );
+    }
+
+    #[test]
+    fn escapes_ampersands_and_stray_brackets() {
+        assert_eq!(
+            sanitize_snippet(Some("a & b > c < d".into())),
+            Some("a &amp; b &gt; c &lt; d".into())
+        );
+    }
+
+    #[test]
+    fn mixes_marks_with_escaped_html() {
+        assert_eq!(
+            sanitize_snippet(Some("<mark>impl</mark><S: Marker>".into())),
+            Some("<mark>impl</mark>&lt;S: Marker&gt;".into())
+        );
+    }
+
+    #[test]
+    fn preserves_utf8() {
+        assert_eq!(
+            sanitize_snippet(Some("café — <mark>rüst</mark>".into())),
+            Some("café — <mark>rüst</mark>".into())
+        );
     }
 }
