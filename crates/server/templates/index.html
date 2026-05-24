@@ -65,19 +65,6 @@
         <!-- Hero pattern background -->
         <div class="hero-pattern"></div>
 
-        <!-- Theme switcher -->
-        <div class="theme-switcher">
-            <select id="theme-select" onchange="setTheme(this.value)">
-                <optgroup label="Light Themes">
-                    <option value="light-docs-rs">docs.rs</option>
-                    <option value="light-hacker-news">Hacker News</option>
-                </optgroup>
-                <optgroup label="Dark Themes">
-                    <option value="dark-cathode">Cathode (Default)</option>
-                    <option value="dark-twir">This Week in Rust</option>
-                </optgroup>
-            </select>
-        </div>
         <div class="container">
             <header>
                 <h1>
@@ -225,7 +212,6 @@
                 const savedTheme =
                     localStorage.getItem("theme") || "dark-cathode";
                 setTheme(savedTheme);
-                document.getElementById("theme-select").value = savedTheme;
 
 
 

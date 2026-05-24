@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ episode_name }} — {{ podcast_name }} | Rust Search</title>
+        <meta
+            name="description"
+            content="{{ summary|truncate(200) }}"
+        />
+
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <link rel="stylesheet" href="/static/css/index.css" />
+        <link rel="stylesheet" href="/static/css/podcast.css" />
+    </head>
+    <body class="preload">
+        <div class="hero-pattern"></div>
+
+        <div class="container podcast-page">
+            <header class="podcast-page-header">
+                <h1>
+                    <a href="/" class="header-link">
+                        <img src="/static/logo.svg" alt="" class="logo" />
+                        Rust Search
+                    </a>
+                </h1>
+                <nav class="podcast-breadcrumb" aria-label="Breadcrumb">
+                    {% if let Some(q) = query %}
+                    <a href="/search?q={{ q|urlencode }}&type=podcast">← Back to results</a>
+                    {% else %}
+                    <a href="/">← Back to search</a>
+                    {% endif %}
+                </nav>
+            </header>
+
+            <article class="podcast-detail">
+                <aside class="podcast-detail-side">
+                    {% if let Some(thumb) = thumbnail_url %}
+                    <img
+                        src="{{ thumb }}"
+                        alt="{{ podcast_name }} cover art"
+                        class="podcast-detail-thumbnail"
+                    />
+                    {% else %}
+                    <div class="podcast-detail-thumbnail podcast-thumbnail-placeholder">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1v-8H6a6 6 0 1 1 12 0h-1v8h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9z" />
+                        </svg>
+                    </div>
+                    {% endif %}
+
+                    <a
+                        href="{{ url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="podcast-listen-btn"
+                    >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Listen to episode
+                    </a>
+                </aside>
+
+                <div class="podcast-detail-main">
+                    <div class="podcast-detail-show">{{ podcast_name }}</div>
+                    <h2 class="podcast-detail-title">{{ episode_name }}</h2>
+
+                    <dl class="podcast-detail-meta">
+                        <div>
+                            <dt>Published</dt>
+                            <dd>{{ date }}</dd>
+                        </div>
+                        {% if let Some(d) = duration %}
+                        <div>
+                            <dt>Duration</dt>
+                            <dd>{{ d }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if !guests.is_empty() %}
+                        <div>
+                            <dt>Guests</dt>
+                            <dd>{{ guests|join(", ") }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+
+                    {% if !summary.is_empty() %}
+                    <section class="podcast-detail-summary">
+                        <h3>Summary</h3>
+                        <p>{{ summary }}</p>
+                    </section>
+                    {% endif %}
+
+                    <section class="podcast-detail-transcript">
+                        <div class="transcript-header">
+                            <h3>Transcript</h3>
+                            <noscript>
+                                <p class="transcript-noscript-hint">
+                                    JavaScript is disabled. The page jumped to the
+                                    first occurrence of your search term.
+                                </p>
+                            </noscript>
+                        </div>
+
+                        <transcript-search
+                            initial-query="{{ query.as_deref().unwrap_or("") }}"
+                            initial-matches="{{ match_count }}"
+                        >
+                            <input
+                                type="search"
+                                slot="input"
+                                placeholder="Search transcript (typo-tolerant)…"
+                                value="{{ query.as_deref().unwrap_or("") }}"
+                                aria-label="Search transcript"
+                            />
+                        </transcript-search>
+
+                        <ol class="transcript" id="transcript">
+                            {% for p in paragraphs %}
+                            <li
+                                class="transcript-paragraph{% if p.has_match %} has-match{% endif %}"
+                                id="p-{{ p.index }}"
+                            >
+                                <a class="transcript-anchor" href="#p-{{ p.index }}" aria-label="Link to paragraph {{ p.index }}">¶</a>
+                                {% if let Some(speaker) = p.speaker %}
+                                <span class="transcript-speaker">{{ speaker }}</span>
+                                {% endif %}
+                                <span class="transcript-text">{{ p.html|safe }}</span>
+                            </li>
+                            {% endfor %}
+                        </ol>
+                    </section>
+                </div>
+            </article>
+        </div>
+
+        <footer>
+            <div class="footer-container">
+                <div class="footer-links">
+                    <a href="/stats" class="footer-link">Statistics</a>
+                    <a href="https://github.com/corrode/search/issues" class="footer-link">Report an issue</a>
+                </div>
+                <div class="footer-section">
+                    <a href="https://corrode.dev" aria-label="corrode.dev">
+                        <img src="/static/corrode.svg" alt="Corrode" class="footer-logo" />
+                    </a>
+                </div>
+            </div>
+        </footer>
+
+        <script>
+            window.addEventListener("load", () => {
+                document.body.classList.remove("preload");
+            });
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute("data-theme", theme);
+                localStorage.setItem("theme", theme);
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
+                const savedTheme = localStorage.getItem("theme") || "dark-cathode";
+                setTheme(savedTheme);
+
+                {% if let Some(anchor) = first_match_anchor %}
+                // If the URL doesn't already point to a specific paragraph,
+                // jump to the first server-side match (works when JS is on;
+                // without JS, the user can use the anchor links above).
+                if (!window.location.hash) {
+                    const target = document.getElementById("{{ anchor }}");
+                    if (target) {
+                        target.scrollIntoView({ behavior: "instant", block: "center" });
+                    }
+                }
+                {% endif %}
+            });
+        </script>
+        <script src="/static/js/transcript-search.js" defer></script>
+    </body>
+</html>
