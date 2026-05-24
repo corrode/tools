@@ -66,6 +66,16 @@
                 background-color: rgba(72, 213, 151, 0.1);
                 outline: none;
             }
+
+            /* Visually mark the submit button as unavailable while the
+               input is empty. The `onsubmit` guard and the htmx trigger
+               condition still block any actual no-op request even on
+               browsers without :has() support, so this is a progressive
+               enhancement only. */
+            .search-container:has(#search:placeholder-shown) .search-icon {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
         </style>
     </head>
     <body class="preload">
@@ -95,7 +105,8 @@
                 hx-swap="outerHTML"
                 hx-push-url="true"
                 hx-indicator=".search-icon"
-                hx-trigger="submit, input from:#search delay:500ms"
+                hx-trigger="submit[document.getElementById('search').value.trim().length>0], input from:#search delay:500ms[document.getElementById('search').value.trim().length>0]"
+                onsubmit="if (!document.getElementById('search').value.trim()) { event.preventDefault(); document.getElementById('search').focus(); return false; }"
             >
                 <div class="search-input-wrapper">
                     <input

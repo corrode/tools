@@ -853,14 +853,30 @@ html[data-theme="dark-twir"] .tag {
     }
 
     .result-item-podcast {
-        flex-direction: column;
+        /* Keep podcast results in a horizontal row even on mobile so a
+           single result doesn't dominate the entire viewport with a
+           320x320 cover. The thumbnail stays a small square and the
+           text wraps next to it. */
+        flex-direction: row;
         gap: 12px;
+        align-items: flex-start;
     }
 
     .podcast-thumbnail-link {
-        width: 100%;
-        max-width: 320px;
-        height: 320px;
+        width: 96px;
+        max-width: 96px;
+        height: 96px;
+        flex-shrink: 0;
+    }
+
+    .podcast-play-overlay {
+        width: 32px;
+        height: 32px;
+    }
+
+    .podcast-play-overlay svg {
+        width: 14px;
+        height: 14px;
     }
 
     .pagination {
