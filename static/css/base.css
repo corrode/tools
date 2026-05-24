@@ -160,22 +160,14 @@ html[data-theme="light-hacker-news"] footer {
     background-color: #f6f6ef;
 }
 
-html[data-theme="light-hacker-news"] .theme-switcher {
-    top: 2px;
-    right: 2px;
-    border: none;
-    background: transparent;
-    padding: 0;
-}
-
-html[data-theme="light-hacker-news"] .theme-switcher select {
+html[data-theme="light-hacker-news"] .customize-toggle,
+html[data-theme="light-hacker-news"] .customize-menu {
     border-radius: 0;
     border: 1px solid #000000;
     background-color: #f6f6ef;
     color: #000000;
     font-family: Verdana, Geneva, sans-serif;
     font-size: 9pt;
-    padding: 1px;
 }
 
 html[data-theme="dark-twir"] {
@@ -398,46 +390,121 @@ html[data-theme="dark-cathode"] .hero-pattern::after {
     );
 }
 
-/* Theme switcher */
-.theme-switcher {
+/* Floating "Customize" pill in the bottom-right corner.
+
+   Renders as an icon + label on desktop; on narrow viewports the label is
+   hidden so only the icon remains, keeping the tap target compact and
+   out of the way of content. Clicking opens `.customize-menu` above it. */
+.customize {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     right: 20px;
     z-index: 1001;
+}
+
+.customize-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition:
+        border-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.customize-toggle:hover,
+.customize-toggle:focus-visible {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.customize-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.customize-label {
+    line-height: 1;
+}
+
+.customize-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    padding: 8px;
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    padding: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
-#theme-select {
-    border: none;
-}
-
-.theme-switcher select {
-    background-color: var(--color-surface);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.theme-switcher select:focus {
-    outline: none;
-    border-color: var(--color-primary);
-}
-
-.theme-switcher optgroup {
-    font-weight: bold;
+.customize-section-title {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--color-text-muted);
 }
 
-.theme-switcher option {
-    font-weight: normal;
+.customize-option {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
     color: var(--color-text);
-    padding: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.customize-option:hover,
+.customize-option:focus-visible {
+    background-color: rgba(72, 213, 151, 0.1);
+    outline: none;
+}
+
+.customize-option.is-active {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.customize-option.is-active::before {
+    content: "✓ ";
+    margin-right: 4px;
+}
+
+/* On narrow viewports collapse the pill to just the icon — keeps the
+   floating control compact and out of the way of mobile content. */
+@media (max-width: 640px) {
+    .customize {
+        bottom: 16px;
+        right: 16px;
+    }
+    .customize-toggle {
+        padding: 10px;
+        gap: 0;
+    }
+    .customize-label {
+        display: none;
+    }
 }
 
 /* Footer */
@@ -548,16 +615,5 @@ html[data-theme^="light"] .icon-github {
     .subtitle {
         font-size: 1rem;
         margin-top: 8px;
-    }
-
-    .theme-switcher {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        padding: 4px;
-    }
-    .theme-switcher select {
-        font-size: 0.8rem;
-        padding: 2px 4px;
     }
 }
