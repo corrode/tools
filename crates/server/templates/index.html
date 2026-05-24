@@ -243,10 +243,7 @@
                     } else if (e.key === 'Enter') {
                         if (items.includes(document.activeElement)) {
                             e.preventDefault();
-                            searchInput.value = document.activeElement.textContent;
-                            if (container) container.innerHTML = '';
-                            document.querySelector('.search-container').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                            searchInput.blur();
+                            pickSuggestion(document.activeElement.textContent);
                         } else if (document.activeElement === searchInput) {
                             if (container) container.innerHTML = '';
                             setTimeout(() => searchInput.blur(), 50);
@@ -254,6 +251,21 @@
                     }
                 }
             });
+
+            // Pick a suggestion: set the input value, close the dropdown, blur
+            // the input (so the mobile keyboard hides), and submit the form so
+            // htmx fetches the new results. Centralised so the mouse/touch and
+            // keyboard paths can't drift.
+            function pickSuggestion(phrase) {
+                const input = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                input.value = phrase;
+                if (container) container.innerHTML = '';
+                document.querySelector('.search-container').dispatchEvent(
+                    new Event('submit', { cancelable: true, bubbles: true })
+                );
+                input.blur();
+            }
 
             // Close suggestions on outside click
             document.addEventListener('click', function(e) {
@@ -269,6 +281,20 @@
                 const input = document.getElementById('search');
                 const container = document.getElementById('suggestions-container');
                 let timer;
+
+                // Delegated handler: any tap/click on a `.suggestion-item`
+                // inside the dropdown picks that suggestion. Using
+                // `mousedown` (not `click`) ensures we fire before the
+                // input's `blur` event closes the dropdown out from under
+                // us; `preventDefault` keeps focus on the input so the
+                // submit + blur sequence is predictable on mobile.
+                container.addEventListener('mousedown', function(e) {
+                    const item = e.target.closest('.suggestion-item');
+                    if (!item) return;
+                    e.preventDefault();
+                    pickSuggestion(item.textContent);
+                });
+
                 input.addEventListener('input', function() {
                     clearTimeout(timer);
                     const q = this.value.trim();
@@ -281,12 +307,16 @@
                                     container.innerHTML = '';
                                     return;
                                 }
-                                container.innerHTML = '<ul class="suggestions-list">' + phrases
-                                    .map(p => {
-                                        const pEsc = p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                                        return '<li class="suggestion-item" tabindex="0" onmousedown="document.getElementById(\'search\').value=\'' + pEsc + '\'; document.querySelector(\'.search-container\').dispatchEvent(new Event(\'submit\', { cancelable: true, bubbles: true }));">' + pEsc + '</li>';
-                                    })
-                                    .join('') + '</ul>';
+                                const ul = document.createElement('ul');
+                                ul.className = 'suggestions-list';
+                                for (const phrase of phrases) {
+                                    const li = document.createElement('li');
+                                    li.className = 'suggestion-item';
+                                    li.tabIndex = 0;
+                                    li.textContent = phrase;
+                                    ul.appendChild(li);
+                                }
+                                container.replaceChildren(ul);
                             })
                             .catch(() => { container.innerHTML = ''; });
                     }, 150);
