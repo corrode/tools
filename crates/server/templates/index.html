@@ -121,6 +121,28 @@
                     />
                     <div id="suggestions-container" class="suggestions-container"></div>
                     <button
+                        type="button"
+                        class="search-clear"
+                        aria-label="Clear search"
+                        tabindex="-1"
+                        onclick="clearSearch()"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            style="width: 100%; height: 100%;"
+                            aria-hidden="true"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <button
                         type="submit"
                         class="search-icon"
                         style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
@@ -235,6 +257,19 @@
                 // Drop focus so the mobile keyboard hides and the dropdown
                 // doesn't immediately get re-rendered by an `input` event.
                 input.blur();
+            }
+
+            // Clear the search box from the X button. Matches the pattern
+            // used by Google/DDG/GitHub: empty the input, close the
+            // suggestion dropdown, and put focus back on the input so the
+            // user can immediately type a new query. Leaves any already-
+            // rendered results untouched.
+            function clearSearch() {
+                const input = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                input.value = '';
+                if (container) container.innerHTML = '';
+                input.focus();
             }
 
             // Keyboard shortcuts & suggestions navigation

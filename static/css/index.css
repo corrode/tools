@@ -290,6 +290,59 @@ html[data-theme="dark-twir"] .tag {
     color: var(--color-text-muted);
 }
 
+/* Suppress the WebKit/Blink native `type="search"` clear button — we render
+   our own `.search-clear` for cross-browser consistency and themed styling. */
+#search::-webkit-search-cancel-button,
+#search::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search-clear {
+    position: absolute;
+    /* Sits just to the left of the magnifier (.search-icon at right: 12px,
+       width 20px → its left edge is at right: 32px). */
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition:
+        color 0.1s ease,
+        background-color 0.1s ease;
+}
+
+.search-clear:hover,
+.search-clear:focus-visible {
+    color: var(--color-text);
+    background-color: rgba(128, 128, 128, 0.15);
+    outline: none;
+}
+
+/* Show the clear button only when the input actually has a value.
+   `:placeholder-shown` is true exactly when the field is empty, so the
+   `:not()` flips that to "has content". The general-sibling combinator
+   (`~`) lets us cross over the suggestions container that sits between
+   the input and the button in source order. */
+#search:not(:placeholder-shown) ~ .search-clear {
+    display: flex;
+}
+
+/* Make room on the right for both the clear button (~22px tap area) and
+   the magnifier so typed text doesn't slide under them. */
+#search {
+    padding-right: 68px;
+}
+
 .suggestions-container {
     position: absolute;
     top: 100%;
