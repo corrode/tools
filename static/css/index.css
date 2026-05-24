@@ -307,6 +307,12 @@ html[data-theme="dark-twir"] .tag {
     transform: translateY(-50%);
     width: 18px;
     height: 18px;
+    /* Defensive: even if a future change drops the explicit width/height
+       above, never let the inner SVG balloon to its intrinsic 300x150
+       default (which used to render a giant black X across the page on
+       mid-render / FOUC). */
+    max-width: 18px;
+    max-height: 18px;
     color: var(--color-text-muted);
     background: transparent;
     border: none;
@@ -381,6 +387,19 @@ html[data-theme="dark-twir"] .tag {
 .suggestion-item:focus {
     background-color: rgba(72, 213, 151, 0.1);
     outline: none;
+}
+
+.search-clear > svg,
+.search-icon > svg {
+    /* Backstop: SVGs without an intrinsic size fall back to 300x150 in
+       WebKit, which previously caused a giant X to render full-width on
+       iOS during the brief moment between markup arrival and CSS apply.
+       Templates also set width/height attributes on these SVGs, so this
+       is the third line of defence. */
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .search-icon {
