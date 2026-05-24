@@ -40,9 +40,15 @@ async fn main() -> Result<()> {
         meta.fields().field("is_monitoring").is_some()
     });
 
+    // Scope the `RUST_LOG` env filter to the stdout `fmt` layer only.
+    //
+    // Applying it globally (via `.with(env_filter)`) would also gate the
+    // `SqliteLayer`, so a restrictive `RUST_LOG` (e.g. `crawler=debug`) would
+    // silently drop every monitoring event before it reached the DB. The
+    // SqliteLayer keeps its own field-based filter (`is_monitoring`) and is
+    // therefore independent of `RUST_LOG`.
     tracing_subscriber::registry()
-        .with(env_filter)
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_filter(env_filter))
         .with(sqlite_layer.with_filter(monitoring_filter))
         .init();
 
