@@ -1,5 +1,9 @@
 use askama::Template;
-use axum::{extract::State, response::Html};
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse, Redirect},
+};
+use serde::Deserialize;
 use std::sync::Arc;
 use storage::Repository;
 
@@ -27,8 +31,37 @@ struct SearchTemplate {
     quote: Option<types::Quote>,
 }
 
-/// Handler for the index page
-pub(crate) async fn index(State(repo): State<Arc<Repository>>) -> Result<Html<String>, AppError> {
+/// Query string accepted by the homepage. We accept the full search query
+/// string verbatim so bookmarks like `/?q=tokio&type=articles` continue to
+/// work and forward the user to the canonical `/search` endpoint.
+#[derive(Debug, Deserialize)]
+pub(crate) struct IndexQuery {
+    q: Option<String>,
+}
+
+/// Handler for the index page.
+///
+/// If a `?q=...` parameter is present (e.g. an old bookmark or an external
+/// link), redirect to the canonical, server-rendered `/search` endpoint so
+/// the user actually sees results. Otherwise render the empty homepage.
+pub(crate) async fn index(
+    raw_query: axum::extract::RawQuery,
+    State(repo): State<Arc<Repository>>,
+) -> Result<axum::response::Response, AppError> {
+    let qs = raw_query.0.unwrap_or_default();
+    let params: IndexQuery = serde_urlencoded::from_str(&qs).unwrap_or(IndexQuery { q: None });
+
+    if let Some(q) = params.q.as_deref()
+        && !q.trim().is_empty()
+    {
+        let target = if qs.is_empty() {
+            "/search".to_string()
+        } else {
+            format!("/search?{qs}")
+        };
+        return Ok(Redirect::to(&target).into_response());
+    }
+
     let quote = if let Ok(Some(q)) = repo.get_random_quote().await {
         Some(q)
     } else {
@@ -52,5 +85,5 @@ pub(crate) async fn index(State(repo): State<Arc<Repository>>) -> Result<Html<St
         next_page_href: None,
         quote,
     };
-    Ok(template.render().map(Html)?)
+    Ok(Html(template.render()?).into_response())
 }

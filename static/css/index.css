@@ -821,9 +821,15 @@ html[data-theme="dark-twir"] .tag {
 }
 
 @media (max-width: 768px) {
+    /* Allow the time-filter chip to wrap to a new row on narrow viewports
+       instead of being clipped off the right edge. The nav element gets
+       inline `display: flex; justify-content: space-between` from the
+       template, so we override here. */
     .search-tabs {
-        gap: 16px;
+        gap: 8px 16px !important;
         margin: 0 0 10px 0;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
     }
 
     .tab {
@@ -882,8 +888,10 @@ html[data-theme="dark-twir"] .tag {
         }
 
         .search-tabs {
-            gap: 12px;
+            gap: 8px 12px !important;
             margin: 0 0 8px 0;
+            flex-wrap: wrap !important;
+            justify-content: flex-start !important;
         }
 
         .tab {

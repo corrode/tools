@@ -10,7 +10,13 @@ mod error;
 mod api;
 mod handlers;
 
-use axum::{Router, middleware, routing::get};
+use axum::{
+    Router,
+    http::{HeaderValue, header},
+    middleware,
+    response::{IntoResponse, Redirect},
+    routing::get,
+};
 use storage::Repository;
 use tower_http::services::ServeDir;
 use tracing_subscriber::Layer;
@@ -76,6 +82,25 @@ async fn main() -> Result<()> {
         .route("/stats", get(handlers::stats))
         .route("/suggestions", get(handlers::suggestions))
         .route(
+            "/favicon.ico",
+            get(|| async { Redirect::permanent("/static/logo.svg") }),
+        )
+        .route(
+            "/opensearch.xml",
+            get(|| async {
+                (
+                    [(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static(
+                            "application/opensearchdescription+xml; charset=utf-8",
+                        ),
+                    )],
+                    include_str!("../../../static/opensearch.xml"),
+                )
+                    .into_response()
+            }),
+        )
+        .route(
             "/monitoring",
             get(|| async { axum::response::Redirect::permanent("/monitoring/") }),
         )
@@ -85,6 +110,7 @@ async fn main() -> Result<()> {
             ServeDir::new(format!("{}/static/youtube", types::get_data_dir())),
         )
         .nest_service("/static", ServeDir::new("static"))
+        .fallback(handlers::not_found)
         .with_state(repo.clone())
         .merge(api::build(repo));
 

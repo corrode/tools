@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Page not found - Rust Search</title>
+        <meta name="description" content="The page you're looking for couldn't be found." />
+        <meta name="robots" content="noindex" />
+
+        <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+        <link rel="alternate icon" href="/favicon.ico" />
+        <link rel="search" type="application/opensearchdescription+xml" title="Rust Search" href="/opensearch.xml" />
+
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <link rel="stylesheet" href="/static/css/index.css" />
+        <style>
+            .notfound {
+                max-width: 640px;
+                margin: 0 auto;
+                padding: 80px 16px 40px;
+                text-align: center;
+            }
+            .notfound-code {
+                font-size: 5rem;
+                font-weight: 700;
+                line-height: 1;
+                margin: 0 0 12px 0;
+                color: var(--color-primary);
+                letter-spacing: -0.02em;
+            }
+            .notfound-title {
+                font-size: 1.5rem;
+                margin: 0 0 12px 0;
+                color: var(--color-text);
+            }
+            .notfound-text {
+                color: var(--color-text-muted, var(--color-text));
+                margin: 0 0 32px 0;
+            }
+            .notfound-search {
+                position: relative;
+                margin: 0 0 24px 0;
+            }
+            .notfound-actions {
+                display: flex;
+                gap: 16px;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .notfound-actions a {
+                color: var(--color-primary);
+                text-decoration: none;
+            }
+            .notfound-actions a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="hero-pattern"></div>
+
+        <div class="container">
+            <header>
+                <h1>
+                    <a href="/" class="header-link">
+                        <img src="/static/logo.svg" alt="" class="logo" />
+                        Rust Search
+                    </a>
+                </h1>
+            </header>
+
+            <main class="notfound">
+                <div class="notfound-code">404</div>
+                <h2 class="notfound-title">Page not found</h2>
+                <p class="notfound-text">
+                    The page you're looking for doesn't exist. Try searching
+                    for what you need instead.
+                </p>
+
+                <form action="/search" method="GET" class="search-container notfound-search">
+                    <div class="search-input-wrapper">
+                        <input
+                            type="search"
+                            id="search"
+                            name="q"
+                            placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
+                            autofocus
+                            autocomplete="off"
+                        />
+                        <button
+                            type="submit"
+                            class="search-icon"
+                            style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
+                            aria-label="Search"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                style="width: 100%; height: 100%;"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="notfound-actions">
+                    <a href="/">← Back to home</a>
+                    <a href="/stats">Statistics</a>
+                    <a href="https://github.com/corrode/search/issues">Report an issue</a>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            <div class="footer-container">
+                <div class="footer-section">
+                    <a href="https://corrode.dev" aria-label="corrode.dev">
+                        <img src="/static/corrode.svg" alt="Corrode" class="footer-logo" />
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </body>
+</html>
