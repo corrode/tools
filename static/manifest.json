@@ -1,0 +1,21 @@
+{
+  "name": "Rust Search",
+  "short_name": "Rust Search",
+  "description": "Find the best content on Rust, curated by the community; a search engine for Rustaceans.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0e11",
+  "theme_color": "#48d597",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "categories": ["education", "developer", "search"],
+  "icons": [
+    {
+      "src": "/static/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

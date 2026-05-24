@@ -4,12 +4,23 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Page not found - Rust Search</title>
-        <meta name="description" content="The page you're looking for couldn't be found." />
+        <meta
+            name="description"
+            content="The page you're looking for couldn't be found."
+        />
         <meta name="robots" content="noindex" />
 
         <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
         <link rel="alternate icon" href="/favicon.ico" />
-        <link rel="search" type="application/opensearchdescription+xml" title="Rust Search" href="/opensearch.xml" />
+        <link rel="apple-touch-icon" href="/static/logo.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <link
+            rel="search"
+            type="application/opensearchdescription+xml"
+            title="Rust Search"
+            href="/opensearch.xml"
+        />
+        <meta name="theme-color" content="#0a0e11" />
 
         <link rel="stylesheet" href="/static/css/base.css" />
         <link rel="stylesheet" href="/static/css/index.css" />
@@ -73,11 +84,15 @@
                 <div class="notfound-code">404</div>
                 <h2 class="notfound-title">Page not found</h2>
                 <p class="notfound-text">
-                    The page you're looking for doesn't exist. Try searching
-                    for what you need instead.
+                    The page you're looking for doesn't exist. Try searching for
+                    what you need instead.
                 </p>
 
-                <form action="/search" method="GET" class="search-container notfound-search">
+                <form
+                    action="/search"
+                    method="GET"
+                    class="search-container notfound-search"
+                >
                     <div class="search-input-wrapper">
                         <input
                             type="search"
@@ -90,7 +105,13 @@
                         <button
                             type="submit"
                             class="search-icon"
-                            style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
+                            style="
+                                background: transparent;
+                                border: none;
+                                padding: 0;
+                                cursor: pointer;
+                                pointer-events: auto;
+                            "
                             aria-label="Search"
                         >
                             <svg
@@ -98,7 +119,7 @@
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
-                                style="width: 100%; height: 100%;"
+                                style="width: 100%; height: 100%"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -114,7 +135,9 @@
                 <div class="notfound-actions">
                     <a href="/">← Back to home</a>
                     <a href="/stats">Statistics</a>
-                    <a href="https://github.com/corrode/search/issues">Report an issue</a>
+                    <a href="https://github.com/corrode/search/issues"
+                        >Report an issue</a
+                    >
                 </div>
             </main>
         </div>
@@ -123,7 +146,11 @@
             <div class="footer-container">
                 <div class="footer-section">
                     <a href="https://corrode.dev" aria-label="corrode.dev">
-                        <img src="/static/corrode.svg" alt="Corrode" class="footer-logo" />
+                        <img
+                            src="/static/corrode.svg"
+                            alt="Corrode"
+                            class="footer-logo"
+                        />
                     </a>
                 </div>
             </div>

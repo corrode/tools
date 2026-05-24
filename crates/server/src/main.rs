@@ -12,13 +12,14 @@ mod handlers;
 
 use axum::{
     Router,
-    http::{HeaderValue, header},
+    http::{HeaderName, HeaderValue, header},
     middleware,
     response::{IntoResponse, Redirect},
     routing::get,
 };
 use storage::Repository;
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tracing_subscriber::Layer;
 use tracing_subscriber::filter::dynamic_filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
@@ -101,6 +102,45 @@ async fn main() -> Result<()> {
             }),
         )
         .route(
+            "/robots.txt",
+            get(|| async {
+                (
+                    [(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static("text/plain; charset=utf-8"),
+                    )],
+                    include_str!("../../../static/robots.txt"),
+                )
+                    .into_response()
+            }),
+        )
+        .route(
+            "/sitemap.xml",
+            get(|| async {
+                (
+                    [(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static("application/xml; charset=utf-8"),
+                    )],
+                    include_str!("../../../static/sitemap.xml"),
+                )
+                    .into_response()
+            }),
+        )
+        .route(
+            "/manifest.json",
+            get(|| async {
+                (
+                    [(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static("application/manifest+json; charset=utf-8"),
+                    )],
+                    include_str!("../../../static/manifest.json"),
+                )
+                    .into_response()
+            }),
+        )
+        .route(
             "/monitoring",
             get(|| async { axum::response::Redirect::permanent("/monitoring/") }),
         )
@@ -112,7 +152,21 @@ async fn main() -> Result<()> {
         .nest_service("/static", ServeDir::new("static"))
         .fallback(handlers::not_found)
         .with_state(repo.clone())
-        .merge(api::build(repo));
+        .merge(api::build(repo))
+        // Conservative security response headers, applied at the outermost
+        // layer so they cover handlers, static files, and the 404 fallback
+        // alike. `if_not_present` so anything an upstream proxy already set
+        // (e.g. HSTS from Cloudflare) wins.
+        .layer(security_header("x-content-type-options", "nosniff"))
+        .layer(security_header("x-frame-options", "SAMEORIGIN"))
+        .layer(security_header(
+            "referrer-policy",
+            "strict-origin-when-cross-origin",
+        ))
+        .layer(security_header(
+            "permissions-policy",
+            "camera=(), microphone=(), geolocation=(), payment=()",
+        ));
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{port}");
@@ -124,6 +178,16 @@ async fn main() -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+/// Returns a tower layer that sets a single response header iff not already
+/// present. Used to layer a handful of conservative security headers without
+/// the type-gymnastics of returning a composite `Layer`.
+fn security_header(name: &'static str, value: &'static str) -> SetResponseHeaderLayer<HeaderValue> {
+    SetResponseHeaderLayer::if_not_present(
+        HeaderName::from_static(name),
+        HeaderValue::from_static(value),
+    )
 }
 
 async fn shutdown_signal() {
