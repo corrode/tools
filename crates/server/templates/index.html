@@ -112,6 +112,12 @@
                         placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
                         autofocus
                         autocomplete="off"
+                        hx-get="/suggestions"
+                        hx-trigger="input changed delay:150ms[this.value.trim().length>=2]"
+                        hx-target="#suggestions-container"
+                        hx-swap="innerHTML"
+                        hx-params="q"
+                        hx-sync="this:replace"
                     />
                     <div id="suggestions-container" class="suggestions-container"></div>
                     <button
@@ -203,12 +209,40 @@
 
             });
 
+            // ----------------------------------------------------------
+            // Suggestions dropdown
+            //
+            // The fetching + rendering is done by htmx itself (see the
+            // `hx-get="/suggestions"` attributes on the search input). The
+            // server returns an HTML fragment whose <li> items are also
+            // htmx-driven: clicking one fires `GET /search` with `q`
+            // overridden to the suggested phrase and inherits the other
+            // form filters (`type`, `start-year`, ...).
+            //
+            // This script only handles the UX pieces htmx can't:
+            //   - `applySuggestion()` syncs the visible input value and
+            //     closes the dropdown after a pick (invoked by each <li>'s
+            //     `hx-on::after-request`).
+            //   - keyboard navigation between the input and the items.
+            //   - clearing the dropdown on outside-click or `Escape`.
+            // ----------------------------------------------------------
+
+            function applySuggestion(phrase) {
+                const input = document.getElementById('search');
+                const container = document.getElementById('suggestions-container');
+                input.value = phrase;
+                if (container) container.innerHTML = '';
+                // Drop focus so the mobile keyboard hides and the dropdown
+                // doesn't immediately get re-rendered by an `input` event.
+                input.blur();
+            }
+
             // Keyboard shortcuts & suggestions navigation
             document.addEventListener('keydown', function(e) {
                 const searchInput = document.getElementById('search');
                 const container = document.getElementById('suggestions-container');
                 const items = container ? Array.from(container.querySelectorAll('.suggestion-item')) : [];
-                
+
                 // Focus search on '/' or 'Cmd/Ctrl + K'
                 if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement !== searchInput) {
                     e.preventDefault();
@@ -216,7 +250,6 @@
                     return;
                 }
 
-                // If search input or a suggestion is focused
                 if (document.activeElement === searchInput || items.includes(document.activeElement)) {
                     if (e.key === 'Escape') {
                         e.preventDefault();
@@ -240,34 +273,20 @@
                                 items[prevIndex].focus();
                             }
                         }
-                    } else if (e.key === 'Enter') {
-                        if (items.includes(document.activeElement)) {
-                            e.preventDefault();
-                            pickSuggestion(document.activeElement.textContent);
-                        } else if (document.activeElement === searchInput) {
-                            if (container) container.innerHTML = '';
-                            setTimeout(() => searchInput.blur(), 50);
-                        }
+                    } else if (e.key === 'Enter' && document.activeElement === searchInput) {
+                        // Enter on the input submits the form (handled by the
+                        // browser); just clear the dropdown so it doesn't
+                        // hover over the freshly-loaded results, and drop
+                        // focus so the mobile keyboard hides.
+                        if (container) container.innerHTML = '';
+                        setTimeout(() => searchInput.blur(), 50);
                     }
+                    // Enter on a focused suggestion <li> is handled by htmx
+                    // (`hx-trigger="click, keyup[key=='Enter']"`).
                 }
             });
 
-            // Pick a suggestion: set the input value, close the dropdown, blur
-            // the input (so the mobile keyboard hides), and submit the form so
-            // htmx fetches the new results. Centralised so the mouse/touch and
-            // keyboard paths can't drift.
-            function pickSuggestion(phrase) {
-                const input = document.getElementById('search');
-                const container = document.getElementById('suggestions-container');
-                input.value = phrase;
-                if (container) container.innerHTML = '';
-                document.querySelector('.search-container').dispatchEvent(
-                    new Event('submit', { cancelable: true, bubbles: true })
-                );
-                input.blur();
-            }
-
-            // Close suggestions on outside click
+            // Close the dropdown on any click outside the input + container.
             document.addEventListener('click', function(e) {
                 const container = document.getElementById('suggestions-container');
                 const searchInput = document.getElementById('search');
@@ -275,53 +294,6 @@
                     container.innerHTML = '';
                 }
             });
-
-            // Fetch JSON suggestions
-            (function() {
-                const input = document.getElementById('search');
-                const container = document.getElementById('suggestions-container');
-                let timer;
-
-                // Delegated handler: any tap/click on a `.suggestion-item`
-                // inside the dropdown picks that suggestion. Using
-                // `mousedown` (not `click`) ensures we fire before the
-                // input's `blur` event closes the dropdown out from under
-                // us; `preventDefault` keeps focus on the input so the
-                // submit + blur sequence is predictable on mobile.
-                container.addEventListener('mousedown', function(e) {
-                    const item = e.target.closest('.suggestion-item');
-                    if (!item) return;
-                    e.preventDefault();
-                    pickSuggestion(item.textContent);
-                });
-
-                input.addEventListener('input', function() {
-                    clearTimeout(timer);
-                    const q = this.value.trim();
-                    if (q.length < 2) { container.innerHTML = ''; return; }
-                    timer = setTimeout(function() {
-                        fetch('/suggestions?q=' + encodeURIComponent(q))
-                            .then(r => r.json())
-                            .then(phrases => {
-                                if (phrases.length === 0) {
-                                    container.innerHTML = '';
-                                    return;
-                                }
-                                const ul = document.createElement('ul');
-                                ul.className = 'suggestions-list';
-                                for (const phrase of phrases) {
-                                    const li = document.createElement('li');
-                                    li.className = 'suggestion-item';
-                                    li.tabIndex = 0;
-                                    li.textContent = phrase;
-                                    ul.appendChild(li);
-                                }
-                                container.replaceChildren(ul);
-                            })
-                            .catch(() => { container.innerHTML = ''; });
-                    }, 150);
-                });
-            })();
         </script>
     </body>
 </html>
