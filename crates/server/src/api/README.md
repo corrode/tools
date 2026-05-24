@@ -69,9 +69,10 @@ crates/server/src/
   duplication.
 - **Response shapes diverge by design.** The HTML handlers convert
   `SearchResult` → view types (`Article`, `Video`, `Podcast`, …) tailored for
-  Askama templates: they carry UI-only fields like `icon_svg: &'static str`,
-  `highlighted_title` with `<mark>` tags, and human strings like
-  `"~5 min read"`. The API returns clean DTOs in `api::dto` with raw,
+  Askama templates: they carry UI-only fields like `highlighted_title` with
+  `<mark>` tags and human strings like `"~5 min read"`. Per-result favicons
+  are fetched at render time from DuckDuckGo (`icons.duckduckgo.com/ip3/...`).
+  The API returns clean DTOs in `api::dto` with raw,
   client-friendly types (e.g. `duration_seconds: u32`, ISO dates, no SVG).
   This keeps the API contract stable independent of UI churn.
 

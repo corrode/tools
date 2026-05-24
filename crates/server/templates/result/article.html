@@ -10,7 +10,18 @@
     {% endif %}
     <div class="result-meta">
         <span class="meta-item">
-            <span class="domain-icon">{{ article.icon_svg|safe }}</span>
+            <span class="domain-icon">
+                <img
+                    src="https://icons.duckduckgo.com/ip3/{{ article.domain }}.ico"
+                    alt=""
+                    width="16"
+                    height="16"
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    onerror="this.style.visibility = 'hidden'"
+                />
+            </span>
             <span class="domain">{{ article.domain }}</span>
         </span>
         {% if let Some(reference) = article.reference %}

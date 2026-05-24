@@ -56,8 +56,6 @@ pub struct Article {
     pub reference: Option<String>,
     /// Formatted reading time (e.g., "~5 min read")
     pub reading_time: String,
-    /// SVG icon for the domain/category
-    pub icon_svg: &'static str,
 }
 
 /// Podcast search result for display in templates.
@@ -299,7 +297,6 @@ impl TryFrom<SearchResult> for Article {
             .map(|d| d.to_string())
             .unwrap_or_else(|| "~1 min read".to_string());
         let domain = result.host_str().unwrap_or("unknown").to_string();
-        let icon_svg = result.icon_svg();
         let highlighted_title = result.highlighted_title.clone();
         let SearchResult { entry, snippet, .. } = result;
         let SearchEntry::Article(article) = entry else {
@@ -315,7 +312,6 @@ impl TryFrom<SearchResult> for Article {
             category: article.category().to_string(),
             reference: article.reference().map(|s| s.to_string()),
             reading_time,
-            icon_svg,
             snippet,
         })
     }
