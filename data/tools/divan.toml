@@ -1,0 +1,18 @@
+id = "divan"
+name = "divan"
+repository = "https://github.com/nvzqz/divan"
+category = "performance"
+crate = "divan"
+
+remarks = """
+A fast, low-boilerplate microbenchmarking harness. Benchmarks are plain
+functions annotated with `#[divan::bench]`, and results print as a compact
+tree grouped by module, with support for generic and parameterized cases.
+
+Reach for it when you want quick, readable benchmarks that compile fast on
+stable Rust. It does less statistical analysis than `criterion` (no
+regression detection across runs), so prefer `criterion` when you need rigorous
+confidence intervals, or `hyperfine` to time whole commands.
+"""
+
+alternatives = ["criterion", "hyperfine"]

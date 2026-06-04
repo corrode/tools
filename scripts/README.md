@@ -1,8 +1,9 @@
-# Discovery scripts
+# Scripts
 
-Throwaway helpers for **finding candidate tools** and pulling quick facts while
-curating `data/tools/*.toml`. They are not part of the build or the deployed
-app — they just save typing during research. Requires `curl` and `jq`.
+Helpers used while curating the index. The discovery scripts (`discover.sh`,
+`crate_info.sh`) are **throwaway** — they help with research and aren't part of
+the build or deployed app. `build_icons.sh` is different: it vendors and
+regenerates committed assets. The discovery scripts require `curl` and `jq`.
 
 ## `discover.sh` — surface candidates from crates.io
 
@@ -25,3 +26,22 @@ bash scripts/crate_info.sh cargo-nextest
 
 Once a tool is added to `data/tools/`, the `generator` fills in the authoritative
 `[metrics]` table — these scripts are only for the human discovery step.
+
+## `build_icons.sh` — vendor & build the category icons
+
+Unlike the discovery helpers, this one **is** part of the committed assets. It
+vendors the category icons from the [Lucide](https://lucide.dev) iconset
+(ISC-licensed) into `static/icons/lucide/` — the individual source SVGs plus
+their `LICENSE` — and regenerates the `static/icons/categories.svg` sprite from
+those vendored files.
+
+```sh
+bash scripts/build_icons.sh            # download any missing icons, rebuild sprite
+bash scripts/build_icons.sh --update   # re-download every icon, then rebuild
+```
+
+The category → icon mapping and the pinned Lucide version live at the top of the
+script. To change an icon (or add one for a new category), edit the `MAP` and
+re-run — never hand-edit the generated `categories.svg`. The vendored files are
+committed so the deployed container needs no network access. Requires `curl`
+and `perl`.

@@ -1,0 +1,17 @@
+id = "cargo-afl"
+name = "cargo-afl"
+repository = "https://github.com/rust-fuzz/afl.rs"
+category = "testing"
+crate = "cargo-afl"
+
+remarks = """
+Coverage-guided fuzzing for Rust built on AFL++. The `afl.rs` project ships the
+`cargo afl` subcommand, which instruments your target and runs the AFL++ engine
+to discover inputs that trigger panics, assertion failures, or crashes.
+
+Pick it when you want AFL++'s mature mutation engine and tooling. For the
+LLVM/libFuzzer ecosystem with first-class `#[no_main]` fuzz targets and
+structured corpora, `cargo-fuzz` is the more common starting point.
+"""
+
+alternatives = ["cargo-fuzz"]

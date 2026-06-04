@@ -1,0 +1,17 @@
+id = "irust"
+name = "IRust"
+repository = "https://github.com/sigmaSd/IRust"
+category = "productivity"
+crate = "irust"
+
+remarks = """
+A standalone Rust REPL for the terminal, with code completion, syntax
+highlighting, and the ability to pull in crates on the fly to experiment
+interactively.
+
+Reach for it when you want a quick scratchpad for Rust without setting up a
+project. If you'd rather work in notebooks or need a Jupyter kernel, `evcxr`
+covers that ground instead.
+"""
+
+alternatives = ["evcxr"]

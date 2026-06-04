@@ -567,11 +567,37 @@ a:hover {
 }
 
 .relation-tool {
-    color: var(--text-dim);
-    background-color: var(--surface-alt);
-    border: 1px solid var(--border);
     border-radius: var(--r-xs);
     padding: 1px 7px;
+}
+
+/* Resolved references link to the target tool's row: a solid, clickable pill. */
+a.relation-tool--link {
+    color: var(--text);
+    background-color: var(--surface-alt);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        border-color 0.12s ease,
+        color 0.12s ease;
+}
+
+a.relation-tool--link:hover,
+a.relation-tool--link:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Unresolved references (built-ins, non-Rust tools) are inert labels, not
+   links: muted text, a dashed border, and no pointer affordance. */
+span.relation-tool {
+    color: var(--text-faint);
+    background-color: transparent;
+    border: 1px dashed var(--border);
+    cursor: default;
 }
 
 /* Numeric cells */

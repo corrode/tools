@@ -33,6 +33,17 @@ pub(crate) struct CategoryView {
     pub(crate) tools: Vec<ToolView>,
 }
 
+/// A single entry in a tool's relations list (alternative, successor, or
+/// related tool). Resolved references link to the target tool's row.
+#[derive(Debug)]
+pub(crate) struct RelationView {
+    /// Text shown on the pill (the reference exactly as authored).
+    pub(crate) label: String,
+    /// In-page anchor (`tool-<id>`) when the reference resolves to a catalog
+    /// tool; `None` for built-ins and non-Rust tools, which stay plain text.
+    pub(crate) anchor: Option<String>,
+}
+
 /// One tool row.
 #[derive(Debug)]
 pub(crate) struct ToolView {
@@ -48,10 +59,12 @@ pub(crate) struct ToolView {
     pub(crate) is_github: bool,
     /// Rendered HTML of the human `remarks` markdown.
     pub(crate) remarks_html: String,
-    /// Peer tools for comparison.
-    pub(crate) alternatives: Vec<String>,
-    /// Modern replacements (for deprecated tools).
-    pub(crate) successors: Vec<String>,
+    /// Peer/replacement tools for comparison, with links when in-catalog.
+    pub(crate) alternatives: Vec<RelationView>,
+    /// Modern replacements (for deprecated tools), with links when in-catalog.
+    pub(crate) successors: Vec<RelationView>,
+    /// Complementary tools, with links when in-catalog.
+    pub(crate) related: Vec<RelationView>,
     /// Whether the source repo is archived/deprecated.
     pub(crate) archived: bool,
     /// Compact recent-downloads string (e.g. `1.2M`), if a published crate.
@@ -99,7 +112,7 @@ impl IndexView {
                         {
                             last_updated = Some(last_updated.map_or(date, |cur| cur.max(date)));
                         }
-                        ToolView::build(tool)
+                        ToolView::build(tool, catalog)
                     })
                     .collect();
                 CategoryView {
@@ -121,8 +134,9 @@ impl IndexView {
 }
 
 impl ToolView {
-    /// Projects a single [`Tool`] into its presentation form.
-    pub(crate) fn build(tool: &Tool) -> Self {
+    /// Projects a single [`Tool`] into its presentation form. The `catalog`
+    /// is used to resolve relation references to in-page links.
+    pub(crate) fn build(tool: &Tool, catalog: &Catalog) -> Self {
         let metrics = tool.metrics.as_ref();
         let krate = metrics.and_then(|m| m.krate.as_ref());
 
@@ -156,6 +170,17 @@ impl ToolView {
             tool.alternatives.join(" ").to_lowercase(),
         );
 
+        let relations = |refs: &[String]| -> Vec<RelationView> {
+            refs.iter()
+                .map(|reference| RelationView {
+                    label: reference.clone(),
+                    anchor: catalog
+                        .resolve_relation(reference)
+                        .map(|t| format!("tool-{}", t.id)),
+                })
+                .collect()
+        };
+
         Self {
             id: tool.id.clone(),
             name: tool.name.clone(),
@@ -163,8 +188,9 @@ impl ToolView {
             is_github: is_github(&tool.repository),
             repository: tool.repository.clone(),
             remarks_html: markdown(&tool.remarks),
-            alternatives: tool.alternatives.clone(),
-            successors: tool.successors.clone(),
+            alternatives: relations(&tool.alternatives),
+            successors: relations(&tool.successors),
+            related: relations(&tool.related),
             archived: tool.is_archived(),
             downloads,
             downloads_full,

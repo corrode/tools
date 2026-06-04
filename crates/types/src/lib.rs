@@ -8,8 +8,8 @@
 //! Each tool file mixes two ownership layers:
 //!
 //! - **Human-owned** top-level fields (`name`, `repository`, `category`,
-//!   `remarks`, `alternatives`, `successors`, …). These hold the editorial
-//!   prose that proves a tool's relevance.
+//!   `remarks`, `alternatives`, `successors`, `related`, …). These hold the
+//!   editorial prose that proves a tool's relevance.
 //! - A **bot-owned** `[metrics]` table refreshed by the `generator` from the
 //!   source forge and crates.io. Humans never edit it by hand.
 //!
@@ -139,12 +139,17 @@ pub struct Tool {
     /// Project homepage or documentation site, when distinct from the repo.
     #[serde(default)]
     pub homepage: Option<String>,
-    /// Peer tools worth comparing against (for *live* tools).
+    /// Peer tools worth comparing against — drop-in *replacements* you might
+    /// pick instead (for *live* tools).
     #[serde(default)]
     pub alternatives: Vec<String>,
-    /// Modern replacements (for *deprecated/archived* tools).
+    /// Modern *replacements* (for *deprecated/archived* tools).
     #[serde(default)]
     pub successors: Vec<String>,
+    /// Complementary tools that solve an *adjacent* problem rather than
+    /// replacing this one (e.g. `clippy` ↔ `cargo-semver-checks`).
+    #[serde(default)]
+    pub related: Vec<String>,
     /// Bot-owned live metrics. Absent until the generator first runs.
     #[serde(default)]
     pub metrics: Option<Metrics>,
@@ -254,6 +259,25 @@ impl Catalog {
     #[must_use]
     pub fn get(&self, id: &str) -> Option<&Tool> {
         self.tools.iter().find(|t| t.id == id)
+    }
+
+    /// Resolves a free-form relation reference (as written in a tool's
+    /// `alternatives`, `successors`, or `related` list) to the catalog tool
+    /// it names, when one exists.
+    ///
+    /// A trailing parenthetical qualifier such as `" (deprecated)"` or
+    /// `" (built-in)"` is ignored before matching against tool ids and names.
+    /// References with no entry — built-in cargo commands, non-Rust tools —
+    /// return `None` and are meant to render as plain, unlinked text.
+    #[must_use]
+    pub fn resolve_relation(&self, reference: &str) -> Option<&Tool> {
+        let name = reference
+            .split_once('(')
+            .map_or(reference, |(head, _)| head)
+            .trim();
+        self.tools
+            .iter()
+            .find(|t| t.id.eq_ignore_ascii_case(name) || t.name.eq_ignore_ascii_case(name))
     }
 
     /// Groups tools by category in declaration order. Within each group,
@@ -417,9 +441,29 @@ mod tests {
                 homepage: None,
                 alternatives: Vec::new(),
                 successors: Vec::new(),
+                related: Vec::new(),
                 metrics: None,
             }],
         };
         assert!(catalog.validate().is_err());
+    }
+
+    #[test]
+    fn resolve_relation_matches_ids_and_strips_qualifiers() {
+        let catalog = Catalog::load(&data_dir()).unwrap();
+        // Plain id.
+        assert_eq!(
+            catalog.resolve_relation("bacon").map(|t| t.id.as_str()),
+            Some("bacon")
+        );
+        // A trailing parenthetical qualifier is ignored before matching.
+        assert_eq!(
+            catalog
+                .resolve_relation("cargo-watch (deprecated)")
+                .map(|t| t.id.as_str()),
+            Some("cargo-watch")
+        );
+        // Built-in commands and non-Rust tools have no entry.
+        assert!(catalog.resolve_relation("cargo test (built-in)").is_none());
     }
 }

@@ -101,5 +101,10 @@ fn render_tool(out: &mut String, tool: &Tool) {
         out.push_str(&tool.successors.join(", "));
         out.push('\n');
     }
+    if !tool.related.is_empty() {
+        out.push_str("  related: ");
+        out.push_str(&tool.related.join(", "));
+        out.push('\n');
+    }
     out.push('\n');
 }

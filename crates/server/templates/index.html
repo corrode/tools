@@ -184,20 +184,49 @@
                                         <span class="relation-label"
                                             >use instead</span
                                         >
-                                        {% for s in tool.successors %}<span
+                                        {% for r in tool.successors %}{% if let
+                                        Some(anchor) = r.anchor %}<a
+                                            class="relation-tool relation-tool--link"
+                                            href="#{{ anchor }}"
+                                            >{{ r.label }}</a
+                                        >{% else %}<span
                                             class="relation-tool"
-                                            >{{ s }}</span
-                                        >{% endfor %}
+                                            title="Not in the index"
+                                            >{{ r.label }}</span
+                                        >{% endif %}{% endfor %}
                                     </p>
                                     {% else if !tool.alternatives.is_empty() %}
                                     <p class="relation">
                                         <span class="relation-label"
                                             >alternatives</span
                                         >
-                                        {% for a in tool.alternatives %}<span
+                                        {% for r in tool.alternatives %}{% if
+                                        let Some(anchor) = r.anchor %}<a
+                                            class="relation-tool relation-tool--link"
+                                            href="#{{ anchor }}"
+                                            >{{ r.label }}</a
+                                        >{% else %}<span
                                             class="relation-tool"
-                                            >{{ a }}</span
-                                        >{% endfor %}
+                                            title="Not in the index"
+                                            >{{ r.label }}</span
+                                        >{% endif %}{% endfor %}
+                                    </p>
+                                    {% endif %} {% if !tool.related.is_empty()
+                                    %}
+                                    <p class="relation relation--related">
+                                        <span class="relation-label"
+                                            >related</span
+                                        >
+                                        {% for r in tool.related %}{% if let
+                                        Some(anchor) = r.anchor %}<a
+                                            class="relation-tool relation-tool--link"
+                                            href="#{{ anchor }}"
+                                            >{{ r.label }}</a
+                                        >{% else %}<span
+                                            class="relation-tool"
+                                            title="Not in the index"
+                                            >{{ r.label }}</span
+                                        >{% endif %}{% endfor %}
                                     </p>
                                     {% endif %}
                                 </td>

@@ -1,0 +1,18 @@
+id = "wasm-bindgen-cli"
+name = "wasm-bindgen"
+repository = "https://github.com/rustwasm/wasm-bindgen"
+category = "cross-platform"
+crate = "wasm-bindgen-cli"
+
+remarks = """
+The foundational toolchain for high-level interaction between Rust-compiled
+WebAssembly and JavaScript. The `wasm-bindgen` CLI post-processes a `.wasm`
+artifact to emit the JS bindings, TypeScript types, and glue that make exported
+Rust functions and imported JS APIs usable from the web.
+
+You rarely invoke it directly: `trunk` and `wasm-pack` both drive it for you.
+Reach for the raw CLI when you need fine-grained control over the output or are
+wiring wasm-bindgen into a custom build pipeline.
+"""
+
+related = ["trunk", "wasm-pack"]

@@ -1,0 +1,17 @@
+id = "quickcheck"
+name = "quickcheck"
+repository = "https://github.com/BurntSushi/quickcheck"
+category = "testing"
+crate = "quickcheck"
+
+remarks = """
+A property-based testing library in the classic Haskell QuickCheck style: you
+assert properties that should hold for all inputs, and it generates random
+values to try to falsify them, shrinking any counterexample to a minimal case.
+
+Good for a lightweight, low-ceremony way to add property tests. For richer
+strategies, struct-aware generation, and a persistent failure database, reach
+for `proptest` instead.
+"""
+
+alternatives = ["proptest"]

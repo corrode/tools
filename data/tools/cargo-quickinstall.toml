@@ -1,0 +1,17 @@
+id = "cargo-quickinstall"
+name = "cargo-quickinstall"
+repository = "https://github.com/cargo-bins/cargo-quickinstall"
+category = "toolchain"
+crate = "cargo-quickinstall"
+
+remarks = """
+Installs Rust binaries from precompiled artifacts instead of building from
+source. It fetches prebuilt packages from a community build service, falling
+back to `cargo install` when no prebuilt binary exists for your target.
+
+Useful for skipping long compile times in CI and local setup. It is also used
+as a backend by `cargo-binstall`, which adds discovery of binaries published
+directly on a project's own releases.
+"""
+
+alternatives = ["cargo-binstall"]
