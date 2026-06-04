@@ -42,8 +42,10 @@ pub(crate) struct ToolView {
     pub(crate) name: String,
     /// Full repository URL.
     pub(crate) repository: String,
-    /// Compact repository label, e.g. `github.com/owner/repo`.
+    /// Compact repository label, e.g. `owner/repo` (or `host/owner/repo`).
     pub(crate) repo_label: String,
+    /// Whether the repo is GitHub-hosted (controls the source icon).
+    pub(crate) is_github: bool,
     /// Rendered HTML of the human `remarks` markdown.
     pub(crate) remarks_html: String,
     /// Peer tools for comparison.
@@ -158,6 +160,7 @@ impl ToolView {
             id: tool.id.clone(),
             name: tool.name.clone(),
             repo_label: repo_label(&tool.repository),
+            is_github: is_github(&tool.repository),
             repository: tool.repository.clone(),
             remarks_html: markdown(&tool.remarks),
             alternatives: tool.alternatives.clone(),
@@ -187,12 +190,22 @@ fn markdown(input: &str) -> String {
     out
 }
 
-/// Strips the scheme from a repository URL for a compact label.
+/// Strips the scheme (and the redundant `github.com/` host) for a compact
+/// `owner/repo` label; non-GitHub repos keep their host for context.
 fn repo_label(url: &str) -> String {
-    url.trim_start_matches("https://")
+    let stripped = url
+        .trim_start_matches("https://")
         .trim_start_matches("http://")
-        .trim_end_matches('/')
+        .trim_end_matches('/');
+    stripped
+        .strip_prefix("github.com/")
+        .unwrap_or(stripped)
         .to_owned()
+}
+
+/// Whether the repository is hosted on GitHub.
+fn is_github(url: &str) -> bool {
+    url.starts_with("https://github.com/") || url.starts_with("http://github.com/")
 }
 
 /// Formats a count with thousands separators, e.g. `4821330` -> `4,821,330`.

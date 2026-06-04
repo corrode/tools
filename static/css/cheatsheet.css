@@ -391,15 +391,26 @@ a:hover {
 }
 
 .col-tool {
-    width: 16%;
-    min-width: 180px;
+    width: 17%;
+    min-width: 176px;
 }
 .col-num {
-    width: 8%;
+    width: 88px;
     text-align: right !important;
 }
 .col-status {
-    width: 9%;
+    width: 112px;
+    text-align: right !important;
+}
+
+/* Tighten the right-hand metric cluster so the numbers and status badge read
+   as one neat, right-aligned block instead of drifting apart. */
+.tool-table thead th.col-num,
+.tool-table thead th.col-status,
+.cell-num,
+.cell-status {
+    padding-left: 8px;
+    padding-right: 18px;
 }
 
 .tool-table tbody tr {
@@ -441,12 +452,31 @@ a:hover {
 }
 
 .tool-repo {
-    display: block;
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 5px;
     font-size: 0.74rem;
     color: var(--text-faint);
     font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
-    margin-top: 3px;
-    word-break: break-all;
+    margin-top: 5px;
+    max-width: 100%;
+}
+
+.tool-repo:hover {
+    color: var(--text-dim);
+    opacity: 1;
+}
+
+.tool-repo span {
+    overflow-wrap: anywhere;
+}
+
+.repo-icon {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 .tool-tags {
@@ -556,6 +586,10 @@ a:hover {
 
 .cell-num .muted {
     color: var(--text-faint);
+}
+
+.cell-status {
+    text-align: right;
 }
 
 /* Status badges — friendly colours, gently rounded */
