@@ -14,6 +14,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 RUN touch -t 197001010000 recipe.json
 
 FROM chef AS builder
+# utoipa-swagger-ui's build script downloads the Swagger UI assets and shells
+# out to `curl`, which isn't in the slim chef image. Install it for the build.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
