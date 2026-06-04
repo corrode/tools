@@ -1,0 +1,83 @@
+id = "testing"
+name = "Testing & Correctness"
+description = "Proving the code does what you think, beyond a handful of examples."
+
+intro = """
+Rust's built-in `#[test]` harness is deliberately minimal: it runs functions and
+checks assertions, and stops there. Everything past that — parameterizing cases,
+faking a dependency, generating inputs, locking down large outputs, measuring
+what the suite actually exercises — is left to the ecosystem, and the right tool
+depends on the question you're asking.
+
+This stack is the correctness toolbox, from everyday ergonomics to the
+specialist instruments. It leaves out benchmarking (that's the Profiling &
+Optimization stack) and stays focused on *does it behave*, not *how fast*. The
+generated-input and mocking libraries here are dev-dependencies you add to the
+project, not installed binaries.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = """
+The runner everything else plugs into: per-test process isolation, a clean
+summary, retries for flaky tests, and partitioning to shard a slow suite across
+CI jobs. Note it doesn't run doctests, so keep `cargo test --doc` alongside it.
+"""
+
+[[pick]]
+tool = "rstest"
+note = """
+Cuts the copy-paste out of table-driven tests: `#[case(...)]` rows and
+`#[values(...)]` matrices expand into individually named tests, and `#[fixture]`
+gives you reusable setup. The first reach when one test body wants many inputs.
+"""
+
+[[pick]]
+tool = "proptest"
+note = """
+When examples aren't enough, assert invariants over generated inputs and let it
+shrink any failure to a minimal, saved counterexample. Strongest on parsers,
+encoders, and anything with a round-trip property. Added as a dev-dependency.
+"""
+
+[[pick]]
+tool = "insta"
+note = """
+Snapshot testing for large or structured output (debug, JSON, YAML, RON): record
+once, then fail on change and `cargo insta review` the diff. Skip it for small
+scalar checks where a plain `assert_eq!` reads better.
+"""
+
+[[pick]]
+tool = "mockall"
+note = """
+Fakes the seams — network, clock, filesystem — so logic can be tested without the
+real dependency. Pays off when your code already abstracts over traits; if it
+doesn't, a hand-written fake is often clearer than the macro machinery. A
+dev-dependency.
+"""
+
+[[pick]]
+tool = "cargo-llvm-cov"
+note = """
+The first measure of suite quality: accurate, source-based coverage showing which
+lines actually ran. Publish it or gate on it so coverage is visible rather than
+assumed. Integrates with nextest.
+"""
+
+[[pick]]
+tool = "cargo-mutants"
+note = """
+The second, deeper measure: it mutates your code and reruns the tests, exposing
+assertions that don't truly pin behavior — gaps coverage can't see. It's slow, so
+scope it to changed files in CI rather than the whole tree.
+"""
+
+[[pick]]
+tool = "loom"
+note = """
+The specialist: exhaustively explores thread interleavings and memory orderings
+to find races in lock-free code. Reach for it only if you write your own
+synchronization primitives; for everyday `async` and channels it's overkill. A
+dev-dependency.
+"""

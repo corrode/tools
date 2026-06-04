@@ -16,5 +16,5 @@ syscalls are unsupported. Reach for it to vet `unsafe` blocks, not as a general
 test runner.
 """
 
-related = ["cargo-fuzz"]
+related = ["cargo-fuzz", "loom"]
 recommended = true

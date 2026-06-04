@@ -29,6 +29,14 @@ function to confirm something inlined, vectorized, or simply fits.
 """
 
 [[pick]]
+tool = "cargo-bloat"
+note = """
+Flash and RAM are the budget. `cargo bloat` attributes `.text` size to crates and
+functions, so when a build stops fitting you can see what grew instead of
+guessing — a natural companion to the assembly view above.
+"""
+
+[[pick]]
 tool = "cargo-nextest"
 note = """
 Most logic (protocol parsing, state machines) should be testable off-target as

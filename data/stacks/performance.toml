@@ -52,5 +52,13 @@ tool = "cargo-show-asm"
 note = "The last mile: confirm the optimization you expected (inlining, vectorization, bounds-check elision) actually shows up in the generated assembly."
 
 [[pick]]
+tool = "cargo-bloat"
+note = """
+Optimization and size pull in opposite directions, so keep an eye on the binary:
+`cargo bloat --release --crates` shows which dependencies dominate code size
+before you reach for `opt-level = "z"`, LTO, or trimming features.
+"""
+
+[[pick]]
 tool = "tokio-console"
 note = "Async slowness is usually a scheduling problem, not a CPU one. This surfaces stuck or busy-looping tasks that a CPU profiler can't see."
