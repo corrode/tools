@@ -297,7 +297,7 @@
                             >
                                 <td class="cell-tool">
                                     {% if tool.recommended %}<span
-                                        class="pick-badge"
+                                        class="badge badge-pick"
                                         title="Editor's pick"
                                         ><svg
                                             class="pick-star"
@@ -309,7 +309,7 @@
                                             /></svg
                                         >Recommended</span
                                     >{% endif %}{% if tool.is_new %}<span
-                                        class="new-badge"
+                                        class="badge badge-new"
                                         title="Recently added"
                                         >New</span
                                     >{% endif %}
@@ -347,26 +347,31 @@
                                         </svg>
                                         <span>{{ tool.repo_label }}</span>
                                     </a>
-                                    <span class="tool-tags">
+                                    {% if tool.version.is_some() ||
+                                    tool.license.is_some() || tool.msrv.is_some()
+                                    %}
+                                    <span class="tool-meta">
                                         {% if let Some(version) = tool.version
-                                        %}<span class="tag">v{{ version }}</span
-                                        >{% endif %} {% if let Some(license) =
-                                        tool.license %}<span class="tag"
+                                        %}<span class="meta-item"
+                                            >v{{ version }}</span
+                                        >{% endif %}{% if let Some(license) =
+                                        tool.license %}<span class="meta-item"
                                             >{{ license }}</span
-                                        >{% endif %} {% if let Some(msrv) =
+                                        >{% endif %}{% if let Some(msrv) =
                                         tool.msrv %}<span
-                                            class="tag"
+                                            class="meta-item"
                                             title="Minimum supported Rust version"
                                             >Rust {{ msrv }}+</span
                                         >{% endif %}
                                     </span>
+                                    {% endif %}
                                     {% if !tool.owners.is_empty() %}<span
                                         class="tool-maint"
                                         >by {{ tool.owners|join(", ") }}</span
                                     >{% endif %} {% if !tool.stacks.is_empty()
                                     %}<span class="part-of"
                                         >In {% for s in tool.stacks %}<a
-                                            class="stack-chip"
+                                            class="chip"
                                             href="/?stack={{ s.id }}"
                                             data-stack="{{ s.id }}"
                                             >{{ s.name }}</a
@@ -394,11 +399,11 @@
                                         >
                                         {% for r in tool.successors %}{% if let
                                         Some(anchor) = r.anchor %}<a
-                                            class="relation-tool relation-tool--link"
+                                            class="chip"
                                             href="#{{ anchor }}"
                                             >{{ r.label }}</a
                                         >{% else %}<span
-                                            class="relation-tool"
+                                            class="chip is-inert"
                                             title="Not in the index"
                                             >{{ r.label }}</span
                                         >{% endif %}{% endfor %}
@@ -410,11 +415,11 @@
                                         >
                                         {% for r in tool.alternatives %}{% if
                                         let Some(anchor) = r.anchor %}<a
-                                            class="relation-tool relation-tool--link"
+                                            class="chip"
                                             href="#{{ anchor }}"
                                             >{{ r.label }}</a
                                         >{% else %}<span
-                                            class="relation-tool"
+                                            class="chip is-inert"
                                             title="Not in the index"
                                             >{{ r.label }}</span
                                         >{% endif %}{% endfor %}
@@ -427,11 +432,11 @@
                                         >
                                         {% for r in tool.related %}{% if let
                                         Some(anchor) = r.anchor %}<a
-                                            class="relation-tool relation-tool--link"
+                                            class="chip"
                                             href="#{{ anchor }}"
                                             >{{ r.label }}</a
                                         >{% else %}<span
-                                            class="relation-tool"
+                                            class="chip is-inert"
                                             title="Not in the index"
                                             >{{ r.label }}</span
                                         >{% endif %}{% endfor %}

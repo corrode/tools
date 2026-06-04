@@ -654,19 +654,35 @@ html[data-theme="dark"] .theme-icon-sun {
     box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.pick-badge {
+/* Eyebrow badges above the tool name. One shape; the pick is filled (the single
+   loud accent in a row), and "new" is a softer, quieter variant. */
+.badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 6px;
-    padding: 2px 8px 2px 6px;
-    font-size: 0.66rem;
+    margin-bottom: 7px;
+    padding: 2px 8px;
+    border-radius: var(--r-sm);
+    font-size: 0.64rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    line-height: 1.45;
+}
+
+.badge + .badge {
+    margin-left: 5px;
+}
+
+.badge-pick {
+    padding-left: 6px;
     color: #fff;
     background-color: var(--accent);
-    border-radius: var(--r-xs);
+}
+
+.badge-new {
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
 }
 
 .pick-star {
@@ -674,22 +690,6 @@ html[data-theme="dark"] .theme-icon-sun {
     height: 11px;
     fill: currentColor;
     stroke: none;
-}
-
-.new-badge {
-    display: inline-flex;
-    align-items: center;
-    margin-bottom: 6px;
-    margin-left: 4px;
-    padding: 2px 8px;
-    font-size: 0.66rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--accent-ink);
-    background-color: var(--accent-soft);
-    border: 1px solid var(--accent);
-    border-radius: var(--r-xs);
 }
 
 .cell-tool .tool-name {
@@ -739,21 +739,22 @@ html[data-theme="dark"] .theme-icon-sun {
     margin-top: 1px;
 }
 
-.tool-tags {
+/* Compact metadata line under the repo link: version, license, MSRV as plain
+   dot-separated text rather than competing pills. */
+.tool-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 9px;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
 }
 
-.tag {
-    font-size: 0.68rem;
-    color: var(--text-dim);
-    background-color: var(--surface-alt);
-    border: 1px solid var(--border);
-    border-radius: var(--r-xs);
-    padding: 1px 7px;
-    font-variant-numeric: tabular-nums;
+.meta-item:not(:first-child)::before {
+    content: "\00B7";
+    margin: 0 6px;
+    color: var(--text-faint);
 }
 
 .tool-maint {
@@ -826,37 +827,45 @@ html[data-theme="dark"] .theme-icon-sun {
     font-weight: 600;
 }
 
-.relation-tool {
-    border-radius: var(--r-xs);
-    padding: 1px 7px;
+/* ---- Chip: one shape for every inline cross-link --------------------------
+   Shared by relation references (alternatives / related / use-instead) and
+   stack membership ("In <stack>"). Links recolour to the accent on hover;
+   inert references (built-ins, non-Rust tools) get a dashed, unclickable look.
+   -------------------------------------------------------------------------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background-color: transparent;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-/* Resolved references link to the target tool's row: a solid, clickable pill. */
-a.relation-tool--link {
-    color: var(--text);
-    background-color: var(--surface-alt);
-    border: 1px solid var(--border);
-    text-decoration: none;
+a.chip {
     cursor: pointer;
     transition:
+        color 0.12s ease,
         border-color 0.12s ease,
-        color 0.12s ease;
+        background-color 0.12s ease;
 }
 
-a.relation-tool--link:hover,
-a.relation-tool--link:focus-visible {
-    color: var(--accent);
+a.chip:hover,
+a.chip:focus-visible {
+    color: var(--accent-ink);
     border-color: var(--accent);
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    background-color: var(--accent-wash);
+    outline: none;
 }
 
-/* Unresolved references (built-ins, non-Rust tools) are inert labels, not
-   links: muted text, a dashed border, and no pointer affordance. */
-span.relation-tool {
+.chip.is-inert {
     color: var(--text-faint);
-    background-color: transparent;
-    border: 1px dashed var(--border);
+    border-style: dashed;
     cursor: default;
 }
 
@@ -881,13 +890,14 @@ span.relation-tool {
 /* Status badges: friendly colours, gently rounded */
 
 .pill {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 10px;
+    border-radius: var(--r-sm);
     font-size: 0.72rem;
     font-weight: 600;
-    border-radius: var(--r-sm);
-    padding: 3px 10px;
     white-space: nowrap;
-    line-height: 1.5;
 }
 
 .status-ok {
@@ -1049,26 +1059,9 @@ span.relation-tool {
     flex-wrap: wrap;
     align-items: center;
     gap: 5px;
-    margin-top: 7px;
+    margin-top: 8px;
     font-size: 0.72rem;
     color: var(--text-faint);
-}
-
-.stack-chip {
-    font-size: 0.72rem;
-    color: var(--accent-ink);
-    background-color: var(--accent-soft);
-    border: 1px solid var(--accent);
-    border-radius: var(--r-xs);
-    padding: 1px 7px;
-    transition:
-        background-color 0.12s ease,
-        color 0.12s ease;
-}
-
-.stack-chip:hover {
-    background-color: var(--accent);
-    color: #fff;
 }
 
 /* ── Stacks: filter banner + inline notes ────────────────────────────── */

@@ -184,7 +184,7 @@
       apply();
       return;
     }
-    const chip = e.target.closest(".stack-chip[data-stack]");
+    const chip = e.target.closest(".chip[data-stack]");
     if (chip && stackFilter) {
       e.preventDefault();
       stackFilter.value = chip.dataset.stack;
