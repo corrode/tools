@@ -1,27 +1,56 @@
 /* =============================================================================
-   Rust Tool Index — light, spacious, table layout.
+   Rust Tool Index — calm, professional, table-driven layout.
 
-   Friendly white/grey palette with soft shadows, per-category icons, a roomy
-   sticky search header, and one table per category with green/amber/red status
-   pills. Overrides the dark tokens from base.css.
+   A restrained white/grey palette with hairline borders, barely-there shadows,
+   tight radii, per-category icons, a roomy sticky search header, and one table
+   per category with friendly green/amber/red status badges. Overrides the dark
+   tokens from base.css.
    ============================================================================= */
 
 :root {
-    --bg: #f4f6f9;
+    /* Surfaces & ink */
+    --bg: #f6f7f9;
     --surface: #ffffff;
-    --surface-alt: #fafbfc;
-    --border: #e6eaf0;
+    --surface-alt: #f8fafc;
+    --surface-hover: #f9fbfc;
+
+    /* Hairline borders */
+    --border: #e5e8ee;
     --border-soft: #eef1f5;
-    --ink: #1f2a37;
-    --text: #44505f;
-    --text-dim: #6b7585;
-    --text-faint: #9aa4b2;
+    --border-strong: #d7dce4;
+
+    /* Text ramp (warm slate greys) */
+    --ink: #18222f;
+    --text: #45505f;
+    --text-dim: #69727f;
+    --text-faint: #98a1ae;
+
+    /* Friendly green accent */
     --accent: #1f9d6b;
-    --accent-ink: #15784f;
-    --accent-soft: #e9f6ef;
-    --shadow:
-        0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.05);
-    --max-width: 1280px;
+    --accent-ink: #157049;
+    --accent-soft: #eaf6f0;
+    --accent-ring: rgba(31, 157, 107, 0.16);
+
+    /* Status colours (kept friendly, softened) */
+    --ok-ink: #1a7a4c;
+    --ok-bg: #ecf7f1;
+    --warn-ink: #9a6a14;
+    --warn-bg: #fcf3e2;
+    --err-ink: #c0392b;
+    --err-bg: #fcecea;
+
+    /* Geometry — deliberately tight & consistent */
+    --r-lg: 10px;
+    --r-md: 8px;
+    --r-sm: 6px;
+    --r-xs: 4px;
+
+    /* Whisper-soft elevation */
+    --shadow: 0 1px 2px rgba(20, 28, 44, 0.04);
+
+    --max-width: 1200px;
+    --gutter: 32px;
+    --header-h: 65px;
 }
 
 body {
@@ -45,14 +74,19 @@ a:hover {
     opacity: 0.82;
 }
 
+::selection {
+    background: var(--accent-ring);
+}
+
 /* ----------------------------------------------------------------- Header -- */
 
 .site-header {
     position: sticky;
     top: 0;
     z-index: 50;
-    background-color: rgba(255, 255, 255, 0.86);
-    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
     border-bottom: 1px solid var(--border);
     text-align: left;
     margin: 0;
@@ -61,7 +95,7 @@ a:hover {
 .site-header-inner {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 16px 32px;
+    padding: 14px var(--gutter);
     display: flex;
     align-items: center;
     gap: 24px;
@@ -70,7 +104,7 @@ a:hover {
 .brand {
     display: inline-flex;
     align-items: center;
-    gap: 11px;
+    gap: 10px;
     color: var(--ink);
     flex-shrink: 0;
 }
@@ -80,12 +114,12 @@ a:hover {
 }
 
 .brand-logo {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
 }
 
 .brand-title {
-    font-size: 1.1rem;
+    font-size: 1.02rem;
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--ink);
@@ -95,33 +129,33 @@ a:hover {
 .search-wrap {
     position: relative;
     flex: 1;
-    max-width: 460px;
+    max-width: 440px;
 }
 
 .search-icon {
     position: absolute;
-    left: 16px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
     fill: none;
     stroke: var(--text-faint);
     stroke-width: 2;
     stroke-linecap: round;
     pointer-events: none;
+    transition: stroke 0.12s ease;
 }
 
 .filter-input {
     width: 100%;
     background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
     color: var(--ink);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-family: inherit;
-    padding: 11px 18px 11px 44px;
-    box-shadow: var(--shadow);
+    padding: 9px 16px 9px 40px;
     transition:
         border-color 0.12s ease,
         box-shadow 0.12s ease;
@@ -134,7 +168,11 @@ a:hover {
 .filter-input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(31, 157, 107, 0.12);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.search-wrap:focus-within .search-icon {
+    stroke: var(--accent);
 }
 
 .header-meta {
@@ -142,7 +180,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 14px;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--text-dim);
     flex-shrink: 0;
 }
@@ -153,11 +191,14 @@ a:hover {
 
 .header-pill {
     color: var(--text-dim);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 5px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    padding: 5px 12px;
     font-weight: 600;
     background-color: var(--surface);
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease;
 }
 
 .header-pill:hover {
@@ -171,7 +212,7 @@ a:hover {
 .catalog {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 36px 32px 90px;
+    padding: 40px var(--gutter) 96px;
     width: 100%;
     flex: 1;
 }
@@ -180,15 +221,17 @@ a:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px 24px;
+    gap: 14px 24px;
     flex-wrap: wrap;
+    padding-bottom: 22px;
     margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
 }
 
 .category-nav {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
     flex: 1 1 auto;
 }
 
@@ -201,21 +244,24 @@ a:hover {
     color: var(--text-dim);
     background-color: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 6px 13px;
-    box-shadow: var(--shadow);
-    transition: all 0.12s ease;
+    border-radius: var(--r-sm);
+    padding: 5px 11px;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease,
+        background-color 0.12s ease;
 }
 
 .category-chip:hover {
     color: var(--accent-ink);
     border-color: var(--accent);
+    background-color: var(--accent-soft);
     opacity: 1;
 }
 
 .chip-icon {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     color: var(--accent);
 }
 
@@ -223,6 +269,10 @@ a:hover {
     font-size: 0.72rem;
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
+}
+
+.category-chip:hover .chip-count {
+    color: var(--accent-ink);
 }
 
 .toggle {
@@ -245,58 +295,71 @@ a:hover {
 /* ------------------------------------------------------------- Category --- */
 
 .category {
-    margin-bottom: 46px;
-    scroll-margin-top: 92px;
+    margin-bottom: 52px;
+    scroll-margin-top: calc(var(--header-h) + 24px);
 }
 
 .category-head {
     display: grid;
-    grid-template-columns: auto auto auto 1fr;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    row-gap: 3px;
     align-items: center;
-    gap: 12px;
     margin-bottom: 16px;
 }
 
 .category-icon {
+    grid-row: 1 / span 2;
+    align-self: center;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-md);
     background-color: var(--accent-soft);
     color: var(--accent-ink);
 }
 
 .category-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+}
+
+.category-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
 .category-title {
-    font-size: 1.3rem;
+    font-size: 1.18rem;
     font-weight: 700;
     color: var(--ink);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     margin: 0;
     display: inline;
 }
 
 .category-count {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
+    font-weight: 600;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
     background-color: var(--surface);
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 2px 10px;
+    padding: 1px 9px;
+    flex-shrink: 0;
 }
 
 .category-desc {
-    font-size: 0.86rem;
+    grid-column: 2;
+    font-size: 0.85rem;
     color: var(--text-dim);
     margin: 0;
-    text-align: right;
+    text-align: left;
 }
 
 /* ---------------------------------------------------------------- Table --- */
@@ -304,7 +367,7 @@ a:hover {
 .table-wrap {
     background-color: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--r-lg);
     box-shadow: var(--shadow);
     overflow: hidden;
 }
@@ -317,12 +380,12 @@ a:hover {
 
 .tool-table thead th {
     text-align: left;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
     color: var(--text-faint);
-    padding: 14px 18px;
+    padding: 12px 20px;
     border-bottom: 1px solid var(--border);
     background-color: var(--surface-alt);
 }
@@ -349,16 +412,17 @@ a:hover {
 }
 
 .tool-table tbody tr:hover {
-    background-color: var(--surface-alt);
+    background-color: var(--surface-hover);
 }
 
 .tool-table td {
-    padding: 16px 18px;
+    padding: 18px 20px;
     vertical-align: top;
 }
 
 .tool-table tbody tr:target {
     background-color: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
 }
 
 /* Tool cell */
@@ -389,7 +453,7 @@ a:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    margin-top: 8px;
+    margin-top: 9px;
 }
 
 .tag {
@@ -397,7 +461,7 @@ a:hover {
     color: var(--text-dim);
     background-color: var(--surface-alt);
     border: 1px solid var(--border);
-    border-radius: 5px;
+    border-radius: var(--r-xs);
     padding: 1px 7px;
     font-variant-numeric: tabular-nums;
 }
@@ -406,7 +470,7 @@ a:hover {
     display: block;
     font-size: 0.72rem;
     color: var(--text-faint);
-    margin-top: 7px;
+    margin-top: 8px;
 }
 
 /* Notes cell */
@@ -417,7 +481,7 @@ a:hover {
 
 .notes-body {
     font-size: 0.86rem;
-    line-height: 1.6;
+    line-height: 1.62;
 }
 
 .notes-body p {
@@ -431,10 +495,10 @@ a:hover {
 .notes-body code {
     background-color: var(--surface-alt);
     border: 1px solid var(--border);
-    border-radius: 4px;
+    border-radius: var(--r-xs);
     padding: 0.5px 5px;
     font-size: 0.82em;
-    color: #3a4658;
+    color: #39455a;
     font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
 }
 
@@ -446,7 +510,13 @@ a:hover {
 .notes-body a {
     color: var(--accent-ink);
     text-decoration: underline;
+    text-decoration-color: var(--accent-ring);
     text-underline-offset: 2px;
+    transition: text-decoration-color 0.12s ease;
+}
+
+.notes-body a:hover {
+    text-decoration-color: var(--accent);
 }
 
 .relation {
@@ -454,15 +524,15 @@ a:hover {
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin: 11px 0 0;
+    margin: 12px 0 0;
     font-size: 0.74rem;
 }
 
 .relation-label {
     color: var(--text-faint);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    font-size: 0.65rem;
     font-weight: 600;
 }
 
@@ -470,7 +540,7 @@ a:hover {
     color: var(--text-dim);
     background-color: var(--surface-alt);
     border: 1px solid var(--border);
-    border-radius: 5px;
+    border-radius: var(--r-xs);
     padding: 1px 7px;
 }
 
@@ -488,36 +558,38 @@ a:hover {
     color: var(--text-faint);
 }
 
-/* Status pills */
+/* Status badges — friendly colours, gently rounded */
 
 .pill {
     display: inline-block;
     font-size: 0.72rem;
     font-weight: 600;
-    border-radius: 999px;
-    padding: 4px 11px;
+    border-radius: var(--r-sm);
+    padding: 3px 10px;
     white-space: nowrap;
+    line-height: 1.5;
 }
 
 .status-ok {
-    color: #1a8a52;
-    background-color: #e6f6ee;
-    border: 1px solid #c8ecd9;
+    color: var(--ok-ink);
+    background-color: var(--ok-bg);
 }
 
 .status-deprecated {
-    color: #c63d2e;
-    background-color: #fdecea;
-    border: 1px solid #f6d3cd;
+    color: var(--err-ink);
+    background-color: var(--err-bg);
 }
 
 .status-stale {
-    color: #a9791b;
-    background-color: #fdf4e3;
-    border: 1px solid #f3e3bf;
+    color: var(--warn-ink);
+    background-color: var(--warn-bg);
 }
 
 /* Deprecated rows: gently muted, not hidden. */
+
+.tool.is-archived td {
+    background-color: var(--surface-alt);
+}
 
 .tool.is-archived .tool-name {
     color: var(--text-dim);
@@ -533,7 +605,7 @@ a:hover {
     text-align: center;
     color: var(--text-dim);
     font-size: 0.95rem;
-    padding: 70px 0;
+    padding: 80px 0;
 }
 
 /* ---------------------------------------------------------------- Footer -- */
@@ -547,7 +619,7 @@ a:hover {
 .footer-inner {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 28px 32px 10px;
+    padding: 26px var(--gutter) 8px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -572,15 +644,20 @@ a:hover {
 }
 
 .footer-logo {
-    height: 22px;
-    opacity: 0.7;
+    height: 20px;
+    opacity: 0.65;
     filter: grayscale(1);
+    transition: opacity 0.15s ease;
+}
+
+.footer-brand:hover .footer-logo {
+    opacity: 1;
 }
 
 .footer-note {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 0 32px 30px;
+    padding: 0 var(--gutter) 28px;
     font-size: 0.78rem;
     color: var(--text-faint);
 }
@@ -633,20 +710,11 @@ a:hover {
 }
 
 @media (max-width: 620px) {
-    .site-header-inner,
-    .catalog,
-    .footer-inner,
-    .footer-note {
-        padding-left: 18px;
-        padding-right: 18px;
-    }
-
-    .category-head {
-        grid-template-columns: auto auto auto;
+    :root {
+        --gutter: 18px;
     }
 
     .category-desc {
         grid-column: 1 / -1;
-        text-align: left;
     }
 }
