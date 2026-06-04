@@ -292,6 +292,54 @@ a:hover {
     height: 15px;
 }
 
+/* Right-hand filter cluster: deprecated/recommended toggles + license select. */
+.filter-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px 18px;
+    /* Keep the cluster pinned right even when it wraps below the category nav. */
+    margin-left: auto;
+}
+
+.select-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.select-filter-label {
+    color: var(--text-faint);
+}
+
+.select-filter select {
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 4px 26px 4px 9px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2390a0a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition:
+        border-color 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.select-filter select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
 /* ------------------------------------------------------------- Category --- */
 
 .category {
@@ -437,6 +485,37 @@ a:hover {
 }
 
 /* Tool cell */
+
+/* Editor's pick: a prominent badge plus a subtle row accent. */
+.tool.is-recommended td {
+    background-color: var(--accent-soft);
+}
+
+.tool.is-recommended td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.pick-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+    padding: 2px 8px 2px 6px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+    background-color: var(--accent);
+    border-radius: var(--r-xs);
+}
+
+.pick-star {
+    width: 11px;
+    height: 11px;
+    fill: currentColor;
+    stroke: none;
+}
 
 .cell-tool .tool-name {
     display: block;

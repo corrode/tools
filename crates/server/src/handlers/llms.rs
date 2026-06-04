@@ -50,6 +50,9 @@ fn render(catalog: &Catalog) -> String {
 fn render_tool(out: &mut String, tool: &Tool) {
     out.push_str("- ");
     out.push_str(&tool.name);
+    if tool.recommended {
+        out.push_str(" [RECOMMENDED]");
+    }
     if tool.is_archived() {
         out.push_str(" [DEPRECATED]");
     }

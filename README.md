@@ -61,6 +61,8 @@ What it does, when to reach for it, and — just as important — when not to.
 """
 
 alternatives = ["cargo test (built-in)"]
+related = ["cargo-llvm-cov"]   # complementary tools, not replacements
+recommended = true              # editor's pick: badge + floats to top, filterable
 # Deprecated instead? Point at the replacements:
 # successors = ["bacon", "watchexec"]
 ```

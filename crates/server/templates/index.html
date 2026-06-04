@@ -84,10 +84,30 @@
                     </a>
                     {% endfor %}
                 </nav>
-                <label class="toggle">
-                    <input type="checkbox" id="hide-deprecated" />
-                    <span>Hide deprecated</span>
-                </label>
+                <div class="filter-controls">
+                    <label class="toggle">
+                        <input type="checkbox" id="hide-deprecated" />
+                        <span>Hide deprecated</span>
+                    </label>
+                    <label class="toggle toggle-pick">
+                        <input type="checkbox" id="recommended-only" />
+                        <span>Recommended only</span>
+                    </label>
+                    <label class="select-filter">
+                        <span class="select-filter-label">License</span>
+                        <select
+                            id="license-filter"
+                            aria-label="Filter by license"
+                        >
+                            <option value="">All licenses</option>
+                            {% for lic in view.licenses %}
+                            <option value="{{ lic.value }}">
+                                {{ lic.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
             </div>
 
             {% for cat in view.categories %}
@@ -126,12 +146,27 @@
                         <tbody>
                             {% for tool in cat.tools %}
                             <tr
-                                class="tool{% if tool.archived %} is-archived{% endif %}"
+                                class="tool{% if tool.archived %} is-archived{% endif %}{% if tool.recommended %} is-recommended{% endif %}"
                                 id="tool-{{ tool.id }}"
                                 data-keywords="{{ tool.keywords }}"
                                 data-archived="{{ tool.archived }}"
+                                data-recommended="{{ tool.recommended }}"
+                                data-license="{{ tool.license_tokens }}"
                             >
                                 <td class="cell-tool">
+                                    {% if tool.recommended %}<span
+                                        class="pick-badge"
+                                        title="Editor's pick"
+                                        ><svg
+                                            class="pick-star"
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                d="M12 2.5l2.92 5.92 6.54.95-4.73 4.61 1.12 6.52L12 17.93 6.15 21l1.12-6.52L2.54 9.87l6.54-.95z"
+                                            /></svg
+                                        >Recommended</span
+                                    >{% endif %}
                                     <a
                                         class="tool-name"
                                         href="{{ tool.repository }}"

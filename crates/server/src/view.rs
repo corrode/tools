@@ -3,6 +3,8 @@
 //! Handlers build these owned structs so the Askama templates stay free of
 //! formatting logic (number grouping, relative dates, markdown rendering).
 
+use std::collections::BTreeMap;
+
 use chrono::{NaiveDate, Utc};
 use pulldown_cmark::{Options, Parser, html};
 use types::{Catalog, Tool};
@@ -16,6 +18,17 @@ pub(crate) struct IndexView {
     pub(crate) total: usize,
     /// Most recent metric refresh date across all tools, if any.
     pub(crate) last_updated: Option<String>,
+    /// Distinct license families across the catalog, for the license filter.
+    pub(crate) licenses: Vec<LicenseOption>,
+}
+
+/// One entry in the license filter dropdown.
+#[derive(Debug)]
+pub(crate) struct LicenseOption {
+    /// Lowercased family used for matching against a tool's `data-license`.
+    pub(crate) value: String,
+    /// Display label (original SPDX case, e.g. `Apache-2.0`).
+    pub(crate) label: String,
 }
 
 /// One category section.
@@ -67,6 +80,8 @@ pub(crate) struct ToolView {
     pub(crate) related: Vec<RelationView>,
     /// Whether the source repo is archived/deprecated.
     pub(crate) archived: bool,
+    /// Editor's pick: hand-curated recommendation, shown with a badge.
+    pub(crate) recommended: bool,
     /// Compact recent-downloads string (e.g. `1.2M`), if a published crate.
     pub(crate) downloads: Option<String>,
     /// Exact total downloads with thousands separators, for the tooltip.
@@ -81,6 +96,9 @@ pub(crate) struct ToolView {
     pub(crate) license: Option<String>,
     /// crates.io owners / maintainers.
     pub(crate) owners: Vec<String>,
+    /// Space-joined lowercased license families, for the license filter
+    /// (e.g. `"mit apache-2.0"`).
+    pub(crate) license_tokens: String,
     /// Short status label for the pill (e.g. `Maintained`, `Deprecated`).
     pub(crate) status_label: &'static str,
     /// CSS modifier class for the status pill.
@@ -125,10 +143,26 @@ impl IndexView {
             })
             .collect::<Vec<_>>();
 
+        // Distinct license families across the whole catalog, sorted, for the
+        // license dropdown. Keyed by lowercased value, keeping a display label.
+        let mut license_map: BTreeMap<String, String> = BTreeMap::new();
+        for tool in catalog.tools() {
+            if let Some(license) = effective_license(tool) {
+                for family in license_families(&license) {
+                    let _ = license_map.entry(family.to_lowercase()).or_insert(family);
+                }
+            }
+        }
+        let licenses = license_map
+            .into_iter()
+            .map(|(value, label)| LicenseOption { value, label })
+            .collect();
+
         Self {
             total,
             last_updated: last_updated.map(|d| d.format("%-d %b %Y").to_string()),
             categories,
+            licenses,
         }
     }
 }
@@ -152,6 +186,16 @@ impl ToolView {
         let license = krate
             .and_then(|c| c.license.clone())
             .or_else(|| metrics.and_then(|m| m.license.clone()));
+        let license_tokens = license
+            .as_deref()
+            .map(|l| {
+                license_families(l)
+                    .iter()
+                    .map(|f| f.to_lowercase())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .unwrap_or_default();
         let owners = krate.map(|c| c.owners.clone()).unwrap_or_default();
 
         let (status_label, status_class) = if tool.is_archived() {
@@ -192,6 +236,7 @@ impl ToolView {
             successors: relations(&tool.successors),
             related: relations(&tool.related),
             archived: tool.is_archived(),
+            recommended: tool.recommended,
             downloads,
             downloads_full,
             stars,
@@ -199,6 +244,7 @@ impl ToolView {
             last_activity,
             license,
             owners,
+            license_tokens,
             status_label,
             status_class,
             keywords,
@@ -213,6 +259,43 @@ fn markdown(input: &str) -> String {
     let parser = Parser::new_ext(input, options);
     let mut out = String::new();
     html::push_html(&mut out, parser);
+    out
+}
+
+/// The license to display/filter on: the crate's license, falling back to the
+/// forge-reported one.
+fn effective_license(tool: &Tool) -> Option<String> {
+    let metrics = tool.metrics.as_ref()?;
+    metrics
+        .krate
+        .as_ref()
+        .and_then(|c| c.license.clone())
+        .or_else(|| metrics.license.clone())
+}
+
+/// Splits an SPDX-ish license expression into distinct, deduplicated families.
+///
+/// Compound expressions are split on `OR`/`AND`/`/`, and version qualifiers
+/// (`+`, `-only`, `-or-later`) are collapsed so that, e.g., `GPL-3.0`,
+/// `GPL-3.0+`, and `GPL-3.0-only` all filter together as `GPL-3.0`.
+fn license_families(license: &str) -> Vec<String> {
+    let unified = license
+        .replace(" OR ", "/")
+        .replace(" or ", "/")
+        .replace(" AND ", "/")
+        .replace(" and ", "/");
+    let mut out: Vec<String> = Vec::new();
+    for part in unified.split('/') {
+        let family = part
+            .trim()
+            .trim_end_matches('+')
+            .trim_end_matches("-or-later")
+            .trim_end_matches("-only")
+            .trim();
+        if !family.is_empty() && !out.iter().any(|f| f == family) {
+            out.push(family.to_owned());
+        }
+    }
     out
 }
 

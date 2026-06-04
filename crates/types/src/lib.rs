@@ -150,6 +150,11 @@ pub struct Tool {
     /// replacing this one (e.g. `clippy` ↔ `cargo-semver-checks`).
     #[serde(default)]
     pub related: Vec<String>,
+    /// Editor's pick: a hand-curated recommendation. Surfaced with a prominent
+    /// badge and floated to the top of its category. Set `recommended = true`
+    /// by hand; it is never touched by the metrics bot.
+    #[serde(default)]
+    pub recommended: bool,
     /// Bot-owned live metrics. Absent until the generator first runs.
     #[serde(default)]
     pub metrics: Option<Metrics>,
@@ -299,6 +304,7 @@ impl Catalog {
                 tools.sort_by(|a, b| {
                     a.is_archived()
                         .cmp(&b.is_archived())
+                        .then_with(|| b.recommended.cmp(&a.recommended))
                         .then_with(|| b.relevance().cmp(&a.relevance()))
                         .then_with(|| a.name.cmp(&b.name))
                 });
@@ -442,6 +448,7 @@ mod tests {
                 alternatives: Vec::new(),
                 successors: Vec::new(),
                 related: Vec::new(),
+                recommended: false,
                 metrics: None,
             }],
         };
