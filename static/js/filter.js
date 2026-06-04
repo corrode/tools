@@ -8,7 +8,6 @@
 (function () {
   const input = document.getElementById("filter");
   const hideDeprecated = document.getElementById("hide-deprecated");
-  const countEl = document.getElementById("filter-count");
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
@@ -40,7 +39,6 @@
     }
 
     noResults.hidden = visible !== 0;
-    countEl.textContent = query || skipDeprecated ? `${visible} shown` : "";
   }
 
   input.addEventListener("input", apply);

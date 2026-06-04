@@ -6,7 +6,7 @@
         <title>Rust Tool Index</title>
         <meta
             name="description"
-            content="A dense, curated reference of Rust development tooling — with live download counts, stars, activity, and guidance on when (not) to use each tool."
+            content="A spacious, curated reference of Rust development tooling — with live download counts, stars, activity, and guidance on when (not) to use each tool."
         />
 
         <meta property="og:type" content="website" />
@@ -14,73 +14,82 @@
         <meta property="og:title" content="Rust Tool Index" />
         <meta
             property="og:description"
-            content="A dense, curated reference of Rust development tooling."
+            content="A spacious, curated reference of Rust development tooling."
         />
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:title" content="Rust Tool Index" />
 
         <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
         <link rel="apple-touch-icon" href="/static/logo.svg" />
-        <meta name="theme-color" content="#0a0e11" />
+        <meta name="theme-color" content="#f4f6f9" />
 
         <link rel="stylesheet" href="/static/css/base.css" />
         <link rel="stylesheet" href="/static/css/cheatsheet.css" />
     </head>
-    <body class="preload">
+    <body>
         <header class="site-header">
             <div class="site-header-inner">
-                <a href="/" class="header-link">
-                    <img src="/static/logo.svg" alt="" class="logo" />
-                    <span class="site-title">Rust Tool Index</span>
+                <a href="/" class="brand">
+                    <img src="/static/logo.svg" alt="" class="brand-logo" />
+                    <span class="brand-title">Rust Tool Index</span>
                 </a>
-                <div class="header-meta">
-                    {% if let Some(updated) = view.last_updated %}
-                    <span class="header-stat" title="Metrics last refreshed">
-                        metrics updated {{ updated }}
-                    </span>
-                    {% endif %}
-                    <span class="header-stat">{{ view.total }} tools</span>
-                    <a
-                        href="/api/v1/docs"
-                        class="header-stat header-stat-link"
-                        title="Machine-readable API"
-                        >API</a
+                <div class="search-wrap">
+                    <svg
+                        class="search-icon"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
                     >
-                </div>
-            </div>
-
-            <div class="filter-bar">
-                <div class="filter-bar-inner">
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
                     <input
                         type="search"
                         id="filter"
                         class="filter-input"
-                        placeholder="Filter {{ view.total }} tools — name, keyword, use case…"
+                        placeholder="Search {{ view.total }} tools…"
                         autocomplete="off"
                         autofocus
-                        aria-label="Filter tools"
+                        aria-label="Search tools"
                     />
-                    <label class="filter-toggle">
-                        <input type="checkbox" id="hide-deprecated" />
-                        <span>Hide deprecated</span>
-                    </label>
-                    <span class="filter-count" id="filter-count"></span>
                 </div>
-                <nav class="category-nav" aria-label="Categories">
+                <div class="header-meta">
+                    {% if let Some(updated) = view.last_updated %}
+                    <span class="header-stat" title="Metrics last refreshed"
+                        >updated {{ updated }}</span
+                    >
+                    {% endif %}
+                    <a href="/api/v1/docs" class="header-stat header-pill"
+                        >API</a
+                    >
+                </div>
+            </div>
+        </header>
+
+        <main class="catalog" id="catalog">
+            <div class="catalog-controls">
+                <nav class="category-nav" aria-label="Jump to category">
                     {% for cat in view.categories %}
                     <a
                         class="category-chip"
                         href="#cat-{{ cat.id }}"
                         data-cat="{{ cat.id }}"
-                        >{{ cat.name }}
-                        <span class="chip-count">{{ cat.count }}</span></a
                     >
+                        <svg class="chip-icon" aria-hidden="true">
+                            <use
+                                href="/static/icons/categories.svg#cat-{{ cat.id }}"
+                            ></use>
+                        </svg>
+                        {{ cat.name }}
+                        <span class="chip-count">{{ cat.count }}</span>
+                    </a>
                     {% endfor %}
                 </nav>
+                <label class="toggle">
+                    <input type="checkbox" id="hide-deprecated" />
+                    <span>Hide deprecated</span>
+                </label>
             </div>
-        </header>
 
-        <main class="catalog" id="catalog">
             {% for cat in view.categories %}
             <section
                 class="category"
@@ -88,90 +97,121 @@
                 data-cat="{{ cat.id }}"
             >
                 <div class="category-head">
+                    <span class="category-icon">
+                        <svg aria-hidden="true">
+                            <use
+                                href="/static/icons/categories.svg#cat-{{ cat.id }}"
+                            ></use>
+                        </svg>
+                    </span>
                     <h2 class="category-title">{{ cat.name }}</h2>
                     <span class="category-count">{{ cat.count }}</span>
                     <p class="category-desc">{{ cat.description }}</p>
                 </div>
 
-                <div class="tool-grid">
-                    {% for tool in cat.tools %}
-                    <article
-                        class="tool{% if tool.archived %} is-archived{% endif %}{% if tool.stale %} is-stale{% endif %}"
-                        id="tool-{{ tool.id }}"
-                        data-keywords="{{ tool.keywords }}"
-                        data-archived="{{ tool.archived }}"
-                    >
-                        <div class="tool-head">
-                            <h3 class="tool-name">{{ tool.name }}</h3>
-                            {% if tool.archived %}<span
-                                class="badge badge-deprecated"
-                                >deprecated</span
-                            >{% endif %} {% if tool.stale %}<span
-                                class="badge badge-stale"
-                                title="Metrics could not be refreshed"
-                                >stale</span
-                            >{% endif %}
-                            <div class="tool-metrics">
-                                {% if let Some(downloads) = tool.downloads
-                                %}<span
-                                    class="metric"
-                                    title="{% if let Some(full) = tool.downloads_full %}{{ full }} total downloads{% else %}recent downloads{% endif %}"
-                                    >&#x2193; {{ downloads }}</span
-                                >{% endif %} {% if let Some(stars) = tool.stars
-                                %}<span
-                                    class="metric"
-                                    title="GitHub/GitLab stars"
-                                    >&#9733; {{ stars }}</span
-                                >{% endif %} {% if let Some(activity) =
-                                tool.last_activity %}<span
-                                    class="metric metric-muted"
-                                    title="Last repository activity"
-                                    >{{ activity }}</span
-                                >{% endif %}
-                            </div>
-                        </div>
-
-                        <a
-                            class="tool-repo"
-                            href="{{ tool.repository }}"
-                            rel="noopener"
-                            >{{ tool.repo_label }}</a
-                        >
-
-                        <div class="tool-remarks">
-                            {{ tool.remarks_html|safe }}
-                        </div>
-
-                        <div class="tool-foot">
-                            {% if let Some(version) = tool.version %}<span
-                                class="tag tag-version"
-                                >v{{ version }}</span
-                            >{% endif %} {% if let Some(license) = tool.license
-                            %}<span class="tag">{{ license }}</span>{% endif %}
-                            {% if !tool.owners.is_empty() %}<span
-                                class="tag tag-maint"
-                                title="crates.io owners / maintainers"
-                                >&#128100; {{ tool.owners|join(", ") }}</span
-                            >{% endif %} {% if !tool.successors.is_empty()
-                            %}<span class="relation"
-                                >use instead: {% for s in tool.successors
-                                %}<span class="relation-tool">{{ s }}</span>{%
-                                endfor %}</span
-                            >{% else if !tool.alternatives.is_empty() %}<span
-                                class="relation"
-                                >alternatives: {% for a in tool.alternatives
-                                %}<span class="relation-tool">{{ a }}</span>{%
-                                endfor %}</span
-                            >{% endif %}
-                        </div>
-                    </article>
-                    {% endfor %}
+                <div class="table-wrap">
+                    <table class="tool-table">
+                        <thead>
+                            <tr>
+                                <th class="col-tool">Tool</th>
+                                <th class="col-notes">Notes</th>
+                                <th class="col-num">Downloads</th>
+                                <th class="col-num">Stars</th>
+                                <th class="col-num">Updated</th>
+                                <th class="col-status">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tool in cat.tools %}
+                            <tr
+                                class="tool{% if tool.archived %} is-archived{% endif %}"
+                                id="tool-{{ tool.id }}"
+                                data-keywords="{{ tool.keywords }}"
+                                data-archived="{{ tool.archived }}"
+                            >
+                                <td class="cell-tool">
+                                    <a
+                                        class="tool-name"
+                                        href="{{ tool.repository }}"
+                                        rel="noopener"
+                                        >{{ tool.name }}</a
+                                    >
+                                    <span class="tool-repo"
+                                        >{{ tool.repo_label }}</span
+                                    >
+                                    <span class="tool-tags">
+                                        {% if let Some(version) = tool.version
+                                        %}<span class="tag">v{{ version }}</span
+                                        >{% endif %} {% if let Some(license) =
+                                        tool.license %}<span class="tag"
+                                            >{{ license }}</span
+                                        >{% endif %}
+                                    </span>
+                                    {% if !tool.owners.is_empty() %}<span
+                                        class="tool-maint"
+                                        >by {{ tool.owners|join(", ") }}</span
+                                    >{% endif %}
+                                </td>
+                                <td class="cell-notes">
+                                    <div class="notes-body">
+                                        {{ tool.remarks_html|safe }}
+                                    </div>
+                                    {% if !tool.successors.is_empty() %}
+                                    <p class="relation">
+                                        <span class="relation-label"
+                                            >use instead</span
+                                        >
+                                        {% for s in tool.successors %}<span
+                                            class="relation-tool"
+                                            >{{ s }}</span
+                                        >{% endfor %}
+                                    </p>
+                                    {% else if !tool.alternatives.is_empty() %}
+                                    <p class="relation">
+                                        <span class="relation-label"
+                                            >alternatives</span
+                                        >
+                                        {% for a in tool.alternatives %}<span
+                                            class="relation-tool"
+                                            >{{ a }}</span
+                                        >{% endfor %}
+                                    </p>
+                                    {% endif %}
+                                </td>
+                                <td class="cell-num" data-label="Downloads">
+                                    {% if let Some(downloads) = tool.downloads
+                                    %}<span
+                                        title="{% if let Some(full) = tool.downloads_full %}{{ full }} total downloads{% else %}recent downloads{% endif %}"
+                                        >{{ downloads }}</span
+                                    >{% else %}<span class="muted">—</span>{%
+                                    endif %}
+                                </td>
+                                <td class="cell-num" data-label="Stars">
+                                    {% if let Some(stars) = tool.stars %}{{
+                                    stars }}{% else %}<span class="muted"
+                                        >—</span
+                                    >{% endif %}
+                                </td>
+                                <td class="cell-num" data-label="Updated">
+                                    {% if let Some(activity) =
+                                    tool.last_activity %}{{ activity }}{% else
+                                    %}<span class="muted">—</span>{% endif %}
+                                </td>
+                                <td class="cell-status" data-label="Status">
+                                    <span class="pill {{ tool.status_class }}"
+                                        >{{ tool.status_label }}</span
+                                    >
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </section>
             {% endfor %}
 
             <p class="no-results" id="no-results" hidden>
-                No tools match your filter.
+                No tools match your search.
             </p>
         </main>
 
@@ -201,15 +241,10 @@
             </div>
             <p class="footer-note">
                 Editorial notes are human-curated. Metrics are auto-refreshed
-                from the source forge and crates.io.
+                daily from the source forge and crates.io.
             </p>
         </footer>
 
         <script src="/static/js/filter.js" defer></script>
-        <script>
-            window.addEventListener("load", () =>
-                document.body.classList.remove("preload"),
-            );
-        </script>
     </body>
 </html>

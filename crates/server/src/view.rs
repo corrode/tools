@@ -52,8 +52,6 @@ pub(crate) struct ToolView {
     pub(crate) successors: Vec<String>,
     /// Whether the source repo is archived/deprecated.
     pub(crate) archived: bool,
-    /// Whether the last metric refresh failed.
-    pub(crate) stale: bool,
     /// Compact recent-downloads string (e.g. `1.2M`), if a published crate.
     pub(crate) downloads: Option<String>,
     /// Exact total downloads with thousands separators, for the tooltip.
@@ -68,6 +66,10 @@ pub(crate) struct ToolView {
     pub(crate) license: Option<String>,
     /// crates.io owners / maintainers.
     pub(crate) owners: Vec<String>,
+    /// Short status label for the pill (e.g. `Maintained`, `Deprecated`).
+    pub(crate) status_label: &'static str,
+    /// CSS modifier class for the status pill.
+    pub(crate) status_class: &'static str,
     /// Lowercased haystack for the client-side filter.
     pub(crate) keywords: String,
 }
@@ -136,6 +138,14 @@ impl ToolView {
             .or_else(|| metrics.and_then(|m| m.license.clone()));
         let owners = krate.map(|c| c.owners.clone()).unwrap_or_default();
 
+        let (status_label, status_class) = if tool.is_archived() {
+            ("Deprecated", "status-deprecated")
+        } else if tool.is_stale() {
+            ("Stale", "status-stale")
+        } else {
+            ("Maintained", "status-ok")
+        };
+
         let keywords = format!(
             "{} {} {} {}",
             tool.name.to_lowercase(),
@@ -153,7 +163,6 @@ impl ToolView {
             alternatives: tool.alternatives.clone(),
             successors: tool.successors.clone(),
             archived: tool.is_archived(),
-            stale: tool.is_stale(),
             downloads,
             downloads_full,
             stars,
@@ -161,6 +170,8 @@ impl ToolView {
             last_activity,
             license,
             owners,
+            status_label,
+            status_class,
             keywords,
         }
     }
