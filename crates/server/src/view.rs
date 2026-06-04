@@ -23,7 +23,7 @@ pub(crate) struct IndexView {
     pub(crate) last_updated: Option<String>,
     /// Distinct license families across the catalog, for the license filter.
     pub(crate) licenses: Vec<LicenseOption>,
-    /// Curated stacks, powering the `Stack` filter dropdown and its banner.
+    /// Curated stacks, powering the stack picker and its banner.
     pub(crate) stacks: Vec<StackInfo>,
 }
 
@@ -36,15 +36,15 @@ pub(crate) struct LicenseOption {
     pub(crate) label: String,
 }
 
-/// A curated stack as it appears on the index: one option in the `Stack`
-/// dropdown, plus the editorial payload rendered into its (hidden) banner and
-/// shown when that stack is the active filter.
+/// A curated stack as it appears on the index: one card in the stack picker,
+/// plus the editorial payload rendered into its (hidden) banner and shown when
+/// that stack is the active filter.
 #[derive(Debug)]
 pub(crate) struct StackInfo {
     /// Stack slug; matches each pick's `data-stacks` token and the `?stack=`
     /// query parameter.
     pub(crate) id: String,
-    /// Display name, shown in the dropdown and the banner heading.
+    /// Display name, shown on the stack card and the banner heading.
     pub(crate) name: String,
     /// One-line summary, shown under the banner heading.
     pub(crate) description: String,
@@ -205,7 +205,7 @@ impl IndexView {
             .map(|(value, label)| LicenseOption { value, label })
             .collect();
 
-        // Curated stacks: one dropdown option each, carrying the editorial
+        // Curated stacks: one picker card each, carrying the editorial
         // payload (intro + derived install line) for the in-page banner.
         let stacks = catalog
             .stacks()

@@ -15,6 +15,10 @@
   const stackFilter = document.getElementById("stack-filter");
   const stackBanners = Array.from(document.querySelectorAll(".stack-banner"));
   const stackNotes = Array.from(document.querySelectorAll(".stack-note"));
+  const stackCards = Array.from(
+    document.querySelectorAll(".stack-card[data-stack]"),
+  );
+  const categoryJump = document.getElementById("category-jump");
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
@@ -82,14 +86,17 @@
 
     sortRows(sortSelect.value);
 
-    // Hide category sections (and their nav chips) that have no visible tools.
+    // Hide category sections that end up empty, and disable their entry in the
+    // "Jump to category" menu so it can't scroll to nothing.
     for (const cat of categories) {
       const any = cat.querySelector(".tool:not([hidden])");
       cat.hidden = !any;
-      const chip = document.querySelector(
-        `.category-chip[data-cat="${cat.dataset.cat}"]`,
-      );
-      if (chip) chip.hidden = !any;
+      if (categoryJump) {
+        const opt = categoryJump.querySelector(
+          `option[value="cat-${cat.dataset.cat}"]`,
+        );
+        if (opt) opt.disabled = !any;
+      }
     }
 
     noResults.hidden = visible !== 0;
@@ -105,6 +112,9 @@
     }
     for (const note of stackNotes) {
       note.hidden = note.dataset.stack !== active;
+    }
+    for (const card of stackCards) {
+      card.setAttribute("aria-pressed", String(card.dataset.stack === active));
     }
   }
 
@@ -157,11 +167,23 @@
   recommendedOnly.addEventListener("change", apply);
   licenseFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
-  if (stackFilter) stackFilter.addEventListener("change", apply);
 
-  // The "In <stack>" chips and a banner's "Clear filter" button drive the same
-  // dropdown, filtering in place instead of navigating away.
+  // Stack selection flows through the hidden <select> (the single source of
+  // truth for the active stack, URL sync, and row filtering): the picker cards,
+  // the "In <stack>" row chips, and a banner's "Clear filter" button all just
+  // set its value and re-apply.
   document.addEventListener("click", (e) => {
+    // Picker chips toggle the stack on/off in place. We deliberately do NOT
+    // scroll: the chips sit at the top, the banner appears just below them, and
+    // scrolling would jump the page down out from under the user.
+    const card = e.target.closest(".stack-card[data-stack]");
+    if (card && stackFilter) {
+      e.preventDefault();
+      const id = card.dataset.stack;
+      stackFilter.value = stackFilter.value === id ? "" : id;
+      apply();
+      return;
+    }
     const chip = e.target.closest(".stack-chip[data-stack]");
     if (chip && stackFilter) {
       e.preventDefault();
@@ -176,6 +198,19 @@
       apply();
     }
   });
+
+  // "Jump to category" is pure navigation: scroll to the chosen section, then
+  // reset so the control always reads "Category…".
+  if (categoryJump) {
+    categoryJump.addEventListener("change", () => {
+      const id = categoryJump.value;
+      const section = id && document.getElementById(id);
+      if (section && !section.hidden) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      categoryJump.value = "";
+    });
+  }
 
   // Allow `/` to focus the filter from anywhere.
   document.addEventListener("keydown", (e) => {

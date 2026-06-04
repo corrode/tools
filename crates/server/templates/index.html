@@ -66,24 +66,39 @@
         </header>
 
         <main class="catalog" id="catalog">
-            <div class="catalog-controls">
-                <nav class="category-nav" aria-label="Jump to category">
-                    {% for cat in view.categories %}
-                    <a
-                        class="category-chip"
-                        href="#cat-{{ cat.id }}"
-                        data-cat="{{ cat.id }}"
+            {% if !view.stacks.is_empty() %}
+            <section class="stack-picker" aria-label="Curated stacks">
+                <div class="stack-picker-head">
+                    <h2 class="stack-picker-title">Start with a stack</h2>
+                    <p class="stack-picker-sub">
+                        Curated tool sets for a use case — pick one to filter the
+                        index.
+                    </p>
+                </div>
+                <div class="stack-cards">
+                    {% for stack in view.stacks %}
+                    <button
+                        type="button"
+                        class="stack-card{% if stack.id == "essentials" %} stack-card--featured{% endif %}"
+                        data-stack="{{ stack.id }}"
+                        aria-pressed="false"
                     >
-                        <svg class="chip-icon" aria-hidden="true">
-                            <use
-                                href="/static/icons/categories.svg#cat-{{ cat.id }}"
-                            ></use>
-                        </svg>
-                        {{ cat.name }}
-                        <span class="chip-count">{{ cat.count }}</span>
-                    </a>
+                        {% if stack.id == "essentials" %}<span class="stack-card-star" aria-hidden="true">★</span>{% endif %}
+                        <span class="stack-card-name">{{ stack.name }}</span>
+                        <span class="stack-card-count">{{ stack.count }}</span>
+                    </button>
                     {% endfor %}
-                </nav>
+                </div>
+                <select id="stack-filter" hidden>
+                    <option value="">All tools</option>
+                    {% for stack in view.stacks %}
+                    <option value="{{ stack.id }}">{{ stack.name }}</option>
+                    {% endfor %}
+                </select>
+            </section>
+            {% endif %}
+
+            <div class="catalog-controls">
                 <div class="filter-controls">
                     <label class="toggle">
                         <input type="checkbox" id="hide-deprecated" />
@@ -92,6 +107,18 @@
                     <label class="toggle toggle-pick">
                         <input type="checkbox" id="recommended-only" />
                         <span>Recommended only</span>
+                    </label>
+                    <span class="filter-spacer"></span>
+                    <label class="select-filter">
+                        <span class="select-filter-label">Jump to</span>
+                        <select id="category-jump" aria-label="Jump to category">
+                            <option value="">Category…</option>
+                            {% for cat in view.categories %}
+                            <option value="cat-{{ cat.id }}">
+                                {{ cat.name }} ({{ cat.count }})
+                            </option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label class="select-filter">
                         <span class="select-filter-label">Sort</span>
@@ -118,19 +145,6 @@
                             {% endfor %}
                         </select>
                     </label>
-                    {% if !view.stacks.is_empty() %}
-                    <label class="select-filter select-filter-stack">
-                        <span class="select-filter-label">Stack</span>
-                        <select id="stack-filter" aria-label="Filter by stack">
-                            <option value="">All tools</option>
-                            {% for stack in view.stacks %}
-                            <option value="{{ stack.id }}">
-                                {{ stack.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    {% endif %}
                 </div>
             </div>
 

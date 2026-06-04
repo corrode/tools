@@ -105,8 +105,8 @@ tool = "cargo-nextest"
 ```
 
 `cargo test` checks that every `pick.tool` resolves to a known tool and that
-stack ids are unique. Stacks surface on the index as the green **Stack** dropdown
-(rightmost in the filter row): pick one and the page narrows to its tools. The
+stack ids are unique. Stacks surface on the index as the **Curated stacks**
+picker at the top of the page: pick a card and the page narrows to its tools. The
 stack's `intro` and a derived `cargo install` line show in a banner, and each
 pick's `note` appears inline on its tool's row. The install command is built
 automatically from the picks that ship an installable binary; toolchain
