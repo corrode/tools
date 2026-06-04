@@ -1,96 +1,86 @@
 # Rust Tool Index
 
-A dense, curated reference of Rust development tooling, served at
-[tools.corrode.dev](https://tools.corrode.dev). For every tool it shows the
-editorial "what it's for / when not to use it" notes plus live, machine-refreshed
-metrics — downloads, stars, last activity, license, maintainers — so you can tell
-at a glance whether a tool is relevant and maintained. Archived tools are kept but
-clearly marked **deprecated** and linked to their successors.
+A curated guide to Rust development tooling, live at
+[tools.corrode.dev](https://tools.corrode.dev).
+
+For each tool you get an honest, hand-written take — what it's good at and when
+*not* to reach for it — next to fresh numbers: downloads, stars, last activity,
+license, maintainers. Deprecated tools stay listed, clearly marked, and point you
+to what to use instead.
 
 ## How it works
 
-The catalog is just **TOML files in `data/`** — there is no database. The server
-loads them into memory at startup and renders one dense page, a JSON API, and an
-LLM feed.
+There's no database. The catalog is just TOML files in `data/`, loaded into memory
+when the server starts. Every tool file has two halves:
 
-Each tool file mixes two ownership layers:
-
-- **Human-owned** editorial fields (`name`, `repository`, `category`, `remarks`,
-  `alternatives`, `successors`). Humans only ever edit these.
-- A **bot-owned** `[metrics]` table refreshed daily by the `generator` from the
-  source forge (GitHub/GitLab/Codeberg) and crates.io. A GitHub Action opens a
-  single rolling PR with the changes for human review — it never touches the
-  prose.
+- **The prose** (`name`, `repository`, `category`, `remarks`, `alternatives`,
+  `successors`) — written and owned by humans.
+- **The `[metrics]`** — refreshed daily by the `generator`, which pulls from the
+  source forge and crates.io and opens a single rolling PR for review. It never
+  touches your words.
 
 ```text
 data/
-  categories.toml        # controlled category vocabulary (validated in CI)
-  tools/<id>.toml        # one file per tool
+  categories.toml     # the allowed categories (CI checks every tool against it)
+  tools/<id>.toml     # one file per tool
 crates/
-  types/                 # data model + loading + validation (the Catalog)
-  server/                # axum + askama site, /api/v1 JSON API, /llms.txt
-  generator/             # metric refresher (forge + crates.io -> [metrics])
-scripts/                 # throwaway crates.io discovery helpers
+  types/              # the data model: loading + validation
+  server/             # the site, JSON API, and /llms.txt (axum + askama)
+  generator/          # the daily metrics refresher
+scripts/              # helpers for finding new tools
 ```
 
-## Running locally
+## Running it
 
 ```sh
-cargo run -p server          # serves http://localhost:3000
+cargo run -p server          # http://localhost:3000
 ```
 
-Refresh metrics into the TOML files (writes the `[metrics]` tables in place):
+Data is read once at startup, so restart to pick up changes.
+
+To refresh metrics in place:
 
 ```sh
-cargo run -p generator -- --data-dir data
-# or a single tool:
-cargo run -p generator -- --only cargo-nextest
+cargo run -p generator -- --data-dir data        # everything
+cargo run -p generator -- --only cargo-nextest   # just one
 ```
-
-The server loads data once at startup; restart it to pick up changes.
 
 ## Adding a tool
 
-1. Create `data/tools/<id>.toml` with the human-owned fields:
+Drop a file in `data/tools/<id>.toml`:
 
-   ```toml
-   id = "cargo-nextest"
-   name = "cargo-nextest"
-   repository = "https://github.com/nextest-rs/nextest"
-   category = "testing"              # must exist in data/categories.toml
-   crate = "cargo-nextest"           # optional: crates.io crate name
+```toml
+id = "cargo-nextest"
+name = "cargo-nextest"
+repository = "https://github.com/nextest-rs/nextest"
+category = "testing"          # must exist in data/categories.toml
+crate = "cargo-nextest"       # optional, for crates.io metrics
 
-   remarks = """
-   What it does, when to reach for it, and — crucially — when *not* to.
-   """
+remarks = """
+What it does, when to reach for it, and — just as important — when not to.
+"""
 
-   alternatives = ["cargo test (built-in)"]
-   # For a deprecated tool, point at its replacements instead:
-   # successors = ["bacon", "watchexec"]
-   ```
+alternatives = ["cargo test (built-in)"]
+# Deprecated instead? Point at the replacements:
+# successors = ["bacon", "watchexec"]
+```
 
-2. Run the generator to populate `[metrics]`.
-3. `cargo test` validates that every `category` exists and ids are unique.
+Then run the generator to fill in `[metrics]`, and `cargo test` to check the
+category exists and the id is unique. The `scripts/` helpers can speed up finding
+candidates.
 
-The `scripts/` helpers (`discover.sh`, `crate_info.sh`) speed up finding
-candidates and their crate facts.
+## API
 
-## API & LLM access
+Everything is public and read-only:
 
-All read-only and public:
+- `GET /api/v1/tools` — the whole catalog as JSON
+- `GET /api/v1/tools/{id}` — a single tool
+- `GET /api/v1/docs` — Swagger UI (`/api/v1/openapi.json` for the raw spec)
+- `GET /llms.txt` — the index as plain text, ready to paste into an LLM
 
-- `GET /api/v1/tools` — the full machine-readable catalog (JSON).
-- `GET /api/v1/tools/{id}` — a single tool.
-- `GET /api/v1/openapi.json` and `GET /api/v1/docs` — OpenAPI spec + Swagger UI.
-- `GET /llms.txt` — a flat, token-efficient plaintext rendering of the whole
-  index for pasting into an LLM context.
+## Deploying
 
-## Deployment
-
-`docker.yml` builds a minimal static image (just the `server` binary plus the
-baked-in `data/` and `static/`), pushes it to ghcr.io, and triggers a Coolify
-redeploy. Because the data is baked in at build time, the running container makes
-no external API calls. Merging a metrics PR rebuilds and redeploys automatically.
-
-> The Coolify deploy `uuid` in `docker.yml` is a placeholder until the app is
-> created.
+`docker.yml` bakes the `server` binary together with `data/` and `static/` into a
+small image, pushes it to ghcr.io, and triggers a Coolify redeploy. Since the data
+ships inside the image, the running container makes no external calls — and merging
+a metrics PR redeploys automatically.
