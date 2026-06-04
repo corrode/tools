@@ -1,0 +1,77 @@
+# =============================================================================
+# Controlled category vocabulary for the Rust Tool Index.
+#
+# Every tool in `data/tools/*.toml` must reference one of these ids in its
+# `category` field. The order here is the order categories render on the page.
+# Adding a category? Pick a short, stable `id` (a slug) and a friendly `name`.
+# =============================================================================
+
+[[category]]
+id = "toolchain"
+name = "Toolchain & Version Management"
+description = "Installing, switching, and managing Rust toolchains and components."
+
+[[category]]
+id = "build"
+name = "Build & Compilation"
+description = "Speeding up, caching, and customizing the build itself."
+
+[[category]]
+id = "cargo-extensions"
+name = "Cargo Extensions"
+description = "General-purpose cargo subcommands that smooth day-to-day workflows."
+
+[[category]]
+id = "dependencies"
+name = "Dependency Management"
+description = "Inspecting, updating, auditing, and pruning your dependency tree."
+
+[[category]]
+id = "testing"
+name = "Testing & Coverage"
+description = "Test runners, coverage, property testing, fuzzing, and snapshots."
+
+[[category]]
+id = "linting"
+name = "Linting & Correctness"
+description = "Catching bugs, anti-patterns, and style issues before review."
+
+[[category]]
+id = "formatting"
+name = "Formatting"
+description = "Consistent, automatic code and config formatting."
+
+[[category]]
+id = "security"
+name = "Security & Supply Chain"
+description = "Vulnerability scanning, license/policy enforcement, and audits."
+
+[[category]]
+id = "performance"
+name = "Performance & Profiling"
+description = "Benchmarking, profiling, and finding what's slow."
+
+[[category]]
+id = "debugging"
+name = "Debugging & Diagnostics"
+description = "Debuggers, expansion, and understanding what the compiler sees."
+
+[[category]]
+id = "docs"
+name = "Documentation"
+description = "Writing, testing, and publishing documentation."
+
+[[category]]
+id = "release"
+name = "Release & Publishing"
+description = "Versioning, changelogs, and shipping crates and binaries."
+
+[[category]]
+id = "cross-platform"
+name = "Cross-Compilation & Targets"
+description = "Building for other platforms, embedded, and WebAssembly."
+
+[[category]]
+id = "productivity"
+name = "Editor & Productivity"
+description = "Language servers, watchers, and general developer ergonomics."

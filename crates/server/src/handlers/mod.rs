@@ -1,11 +1,9 @@
+//! HTTP handlers for the HTML site and the `/llms.txt` feed.
+
 mod index;
+mod llms;
 mod not_found;
-mod search;
-mod stats;
-mod suggestions;
 
 pub(crate) use index::index;
+pub(crate) use llms::llms_txt;
 pub(crate) use not_found::not_found;
-pub(crate) use search::search;
-pub(crate) use stats::stats;
-pub(crate) use suggestions::suggestions;

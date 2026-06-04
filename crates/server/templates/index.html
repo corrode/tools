@@ -3,328 +3,213 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Rust Search</title>
-        <meta name="description" content="Find the best content on Rust, curated by the community; a search engine for Rustaceans." />
+        <title>Rust Tool Index</title>
+        <meta
+            name="description"
+            content="A dense, curated reference of Rust development tooling — with live download counts, stars, activity, and guidance on when (not) to use each tool."
+        />
 
-        <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://search.corrode.dev/" />
-        <meta property="og:title" content="Rust Search" />
-        <meta property="og:description" content="Find the best content on Rust, curated by the community; a search engine for Rustaceans." />
-        <meta property="og:image" content="https://search.corrode.dev/static/og-image.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Rust Search — search.corrode.dev" />
-
-        <!-- Twitter -->
+        <meta property="og:url" content="https://tools.corrode.dev/" />
+        <meta property="og:title" content="Rust Tool Index" />
+        <meta
+            property="og:description"
+            content="A dense, curated reference of Rust development tooling."
+        />
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://search.corrode.dev/" />
-        <meta property="twitter:title" content="Rust Search" />
-        <meta property="twitter:description" content="Find the best content on Rust, curated by the community; a search engine for Rustaceans." />
-        <meta property="twitter:image" content="https://search.corrode.dev/static/og-image.png" />
+        <meta property="twitter:title" content="Rust Tool Index" />
 
         <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
-        <link rel="alternate icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/static/logo.svg" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="search" type="application/opensearchdescription+xml" title="Rust Search" href="/opensearch.xml" />
         <meta name="theme-color" content="#0a0e11" />
 
         <link rel="stylesheet" href="/static/css/base.css" />
-        <link rel="stylesheet" href="/static/css/index.css" />
-        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-        <style>
-            .suggestions-container {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                z-index: 100;
-                margin-top: 4px;
-                background-color: var(--color-surface);
-                border: 1px solid var(--color-border);
-                border-radius: 6px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                overflow: hidden;
-            }
-            .suggestions-container:empty {
-                display: none;
-                border: none;
-                box-shadow: none;
-            }
-            .suggestions-list {
-                list-style: none;
-                margin: 0;
-                padding: 0;
-            }
-            .suggestion-item {
-                padding: 10px 20px;
-                cursor: pointer;
-                font-size: 0.95rem;
-                color: var(--color-text);
-                transition: background-color 0.1s ease;
-            }
-            .suggestion-item:hover,
-            .suggestion-item:focus {
-                background-color: rgba(72, 213, 151, 0.1);
-                outline: none;
-            }
-
-            /* Visually mark the submit button as unavailable while the
-               input is empty. The `onsubmit` guard and the htmx trigger
-               condition still block any actual no-op request even on
-               browsers without :has() support, so this is a progressive
-               enhancement only. */
-            .search-container:has(#search:placeholder-shown) .search-icon {
-                opacity: 0.4;
-                cursor: not-allowed;
-            }
-        </style>
+        <link rel="stylesheet" href="/static/css/cheatsheet.css" />
     </head>
     <body class="preload">
-        <!-- Hero pattern background -->
-        <div class="hero-pattern"></div>
-
-        <div class="container">
-            <header>
-                <h1>
-                    <a href="/" class="header-link">
-                        <img src="/static/logo.svg" alt="" class="logo" />
-                        Rust Search
-                    </a>
-                </h1>
-                <div class="subtitle">
-                    Find the best content on Rust, curated by the community; a
-                    search engine for Rustaceans.
-                </div>
-            </header>
-
-            <form
-                action="/search"
-                method="GET"
-                class="search-container"
-                hx-get="/search"
-                hx-target="#results-container"
-                hx-swap="outerHTML"
-                hx-push-url="true"
-                hx-indicator=".search-icon"
-                hx-trigger="submit[document.getElementById('search').value.trim().length>0], input from:#search delay:500ms[document.getElementById('search').value.trim().length>0]"
-                onsubmit="if (!document.getElementById('search').value.trim()) { event.preventDefault(); document.getElementById('search').focus(); return false; }"
-            >
-                <div class="search-input-wrapper">
-                    <input
-                        type="search"
-                        id="search"
-                        name="q"
-                        value="{{ query.as_deref().unwrap_or("") }}"
-                        placeholder="Search for Rust content (e.g., 'async', 'macros', 'embedded')"
-                        autofocus
-                        autocomplete="off"
-                        hx-get="/suggestions"
-                        hx-trigger="input changed delay:150ms[this.value.trim().length>=2]"
-                        hx-target="#suggestions-container"
-                        hx-swap="innerHTML"
-                        hx-params="q"
-                        hx-sync="this:replace"
-                    />
-                    <div id="suggestions-container" class="suggestions-container"></div>
-                    <button
-                        type="button"
-                        class="search-clear"
-                        aria-label="Clear search"
-                        tabindex="-1"
-                        onclick="clearSearch()"
+        <header class="site-header">
+            <div class="site-header-inner">
+                <a href="/" class="header-link">
+                    <img src="/static/logo.svg" alt="" class="logo" />
+                    <span class="site-title">Rust Tool Index</span>
+                </a>
+                <div class="header-meta">
+                    {% if let Some(updated) = view.last_updated %}
+                    <span class="header-stat" title="Metrics last refreshed">
+                        metrics updated {{ updated }}
+                    </span>
+                    {% endif %}
+                    <span class="header-stat">{{ view.total }} tools</span>
+                    <a
+                        href="/api/v1/docs"
+                        class="header-stat header-stat-link"
+                        title="Machine-readable API"
+                        >API</a
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            width="18"
-                            height="18"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
-                    <button
-                        type="submit"
-                        class="search-icon"
-                        style="background: transparent; border: none; padding: 0; cursor: pointer; pointer-events: auto;"
-                        aria-label="Search"
-                        onclick="setTimeout(() => document.getElementById('search').blur(), 50);"
-                    >
-                        <svg
-                            class="search-icon-glass"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            width="20"
-                            height="20"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                        <svg
-                            class="search-icon-spinner"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            width="20"
-                            height="20"
-                            style="display: none; animation: spin 1s linear infinite;"
-                        >
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle>
-                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <style>
-                            @keyframes spin { to { transform: rotate(360deg); } }
-                            .htmx-request.search-icon .search-icon-glass { display: none !important; }
-                            .htmx-request.search-icon .search-icon-spinner { display: block !important; }
-                        </style>
-                    </button>
-                </div>
-
-                <!-- Hidden input for content type filter -->
-                <input type="hidden" id="content-type" {% if let Some(content_type) = content_type %}name="type" value="{{ content_type }}"{% endif %} />
-                <input type="hidden" id="start-year" {% if let Some(start_year) = start_year %}name="start-year" value="{{ start_year }}"{% endif %} />
-                <input type="hidden" id="end-year" {% if let Some(end_year) = end_year %}name="end-year" value="{{ end_year }}"{% endif %} />
-                <input type="hidden" id="sort-by" {% if let Some(sort_by) = sort_by %}name="sort-by" value="{{ sort_by }}"{% endif %} />
-            </form>
-
-            {% include "results.html" %}
-        </div>
-
-        <footer>
-            <div class="footer-container">
-                <div class="footer-links">
-                    <a href="/stats" class="footer-link">Statistics</a>
-                    <a href="https://github.com/corrode/search-feedback/issues/new/choose" class="footer-link">Report an issue</a>
-                    <a href="https://corrode.dev/blog/idiomatic-rust-resources/" class="footer-link">Idiomatic Rust Resources</a>
-                </div>
-                <div class="footer-section">
-                    <a href="https://corrode.dev" aria-label="corrode.dev">
-                        <img src="/static/corrode.svg" alt="Corrode" class="footer-logo" />
-                    </a>
                 </div>
             </div>
+
+            <div class="filter-bar">
+                <div class="filter-bar-inner">
+                    <input
+                        type="search"
+                        id="filter"
+                        class="filter-input"
+                        placeholder="Filter {{ view.total }} tools — name, keyword, use case…"
+                        autocomplete="off"
+                        autofocus
+                        aria-label="Filter tools"
+                    />
+                    <label class="filter-toggle">
+                        <input type="checkbox" id="hide-deprecated" />
+                        <span>Hide deprecated</span>
+                    </label>
+                    <span class="filter-count" id="filter-count"></span>
+                </div>
+                <nav class="category-nav" aria-label="Categories">
+                    {% for cat in view.categories %}
+                    <a
+                        class="category-chip"
+                        href="#cat-{{ cat.id }}"
+                        data-cat="{{ cat.id }}"
+                        >{{ cat.name }}
+                        <span class="chip-count">{{ cat.count }}</span></a
+                    >
+                    {% endfor %}
+                </nav>
+            </div>
+        </header>
+
+        <main class="catalog" id="catalog">
+            {% for cat in view.categories %}
+            <section
+                class="category"
+                id="cat-{{ cat.id }}"
+                data-cat="{{ cat.id }}"
+            >
+                <div class="category-head">
+                    <h2 class="category-title">{{ cat.name }}</h2>
+                    <span class="category-count">{{ cat.count }}</span>
+                    <p class="category-desc">{{ cat.description }}</p>
+                </div>
+
+                <div class="tool-grid">
+                    {% for tool in cat.tools %}
+                    <article
+                        class="tool{% if tool.archived %} is-archived{% endif %}{% if tool.stale %} is-stale{% endif %}"
+                        id="tool-{{ tool.id }}"
+                        data-keywords="{{ tool.keywords }}"
+                        data-archived="{{ tool.archived }}"
+                    >
+                        <div class="tool-head">
+                            <h3 class="tool-name">{{ tool.name }}</h3>
+                            {% if tool.archived %}<span
+                                class="badge badge-deprecated"
+                                >deprecated</span
+                            >{% endif %} {% if tool.stale %}<span
+                                class="badge badge-stale"
+                                title="Metrics could not be refreshed"
+                                >stale</span
+                            >{% endif %}
+                            <div class="tool-metrics">
+                                {% if let Some(downloads) = tool.downloads
+                                %}<span
+                                    class="metric"
+                                    title="{% if let Some(full) = tool.downloads_full %}{{ full }} total downloads{% else %}recent downloads{% endif %}"
+                                    >&#x2193; {{ downloads }}</span
+                                >{% endif %} {% if let Some(stars) = tool.stars
+                                %}<span
+                                    class="metric"
+                                    title="GitHub/GitLab stars"
+                                    >&#9733; {{ stars }}</span
+                                >{% endif %} {% if let Some(activity) =
+                                tool.last_activity %}<span
+                                    class="metric metric-muted"
+                                    title="Last repository activity"
+                                    >{{ activity }}</span
+                                >{% endif %}
+                            </div>
+                        </div>
+
+                        <a
+                            class="tool-repo"
+                            href="{{ tool.repository }}"
+                            rel="noopener"
+                            >{{ tool.repo_label }}</a
+                        >
+
+                        <div class="tool-remarks">
+                            {{ tool.remarks_html|safe }}
+                        </div>
+
+                        <div class="tool-foot">
+                            {% if let Some(version) = tool.version %}<span
+                                class="tag tag-version"
+                                >v{{ version }}</span
+                            >{% endif %} {% if let Some(license) = tool.license
+                            %}<span class="tag">{{ license }}</span>{% endif %}
+                            {% if !tool.owners.is_empty() %}<span
+                                class="tag tag-maint"
+                                title="crates.io owners / maintainers"
+                                >&#128100; {{ tool.owners|join(", ") }}</span
+                            >{% endif %} {% if !tool.successors.is_empty()
+                            %}<span class="relation"
+                                >use instead: {% for s in tool.successors
+                                %}<span class="relation-tool">{{ s }}</span>{%
+                                endfor %}</span
+                            >{% else if !tool.alternatives.is_empty() %}<span
+                                class="relation"
+                                >alternatives: {% for a in tool.alternatives
+                                %}<span class="relation-tool">{{ a }}</span>{%
+                                endfor %}</span
+                            >{% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+
+            <p class="no-results" id="no-results" hidden>
+                No tools match your filter.
+            </p>
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div class="footer-links">
+                    <a href="/api/v1/docs">API</a>
+                    <a href="/llms.txt">llms.txt</a>
+                    <a href="https://github.com/corrode/tools"
+                        >Source &amp; data</a
+                    >
+                    <a href="https://corrode.dev/blog/idiomatic-rust-resources/"
+                        >Idiomatic Rust Resources</a
+                    >
+                </div>
+                <a
+                    href="https://corrode.dev"
+                    aria-label="corrode.dev"
+                    class="footer-brand"
+                >
+                    <img
+                        src="/static/corrode.svg"
+                        alt="corrode"
+                        class="footer-logo"
+                    />
+                </a>
+            </div>
+            <p class="footer-note">
+                Editorial notes are human-curated. Metrics are auto-refreshed
+                from the source forge and crates.io.
+            </p>
         </footer>
 
-        {% include "customize.html" %}
-
+        <script src="/static/js/filter.js" defer></script>
         <script>
-            // Remove preload class after page is fully loaded to prevent flicker
-            window.addEventListener("load", () => {
-                document.body.classList.remove("preload");
-            });
-
-            // ----------------------------------------------------------
-            // Suggestions dropdown
-            //
-            // The fetching + rendering is done by htmx itself (see the
-            // `hx-get="/suggestions"` attributes on the search input). The
-            // server returns an HTML fragment whose <li> items are also
-            // htmx-driven: clicking one fires `GET /search` with `q`
-            // overridden to the suggested phrase and inherits the other
-            // form filters (`type`, `start-year`, ...).
-            //
-            // This script only handles the UX pieces htmx can't:
-            //   - `applySuggestion()` syncs the visible input value and
-            //     closes the dropdown after a pick (invoked by each <li>'s
-            //     `hx-on::after-request`).
-            //   - keyboard navigation between the input and the items.
-            //   - clearing the dropdown on outside-click or `Escape`.
-            // ----------------------------------------------------------
-
-            function applySuggestion(phrase) {
-                const input = document.getElementById('search');
-                const container = document.getElementById('suggestions-container');
-                input.value = phrase;
-                if (container) container.innerHTML = '';
-                // Drop focus so the mobile keyboard hides and the dropdown
-                // doesn't immediately get re-rendered by an `input` event.
-                input.blur();
-            }
-
-            // Clear the search box from the X button. Matches the pattern
-            // used by Google/DDG/GitHub: empty the input, close the
-            // suggestion dropdown, and put focus back on the input so the
-            // user can immediately type a new query. Leaves any already-
-            // rendered results untouched.
-            function clearSearch() {
-                const input = document.getElementById('search');
-                const container = document.getElementById('suggestions-container');
-                input.value = '';
-                if (container) container.innerHTML = '';
-                input.focus();
-            }
-
-            // Keyboard shortcuts & suggestions navigation
-            document.addEventListener('keydown', function(e) {
-                const searchInput = document.getElementById('search');
-                const container = document.getElementById('suggestions-container');
-                const items = container ? Array.from(container.querySelectorAll('.suggestion-item')) : [];
-
-                // Focus search on '/' or 'Cmd/Ctrl + K'
-                if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement !== searchInput) {
-                    e.preventDefault();
-                    searchInput.focus();
-                    return;
-                }
-
-                if (document.activeElement === searchInput || items.includes(document.activeElement)) {
-                    if (e.key === 'Escape') {
-                        e.preventDefault();
-                        if (container) container.innerHTML = '';
-                        searchInput.blur();
-                    } else if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        if (items.length > 0) {
-                            const currentIndex = items.indexOf(document.activeElement);
-                            const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-                            items[nextIndex].focus();
-                        }
-                    } else if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        if (items.length > 0) {
-                            const currentIndex = items.indexOf(document.activeElement);
-                            const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-                            if (currentIndex === -1) {
-                                items[items.length - 1].focus();
-                            } else {
-                                items[prevIndex].focus();
-                            }
-                        }
-                    } else if (e.key === 'Enter' && document.activeElement === searchInput) {
-                        // Enter on the input submits the form (handled by the
-                        // browser); just clear the dropdown so it doesn't
-                        // hover over the freshly-loaded results, and drop
-                        // focus so the mobile keyboard hides.
-                        if (container) container.innerHTML = '';
-                        setTimeout(() => searchInput.blur(), 50);
-                    }
-                    // Enter on a focused suggestion <li> is handled by htmx
-                    // (`hx-trigger="click, keyup[key=='Enter']"`).
-                }
-            });
-
-            // Close the dropdown on any click outside the input + container.
-            document.addEventListener('click', function(e) {
-                const container = document.getElementById('suggestions-container');
-                const searchInput = document.getElementById('search');
-                if (container && !container.contains(e.target) && e.target !== searchInput) {
-                    container.innerHTML = '';
-                }
-            });
+            window.addEventListener("load", () =>
+                document.body.classList.remove("preload"),
+            );
         </script>
     </body>
 </html>

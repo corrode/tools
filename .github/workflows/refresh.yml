@@ -1,0 +1,47 @@
+name: Refresh metrics
+
+# Daily refresh of the bot-owned `[metrics]` tables from the source forges and
+# crates.io. Never commits to `main`: it opens (or updates) a single rolling PR
+# for human review. Editorial prose is never touched.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    name: Refresh tool metrics
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Refresh metrics
+        env:
+          # Raises the GitHub API rate limit from 60 to 5000 req/hr.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo run --release -p generator -- --data-dir data
+
+      - name: Open or update pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/refresh-metrics
+          delete-branch: false
+          commit-message: "chore: refresh tool metrics"
+          title: "chore: refresh tool metrics"
+          labels: automated
+          body: |
+            Automated daily refresh of the bot-owned `[metrics]` tables from the
+            source forges (GitHub/GitLab/Codeberg) and crates.io.
+
+            Only the `[metrics]` tables change — human-authored editorial fields
+            (`remarks`, `alternatives`, `successors`, …) are never modified.
+
+            Review the diff and merge to publish. Merging rebuilds the image and
+            triggers a redeploy.

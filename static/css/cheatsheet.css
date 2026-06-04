@@ -1,0 +1,544 @@
+/* =============================================================================
+   Rust Tool Index — dense reference layout.
+
+   Builds on base.css (color tokens, fonts, reset). The aesthetic: rich shades
+   of grey, soft borders, a fixed friendly header with a sticky filter bar,
+   bold category headlines, and a tidy multi-column grid of compact tool cards.
+   ============================================================================= */
+
+:root {
+    --grey-1: #0a0e11; /* page background        */
+    --grey-2: #0f1317; /* card / header surface  */
+    --grey-3: #151a1f; /* raised surface         */
+    --grey-4: #1c2228; /* hover / chips          */
+    --grey-line: #20262d; /* hairline borders     */
+    --grey-line-soft: #181d22;
+    --text-strong: #f2f4f6;
+    --text: #c9ced4;
+    --text-dim: #8a929b;
+    --text-faint: #5f6770;
+    --max-width: 1240px;
+}
+
+body {
+    background-color: var(--grey-1);
+    color: var(--text);
+    display: block;
+    min-height: 100vh;
+}
+
+/* ----------------------------------------------------------------- Header -- */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(10, 14, 17, 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--grey-line);
+    text-align: left;
+    margin: 0;
+}
+
+.site-header-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.site-header .header-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.site-header .logo {
+    width: 26px;
+    height: 26px;
+}
+
+.site-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-strong);
+    white-space: nowrap;
+}
+
+.header-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+}
+
+.header-stat {
+    white-space: nowrap;
+}
+
+.header-stat-link {
+    color: var(--text-dim);
+    border: 1px solid var(--grey-line);
+    border-radius: 5px;
+    padding: 3px 9px;
+    font-weight: 500;
+}
+
+.header-stat-link:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------- Filter bar -- */
+
+.filter-bar {
+    border-top: 1px solid var(--grey-line-soft);
+    background-color: rgba(15, 19, 23, 0.6);
+}
+
+.filter-bar-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.filter-input {
+    flex: 1;
+    min-width: 0;
+    background-color: var(--grey-3);
+    border: 1px solid var(--grey-line);
+    border-radius: 8px;
+    color: var(--text-strong);
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    font-family: inherit;
+}
+
+.filter-input::placeholder {
+    color: var(--text-faint);
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(72, 213, 151, 0.12);
+}
+
+.filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.filter-toggle input {
+    accent-color: var(--color-primary);
+}
+
+.filter-count {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    white-space: nowrap;
+    min-width: 64px;
+    text-align: right;
+}
+
+.category-nav {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 28px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    background-color: var(--grey-3);
+    border: 1px solid var(--grey-line);
+    border-radius: 999px;
+    padding: 4px 11px;
+    transition: all 0.12s ease;
+}
+
+.category-chip:hover {
+    color: var(--text-strong);
+    border-color: var(--text-faint);
+    opacity: 1;
+}
+
+.chip-count {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- Catalog -- */
+
+.catalog {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 36px 28px 80px;
+}
+
+.category {
+    margin-bottom: 48px;
+    scroll-margin-top: 150px;
+}
+
+.category-head {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--grey-line);
+}
+
+.category-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    letter-spacing: -0.01em;
+    margin: 0;
+    display: inline;
+}
+
+.category-count {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    background-color: var(--grey-3);
+    border: 1px solid var(--grey-line);
+    border-radius: 999px;
+    padding: 1px 9px;
+}
+
+.category-desc {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin: 0;
+    text-align: right;
+}
+
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 14px;
+}
+
+/* ------------------------------------------------------------ Tool card --- */
+
+.tool {
+    background-color: var(--grey-2);
+    border: 1px solid var(--grey-line);
+    border-radius: 10px;
+    padding: 15px 17px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    transition:
+        border-color 0.12s ease,
+        background-color 0.12s ease;
+}
+
+.tool:hover {
+    border-color: #2c343c;
+    background-color: var(--grey-3);
+}
+
+.tool:target {
+    border-color: var(--color-primary);
+}
+
+.tool-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.tool-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    margin: 0;
+    font-family: inherit;
+    display: inline;
+}
+
+.tool-metrics {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+
+.metric {
+    white-space: nowrap;
+}
+
+.metric-muted {
+    color: var(--text-faint);
+}
+
+.tool-repo {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    word-break: break-all;
+    margin-top: -2px;
+}
+
+.tool-repo:hover {
+    color: var(--color-primary);
+    opacity: 1;
+}
+
+.tool-remarks {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--text);
+}
+
+.tool-remarks p {
+    margin: 0 0 7px;
+}
+
+.tool-remarks p:last-child {
+    margin-bottom: 0;
+}
+
+.tool-remarks code {
+    background-color: var(--grey-4);
+    border: 1px solid var(--grey-line);
+    border-radius: 4px;
+    padding: 0.5px 5px;
+    font-size: 0.82em;
+    color: #d8dde2;
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+}
+
+.tool-remarks strong {
+    color: var(--text-strong);
+    font-weight: 600;
+}
+
+.tool-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.tag {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    background-color: var(--grey-3);
+    border: 1px solid var(--grey-line);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-variant-numeric: tabular-nums;
+}
+
+.tag-version {
+    color: var(--text);
+}
+
+.relation {
+    font-size: 0.74rem;
+    color: var(--text-faint);
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+
+.relation-tool {
+    color: var(--text-dim);
+    background-color: var(--grey-3);
+    border: 1px solid var(--grey-line-soft);
+    border-radius: 5px;
+    padding: 1px 6px;
+}
+
+/* ---------------------------------------------------------------- Badges -- */
+
+.badge {
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.badge-deprecated {
+    color: #e8a13a;
+    background-color: rgba(232, 161, 58, 0.12);
+    border: 1px solid rgba(232, 161, 58, 0.3);
+}
+
+.badge-stale {
+    color: var(--text-faint);
+    background-color: var(--grey-4);
+    border: 1px solid var(--grey-line);
+}
+
+/* ----------------------------------------------------- Deprecated state --- */
+
+.tool.is-archived {
+    background-color: transparent;
+    border-style: dashed;
+    border-color: var(--grey-line-soft);
+}
+
+.tool.is-archived .tool-name {
+    color: var(--text-dim);
+}
+
+.tool.is-archived .tool-remarks,
+.tool.is-archived .tool-metrics {
+    filter: grayscale(1);
+    opacity: 0.62;
+}
+
+.tool.is-archived:hover {
+    opacity: 1;
+}
+
+.tool.is-archived:hover .tool-remarks,
+.tool.is-archived:hover .tool-metrics {
+    opacity: 0.85;
+}
+
+/* ------------------------------------------------------------- Utilities -- */
+
+.no-results {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    padding: 60px 0;
+}
+
+/* ---------------------------------------------------------------- Footer -- */
+
+.site-footer {
+    border-top: 1px solid var(--grey-line);
+    background-color: var(--grey-2);
+    margin-top: auto;
+}
+
+.footer-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 24px 28px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 0.85rem;
+}
+
+.footer-links a {
+    color: var(--text-dim);
+}
+
+.footer-links a:hover {
+    color: var(--color-primary);
+    opacity: 1;
+}
+
+.footer-logo {
+    height: 22px;
+    opacity: 0.8;
+}
+
+.footer-note {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 28px 28px;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------- 404 ------ */
+
+.notfound {
+    max-width: 520px;
+    margin: 18vh auto;
+    text-align: center;
+    padding: 0 24px;
+}
+
+.notfound h1 {
+    font-size: 4rem;
+    color: var(--text-strong);
+    display: block;
+}
+
+.notfound p {
+    color: var(--text-dim);
+    margin-top: 10px;
+}
+
+/* ------------------------------------------------------------ Responsive -- */
+
+@media (max-width: 760px) {
+    .site-header-inner,
+    .filter-bar-inner,
+    .category-nav,
+    .catalog,
+    .footer-inner,
+    .footer-note {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .tool-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .category-head {
+        grid-template-columns: auto auto;
+    }
+
+    .category-desc {
+        grid-column: 1 / -1;
+        text-align: left;
+    }
+
+    .filter-toggle span {
+        display: none;
+    }
+}

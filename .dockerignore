@@ -1,7 +1,6 @@
 target/
 .git/
 .env
-backups/
-data/
-fixtures/
-Dockerfile
+.screenshots/
+search/
+scripts/

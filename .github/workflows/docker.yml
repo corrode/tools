@@ -56,7 +56,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trigger Coolify deployment via webhook
+        # TODO: replace the uuid below with the Rust Tool Index Coolify app's
+        # deploy uuid once the app is created. Until then this step will fail.
         run: |
-          curl --request GET "https://admin.corrode.dev/api/v1/deploy?uuid=zskww4wkc4csck08ooog0ggw&force=false" \
+          curl --request GET "https://admin.corrode.dev/api/v1/deploy?uuid=REPLACE_WITH_TOOLS_APP_UUID&force=false" \
                --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
                --fail

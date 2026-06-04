@@ -1,14 +1,10 @@
-use askama::Template;
-use axum::{http::StatusCode, response::Html};
+use axum::{
+    http::StatusCode,
+    response::{Html, IntoResponse},
+};
 
-use crate::error::AppError;
-
-#[derive(Template)]
-#[template(path = "not_found.html")]
-struct NotFoundTemplate;
-
-/// Branded 404 page. Served by axum's `fallback` for any unmatched route.
-pub(crate) async fn not_found() -> Result<(StatusCode, Html<String>), AppError> {
-    let body = NotFoundTemplate.render()?;
-    Ok((StatusCode::NOT_FOUND, Html(body)))
+/// Fallback handler for unmatched routes.
+pub(crate) async fn not_found() -> impl IntoResponse {
+    let body = include_str!("../../templates/not_found.html");
+    (StatusCode::NOT_FOUND, Html(body))
 }

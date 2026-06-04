@@ -1,91 +1,50 @@
-//! Public JSON API for the search index.
+//! Public, read-only JSON API for the Rust Tool Index.
 //!
-//! Mounted by the caller via [`Router::merge`]; all routes carry their full
-//! `/api/v1/...` path internally so that Swagger UI's `index.html` redirect
-//! resolves correctly. See `crates/server/src/api/README.md` for the design
-//! rationale.
-//!
-//! The OpenAPI 3.1 specification is built at startup from the route
-//! registrations and the `ToSchema` / `IntoParams` derives on the DTOs and
-//! query types, and served at:
+//! The `OpenAPI` 3.1 spec is built from the route registrations and the
+//! `ToSchema` derives on the shared [`types`] structs, and served at:
 //!
 //! - `GET /api/v1/openapi.json` — the raw spec.
-//! - `GET /api/v1/docs` — Swagger UI rendered docs page.
+//! - `GET /api/v1/docs` — Swagger UI.
 
 use std::sync::Arc;
 
 use axum::{Router, http::Method};
-use storage::Repository;
 use tower_http::cors::{Any, CorsLayer};
+use types::Catalog;
 use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
 
-mod documents;
-mod dto;
-mod error;
-mod health;
-mod passages;
-mod podcast;
-mod search;
-mod stats;
-mod suggestions;
+mod tools;
 
-/// Top-level OpenAPI document. The description is rendered by Swagger UI on
-/// the docs landing page and serves as the public reference for API
-/// consumers.
+/// Top-level `OpenAPI` document.
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "Corrode Rust Search API",
+        title = "Rust Tool Index API",
         version = "1.0.0",
-        description = include_str!("description.md"),
-        license(
-            name = "MIT",
-            url = "https://github.com/corrode/search/blob/main/LICENSE",
-        ),
-        contact(
-            name = "corrode",
-            url = "https://corrode.dev",
-        ),
+        description = "A curated, machine-readable reference of Rust development tooling. \
+                       Editorial fields are human-authored; metrics are auto-refreshed daily \
+                       from the source forge and crates.io. Read-only and public.",
+        license(name = "MIT"),
+        contact(name = "corrode", url = "https://corrode.dev"),
     ),
-    servers(
-        (url = "/api/v1", description = "Current host"),
-    ),
-    tags(
-        (name = "search",      description = "Full-text search across the corpus."),
-        (name = "suggestions", description = "Query autocomplete."),
-        (name = "stats",       description = "Aggregate index statistics."),
-        (name = "podcasts",    description = "Podcast episode detail with transcript."),
-        (name = "documents",   description = "Full document fetch, batch fetch, and search-within-document for LLM clients."),
-        (name = "meta",        description = "Service metadata (health, etc.)."),
-    ),
+    servers((url = "/api/v1", description = "Current host")),
+    tags((name = "tools", description = "The curated tool catalog.")),
 )]
 struct ApiDoc;
 
-/// Builds the complete `/api/v1/*` router (JSON endpoints + Swagger UI +
-/// raw OpenAPI spec). The returned router is meant to be `merge`d into the
-/// top-level app router, not nested: Swagger UI's internal redirect target
-/// is absolute, so the path it's registered under must match the path it's
-/// served from.
-pub(crate) fn build(state: Arc<Repository>) -> Router {
+/// Builds the complete `/api/v1/*` router plus Swagger UI and raw spec.
+pub(crate) fn build(state: Arc<Catalog>) -> Router {
     let (router, openapi) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(health::health))
-        .routes(routes!(search::search))
-        .routes(routes!(suggestions::suggestions))
-        .routes(routes!(stats::stats))
-        .routes(routes!(podcast::get_podcast))
-        .routes(routes!(documents::get_document))
-        .routes(routes!(documents::search_in_document))
-        .routes(routes!(documents::batch_documents))
+        .routes(routes!(tools::list_tools))
+        .routes(routes!(tools::get_tool))
         .with_state(state)
         .split_for_parts();
 
-    // Permissive CORS — the API is read-only and meant to be consumed from
-    // arbitrary origins.
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::OPTIONS])
         .allow_headers(Any);
 
     Router::new()
