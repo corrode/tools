@@ -3,6 +3,7 @@ name = "criterion"
 repository = "https://github.com/bheisler/criterion.rs"
 category = "performance"
 crate = "criterion"
+installable = false
 
 remarks = """
 A statistics-driven microbenchmarking library for in-process Rust functions. It

@@ -23,6 +23,8 @@ pub(crate) struct IndexView {
     pub(crate) last_updated: Option<String>,
     /// Distinct license families across the catalog, for the license filter.
     pub(crate) licenses: Vec<LicenseOption>,
+    /// Curated stacks, powering the `Stack` filter dropdown and its banner.
+    pub(crate) stacks: Vec<StackInfo>,
 }
 
 /// One entry in the license filter dropdown.
@@ -32,6 +34,28 @@ pub(crate) struct LicenseOption {
     pub(crate) value: String,
     /// Display label (original SPDX case, e.g. `Apache-2.0`).
     pub(crate) label: String,
+}
+
+/// A curated stack as it appears on the index: one option in the `Stack`
+/// dropdown, plus the editorial payload rendered into its (hidden) banner and
+/// shown when that stack is the active filter.
+#[derive(Debug)]
+pub(crate) struct StackInfo {
+    /// Stack slug; matches each pick's `data-stacks` token and the `?stack=`
+    /// query parameter.
+    pub(crate) id: String,
+    /// Display name, shown in the dropdown and the banner heading.
+    pub(crate) name: String,
+    /// One-line summary, shown under the banner heading.
+    pub(crate) description: String,
+    /// Rendered HTML of the `intro` markdown.
+    pub(crate) intro_html: String,
+    /// Number of curated picks.
+    pub(crate) count: usize,
+    /// Crate names for the derived `cargo install` line (in pick order).
+    pub(crate) install_crates: Vec<String>,
+    /// Names of picks with no installable crate (shown as a caveat).
+    pub(crate) uncovered: Vec<String>,
 }
 
 /// One category section.
@@ -116,6 +140,9 @@ pub(crate) struct ToolView {
     pub(crate) status_class: &'static str,
     /// Lowercased haystack for the client-side filter.
     pub(crate) keywords: String,
+    /// Stacks this tool is a pick in (for "In <stack>" cross-links and the
+    /// per-stack note shown inline when that stack is the active filter).
+    pub(crate) stacks: Vec<ToolStack>,
     /// Recent (or total) downloads as a raw number, for client-side sorting.
     pub(crate) sort_downloads: u64,
     /// Star count as a raw number, for client-side sorting.
@@ -178,11 +205,41 @@ impl IndexView {
             .map(|(value, label)| LicenseOption { value, label })
             .collect();
 
+        // Curated stacks: one dropdown option each, carrying the editorial
+        // payload (intro + derived install line) for the in-page banner.
+        let stacks = catalog
+            .stacks()
+            .iter()
+            .map(|stack| {
+                let mut install_crates = Vec::new();
+                let mut uncovered = Vec::new();
+                for pick in &stack.picks {
+                    let Some(tool) = catalog.get(&pick.tool) else {
+                        continue;
+                    };
+                    match install_crate(tool) {
+                        Some(krate) => install_crates.push(krate),
+                        None => uncovered.push(tool.name.clone()),
+                    }
+                }
+                StackInfo {
+                    id: stack.id.clone(),
+                    name: stack.name.clone(),
+                    description: stack.description.clone(),
+                    intro_html: markdown(&stack.intro),
+                    count: stack.picks.len(),
+                    install_crates,
+                    uncovered,
+                }
+            })
+            .collect();
+
         Self {
             total,
             last_updated: last_updated.map(|d| d.format("%-d %b %Y").to_string()),
             categories,
             licenses,
+            stacks,
         }
     }
 }
@@ -252,6 +309,19 @@ impl ToolView {
                 .collect()
         };
 
+        let stacks = catalog
+            .stacks()
+            .iter()
+            .filter_map(|s| {
+                let pick = s.picks.iter().find(|p| p.tool == tool.id)?;
+                Some(ToolStack {
+                    id: s.id.clone(),
+                    name: s.name.clone(),
+                    note_html: markdown(&pick.note),
+                })
+            })
+            .collect();
+
         Self {
             id: tool.id.clone(),
             name: tool.name.clone(),
@@ -277,12 +347,41 @@ impl ToolView {
             status_label,
             status_class,
             keywords,
+            stacks,
             sort_downloads: downloads_value,
             sort_stars: stars_value,
             sort_updated,
             sort_added,
         }
     }
+}
+
+/// A stack a tool is a pick in: a cross-link chip plus the per-pick note shown
+/// inline on the index when that stack is the active filter.
+#[derive(Debug)]
+pub(crate) struct ToolStack {
+    /// Stack slug, used in the `?stack=<id>` cross-link and inline-note match.
+    pub(crate) id: String,
+    /// Display name shown on the chip.
+    pub(crate) name: String,
+    /// Rendered HTML of this tool's note in the stack (may be empty).
+    pub(crate) note_html: String,
+}
+
+/// The crate to `cargo install` for a tool, if it has one: the human-owned
+/// `crate` field, else a crate the metrics bot discovered on crates.io.
+/// Returns `None` for tools that aren't installable crates (e.g. rustup
+/// components like `clippy`/`rustfmt`).
+fn install_crate(tool: &Tool) -> Option<String> {
+    if !tool.installable {
+        return None;
+    }
+    tool.krate.clone().or_else(|| {
+        tool.metrics
+            .as_ref()
+            .and_then(|m| m.krate.as_ref())
+            .map(|c| c.name.clone())
+    })
 }
 
 /// Renders trusted, human-authored markdown to HTML.

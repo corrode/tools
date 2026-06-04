@@ -12,6 +12,9 @@
   const recommendedOnly = document.getElementById("recommended-only");
   const licenseFilter = document.getElementById("license-filter");
   const sortSelect = document.getElementById("sort-select");
+  const stackFilter = document.getElementById("stack-filter");
+  const stackBanners = Array.from(document.querySelectorAll(".stack-banner"));
+  const stackNotes = Array.from(document.querySelectorAll(".stack-note"));
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
@@ -56,6 +59,7 @@
     const skipDeprecated = hideDeprecated.checked;
     const onlyRecommended = recommendedOnly.checked;
     const license = licenseFilter.value;
+    const stack = stackFilter ? stackFilter.value : "";
     let visible = 0;
 
     for (const tool of tools) {
@@ -65,10 +69,12 @@
       const licenses = (tool.dataset.license || "")
         .split(/\s+/)
         .filter(Boolean);
+      const stacks = (tool.dataset.stacks || "").split(/\s+/).filter(Boolean);
       const matches =
         (!skipDeprecated || !deprecated) &&
         (!onlyRecommended || recommended) &&
         (!license || licenses.includes(license)) &&
+        (!stack || stacks.includes(stack)) &&
         terms.every((t) => haystack.includes(t));
       tool.hidden = !matches;
       if (matches) visible++;
@@ -87,7 +93,19 @@
     }
 
     noResults.hidden = visible !== 0;
+    updateStackContext(stack);
     syncUrl();
+  }
+
+  // Reveal the selected stack's banner and its picks' inline notes; everything
+  // for other stacks (and all of it, when no stack is active) stays hidden.
+  function updateStackContext(active) {
+    for (const banner of stackBanners) {
+      banner.hidden = banner.dataset.stack !== active;
+    }
+    for (const note of stackNotes) {
+      note.hidden = note.dataset.stack !== active;
+    }
   }
 
   // ── Shareable URL state ──────────────────────────────────────────────────
@@ -100,6 +118,8 @@
     if (sortSelect.value !== "default") params.set("sort", sortSelect.value);
     if (hideDeprecated.checked) params.set("deprecated", "0");
     if (recommendedOnly.checked) params.set("recommended", "1");
+    if (stackFilter && stackFilter.value)
+      params.set("stack", stackFilter.value);
     const qs = params.toString();
     const url = qs ? `?${qs}` : location.pathname;
     history.replaceState(null, "", url + location.hash);
@@ -119,6 +139,14 @@
     if (sort && comparators[sort]) sortSelect.value = sort;
     hideDeprecated.checked = params.get("deprecated") === "0";
     recommendedOnly.checked = params.get("recommended") === "1";
+    const stack = params.get("stack");
+    if (
+      stackFilter &&
+      stack &&
+      [...stackFilter.options].some((o) => o.value === stack)
+    ) {
+      stackFilter.value = stack;
+    }
   }
 
   restoreFromUrl();
@@ -129,6 +157,25 @@
   recommendedOnly.addEventListener("change", apply);
   licenseFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
+  if (stackFilter) stackFilter.addEventListener("change", apply);
+
+  // The "In <stack>" chips and a banner's "Clear filter" button drive the same
+  // dropdown, filtering in place instead of navigating away.
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".stack-chip[data-stack]");
+    if (chip && stackFilter) {
+      e.preventDefault();
+      stackFilter.value = chip.dataset.stack;
+      apply();
+      document
+        .getElementById("catalog")
+        .scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (e.target.closest("[data-clear-stack]") && stackFilter) {
+      e.preventDefault();
+      stackFilter.value = "";
+      apply();
+    }
+  });
 
   // Allow `/` to focus the filter from anywhere.
   document.addEventListener("keydown", (e) => {

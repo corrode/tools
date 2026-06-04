@@ -1,0 +1,63 @@
+id = "essentials"
+name = "Everyday Essentials"
+description = "The small set every Rust project wants, whatever it ships."
+
+intro = """
+Before you specialize for the web, embedded, or a published crate, there's a
+baseline that pays off on essentially every Rust project: a managed toolchain,
+an editor that understands your code, a fast lint/format/test loop, and a way to
+install the rest without waiting on `cargo install` to compile from source.
+
+This is that baseline. Everything here is general-purpose and low-commitment — if
+you adopt nothing else from the index, adopt these. The domain stacks build on
+top of it rather than repeating it.
+"""
+
+[[pick]]
+tool = "rustup"
+note = """
+Manages your toolchains, components, and cross-compilation targets, and pins a
+per-project version via `rust-toolchain.toml`. Effectively mandatory — almost
+everything else here assumes a rustup-managed toolchain.
+"""
+
+[[pick]]
+tool = "rust-analyzer"
+note = """
+The language server behind completion, go-to-definition, and inline diagnostics
+in VS Code, Zed, and Neovim. Install it as a rustup component or editor
+extension; it's the single biggest quality-of-life upgrade for writing Rust.
+"""
+
+[[pick]]
+tool = "clippy"
+note = """
+700+ lints that catch correctness traps and non-idiomatic code `rustc` waves
+through. Run `cargo clippy` locally and gate CI on it — there's rarely a reason
+not to.
+"""
+
+[[pick]]
+tool = "rustfmt"
+note = "Canonical, non-negotiable formatting. Wire it into the editor on save and stop arguing about style."
+
+[[pick]]
+tool = "cargo-nextest"
+note = """
+A faster, clearer `cargo test` with per-test process isolation. The default
+runner to reach for once a project has more than a handful of tests.
+"""
+
+[[pick]]
+tool = "bacon"
+note = """
+A background `cargo check`/`clippy`/`test` that repaints on save, giving you a
+fast error loop in a side pane without re-running anything by hand.
+"""
+
+[[pick]]
+tool = "cargo-binstall"
+note = """
+Installs the rest of your tooling from prebuilt binaries instead of compiling
+each one. Bootstraps a fresh machine in seconds rather than minutes.
+"""

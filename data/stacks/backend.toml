@@ -1,0 +1,53 @@
+id = "backend"
+name = "Backend Services"
+description = "Long-running, async services you deploy in a container."
+
+intro = """
+Server-side Rust has a particular shape: an async runtime under load, a build
+that runs over and over in CI and Docker, and a binary whose provenance you may
+have to answer for later. The framework (axum, actix, tonic, …) is a per-project
+dependency; the operational tooling around it is not.
+
+This stack is that operational layer — keeping the async runtime observable,
+builds fast, and what you deploy auditable. It deliberately says nothing about
+your web framework or database.
+"""
+
+[[pick]]
+tool = "tokio-console"
+note = """
+A live TUI into a running tokio app: per-task poll times, wakers, and resource
+usage. The fastest way to find the task that's stuck, busy-looping, or never
+waking. Development-time only — it needs `tokio_unstable`.
+"""
+
+[[pick]]
+tool = "cargo-flamegraph"
+note = "When a handler is slow under load, a flamegraph of a representative run shows where the wall-clock time actually goes."
+
+[[pick]]
+tool = "cargo-nextest"
+note = "Parallel, isolated tests with first-class partitioning — handy once an integration suite gets big enough to shard across CI."
+
+[[pick]]
+tool = "cargo-chef"
+note = """
+Caches dependency compilation as a separate Docker layer, so an app-only change
+doesn't rebuild the whole tree. Often the single biggest win on container build
+times.
+"""
+
+[[pick]]
+tool = "sccache"
+note = "A shared compiler cache across local and CI builds; complements cargo-chef for the non-Docker path."
+
+[[pick]]
+tool = "cargo-deny"
+note = "A policy gate on advisories, licenses, and banned crates for everything you're about to deploy."
+
+[[pick]]
+tool = "cargo-auditable"
+note = """
+Embeds the exact dependency list into the binary, so a deployed artifact stays
+scannable with `cargo audit bin` long after the source and lockfile are gone.
+"""

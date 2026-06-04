@@ -3,6 +3,7 @@ name = "insta"
 repository = "https://github.com/mitsuhiko/insta"
 category = "testing"
 crate = "insta"
+installable = false
 
 remarks = """
 A snapshot testing library that records the output of a value (debug, JSON,

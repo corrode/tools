@@ -3,6 +3,7 @@ name = "divan"
 repository = "https://github.com/nvzqz/divan"
 category = "performance"
 crate = "divan"
+installable = false
 
 remarks = """
 A fast, low-boilerplate microbenchmarking harness. Benchmarks are plain

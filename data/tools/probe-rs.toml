@@ -2,6 +2,9 @@ id = "probe-rs"
 name = "probe-rs"
 repository = "https://github.com/probe-rs/probe-rs"
 category = "cross-platform"
+# The crates.io `probe-rs` crate (tracked for metrics) is a library; the CLI
+# ships as `probe-rs-tools`, so keep it out of derived `cargo install` lines.
+installable = false
 crate = "probe-rs"
 
 remarks = """

@@ -1,0 +1,47 @@
+id = "ci"
+name = "Continuous Integration"
+description = "The checks and caches you wire into the pipeline."
+
+intro = """
+A good CI pipeline is a stack of gates — tests, lints, formatting, supply-chain
+policy — plus the caching that keeps all of it fast enough that people don't
+route around it. The individual tools appear in other stacks too; what's
+distinctive here is assembling them into one merge-blocking pass.
+
+This is the pipeline layer. It assumes the Everyday Essentials are already in
+place locally — CI is where you enforce them for everyone.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = """
+The CI test runner of choice: fast, clean output, and first-class partitioning so
+you can shard a slow suite across parallel jobs.
+"""
+
+[[pick]]
+tool = "cargo-llvm-cov"
+note = "Source-based coverage you can publish or gate on, so coverage trends are visible rather than assumed."
+
+[[pick]]
+tool = "clippy"
+note = "Run with `-D warnings` to make lints a hard gate, not a suggestion that scrolls past in the logs."
+
+[[pick]]
+tool = "rustfmt"
+note = "`cargo fmt --check` fails the build on unformatted code — the cheapest gate you'll add."
+
+[[pick]]
+tool = "taplo"
+note = "Extends the formatting gate to `Cargo.toml` and other config with `taplo fmt --check`, so manifests stay tidy too."
+
+[[pick]]
+tool = "cargo-deny"
+note = "One pass for advisories, licenses, and banned crates — the supply-chain gate that belongs on every PR."
+
+[[pick]]
+tool = "sccache"
+note = """
+Wrap the build in a shared compiler cache so CI re-uses artifacts across runs.
+Often the difference between a pipeline people wait for and one they don't.
+"""

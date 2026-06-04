@@ -1,0 +1,49 @@
+id = "embedded"
+name = "Embedded & no_std"
+description = "Firmware for microcontrollers, flashed and debugged on real hardware."
+
+intro = """
+Embedded Rust lives mostly in libraries — HALs, `embassy` or RTIC, `defmt` for
+logging — which are per-chip choices the index doesn't try to rank. What it can
+offer is the host-side tooling that's the same whatever the target: getting code
+onto the chip, watching it run, and keeping an eye on code size.
+
+This stack is deliberately small and honest about that. The big omissions — a HAL,
+an async/RTOS framework, `defmt` — are dependencies you pick per board.
+"""
+
+[[pick]]
+tool = "probe-rs"
+note = """
+The center of an embedded workflow: flash firmware, reset, and stream RTT logs
+over CMSIS-DAP/J-Link/ST-Link, with `cargo embed` and a GDB/DAP server for editor
+debugging. The modern replacement for OpenOCD. Install the CLI with
+`cargo install probe-rs-tools`.
+"""
+
+[[pick]]
+tool = "cargo-show-asm"
+note = """
+On a chip with kilobytes of flash, codegen matters. Inspect the assembly for a
+function to confirm something inlined, vectorized, or simply fits.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = """
+Most logic — protocol parsing, state machines — should be testable off-target as
+plain Rust. Run that here for a fast loop, and reserve on-hardware runs for the
+genuinely device-bound parts.
+"""
+
+[[pick]]
+tool = "bacon"
+note = "A background check loop is doubly welcome on embedded, where the full flash-and-run cycle is slow; keep type errors in a side pane."
+
+[[pick]]
+tool = "clippy"
+note = "Catches the usual bugs, plus accidental panics or blocking calls that are far nastier to chase down on a microcontroller than on a host."
+
+[[pick]]
+tool = "rustfmt"
+note = "Baseline formatting — one less thing to think about in already fiddly register-level code."

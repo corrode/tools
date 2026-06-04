@@ -118,6 +118,12 @@ pub struct Metrics {
     pub krate: Option<CrateMetrics>,
 }
 
+/// Serde default for [`Tool::installable`] (a tool ships a binary unless it
+/// explicitly opts out).
+fn default_true() -> bool {
+    true
+}
+
 /// A single tool in the index, merged from its human-owned fields and its
 /// bot-owned [`Metrics`] table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,6 +146,12 @@ pub struct Tool {
     /// Explicit crate name, when it differs from `id`/repository.
     #[serde(default, rename = "crate")]
     pub krate: Option<String>,
+    /// Whether the crate ships a `cargo install`-able binary. Defaults to
+    /// `true`; set `installable = false` for libraries that are listed on
+    /// crates.io for metrics but added as dependencies rather than installed
+    /// (e.g. `criterion`), so derived install lines skip them.
+    #[serde(default = "default_true")]
+    pub installable: bool,
     /// Project homepage or documentation site, when distinct from the repo.
     #[serde(default)]
     pub homepage: Option<String>,
@@ -208,11 +220,54 @@ impl Tool {
     }
 }
 
+/// One entry in a [`Stack`]: a reference to a catalog tool plus an optional
+/// note on the role it plays in *this* stack.
+///
+/// The tool's functional role is derived from its own [`Tool::category`], not
+/// stored here — a stack composes the existing category vocabulary rather than
+/// inventing a parallel one.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(ToSchema))]
+#[non_exhaustive]
+pub struct StackPick {
+    /// Id of the catalog tool this pick refers to (`data/tools/<tool>.toml`).
+    pub tool: String,
+    /// Short, honest note on why this tool earns its place in the stack.
+    #[serde(default)]
+    pub note: String,
+}
+
+/// A curated, cross-cutting toolbox for a kind of project or workflow.
+///
+/// A stack is pure editorial: it *references* catalog tools by id and is never
+/// touched by the metrics bot. Picks surface on the index, filtered in by the
+/// `Stack` dropdown and grouped under each tool's own category section.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(ToSchema))]
+#[non_exhaustive]
+pub struct Stack {
+    /// Stable slug; also the file stem (`data/stacks/<id>.toml`).
+    pub id: String,
+    /// Display name (e.g. `"Web Frontend (WASM)"`).
+    pub name: String,
+    /// One-line summary for stack listings.
+    #[serde(default)]
+    pub description: String,
+    /// Markdown lead-in: what's distinctive about tooling for this domain and,
+    /// in the honest-take spirit, what it deliberately leaves out.
+    #[serde(default)]
+    pub intro: String,
+    /// The curated tools, in authoring order. Authored as `[[pick]]` tables.
+    #[serde(default, alias = "pick")]
+    pub picks: Vec<StackPick>,
+}
+
 /// The fully-loaded, validated tool index held in memory.
 #[derive(Debug, Clone, Default)]
 pub struct Catalog {
     categories: Vec<Category>,
     tools: Vec<Tool>,
+    stacks: Vec<Stack>,
 }
 
 /// A category paired with the tools filed under it, ready for rendering.
@@ -227,21 +282,29 @@ pub struct CategoryGroup<'a> {
 
 impl Catalog {
     /// Loads and validates the catalog from a `data/` directory containing
-    /// `categories.toml` and a `tools/` subdirectory.
+    /// `categories.toml`, a `tools/` subdirectory, and an optional `stacks/`
+    /// subdirectory.
     ///
     /// # Errors
     ///
     /// Fails if a file is missing, malformed, or if a tool references an
-    /// unknown category or a duplicate id.
+    /// unknown category, a tool id is duplicated, or a stack references an
+    /// unknown tool.
     pub fn load(data_dir: &Path) -> Result<Self> {
         let categories = load_categories(&data_dir.join("categories.toml"))?;
         let tools = load_tools(&data_dir.join("tools"))?;
-        let catalog = Self { categories, tools };
+        let stacks = load_stacks(&data_dir.join("stacks"))?;
+        let catalog = Self {
+            categories,
+            tools,
+            stacks,
+        };
         catalog.validate()?;
         Ok(catalog)
     }
 
-    /// Validates referential integrity: unique tool ids and known categories.
+    /// Validates referential integrity: unique tool ids, known categories,
+    /// unique stack ids, and stack picks that resolve to known tools.
     ///
     /// # Errors
     ///
@@ -261,6 +324,22 @@ impl Catalog {
                 );
             }
         }
+
+        let mut seen_stacks: BTreeSet<&str> = BTreeSet::new();
+        for stack in &self.stacks {
+            if !seen_stacks.insert(stack.id.as_str()) {
+                bail!("duplicate stack id: {}", stack.id);
+            }
+            for pick in &stack.picks {
+                if !seen.contains(pick.tool.as_str()) {
+                    bail!(
+                        "stack '{}' references unknown tool '{}'",
+                        stack.id,
+                        pick.tool
+                    );
+                }
+            }
+        }
         Ok(())
     }
 
@@ -274,6 +353,12 @@ impl Catalog {
     #[must_use]
     pub fn tools(&self) -> &[Tool] {
         &self.tools
+    }
+
+    /// All stacks, in load order (sorted by id).
+    #[must_use]
+    pub fn stacks(&self) -> &[Stack] {
+        &self.stacks
     }
 
     /// Looks up a single tool by id.
@@ -399,6 +484,32 @@ fn load_tools(dir: &Path) -> Result<Vec<Tool>> {
     Ok(tools)
 }
 
+/// Loads every `*.toml` file in `dir` as a [`Stack`], sorted by id.
+///
+/// A missing directory yields an empty list: stacks are an optional layer, so
+/// a data set without any `stacks/` directory loads fine.
+fn load_stacks(dir: &Path) -> Result<Vec<Stack>> {
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let mut stacks = Vec::new();
+    let entries =
+        std::fs::read_dir(dir).with_context(|| format!("reading stacks dir {}", dir.display()))?;
+    for entry in entries {
+        let path = entry?.path();
+        if path.extension().is_none_or(|ext| ext != "toml") {
+            continue;
+        }
+        let raw = std::fs::read_to_string(&path)
+            .with_context(|| format!("reading stack file {}", path.display()))?;
+        let stack: Stack = toml::from_str(&raw)
+            .with_context(|| format!("parsing stack file {}", path.display()))?;
+        stacks.push(stack);
+    }
+    stacks.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(stacks)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -412,6 +523,34 @@ mod tests {
     /// The repository's real `data/` directory, relative to this crate.
     fn data_dir() -> std::path::PathBuf {
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data")
+    }
+
+    /// A minimal tool in `category`, enough to exercise validation/grouping.
+    fn tool(id: &str, category: &str) -> Tool {
+        Tool {
+            id: id.to_owned(),
+            name: id.to_owned(),
+            repository: format!("https://example.com/{id}"),
+            category: category.to_owned(),
+            remarks: String::new(),
+            krate: None,
+            installable: true,
+            homepage: None,
+            alternatives: Vec::new(),
+            successors: Vec::new(),
+            related: Vec::new(),
+            recommended: false,
+            added: None,
+            metrics: None,
+        }
+    }
+
+    fn category(id: &str) -> Category {
+        Category {
+            id: id.to_owned(),
+            name: id.to_owned(),
+            description: String::new(),
+        }
     }
 
     #[test]
@@ -448,25 +587,27 @@ mod tests {
     #[test]
     fn unknown_category_is_rejected() {
         let catalog = Catalog {
-            categories: vec![Category {
-                id: "testing".to_owned(),
-                name: "Testing".to_owned(),
+            categories: vec![category("testing")],
+            tools: vec![tool("x", "nonexistent")],
+            stacks: Vec::new(),
+        };
+        assert!(catalog.validate().is_err());
+    }
+
+    #[test]
+    fn unknown_stack_tool_is_rejected() {
+        let catalog = Catalog {
+            categories: vec![category("testing")],
+            tools: vec![tool("real-tool", "testing")],
+            stacks: vec![Stack {
+                id: "web".to_owned(),
+                name: "Web".to_owned(),
                 description: String::new(),
-            }],
-            tools: vec![Tool {
-                id: "x".to_owned(),
-                name: "x".to_owned(),
-                repository: "https://example.com/x/x".to_owned(),
-                category: "nonexistent".to_owned(),
-                remarks: String::new(),
-                krate: None,
-                homepage: None,
-                alternatives: Vec::new(),
-                successors: Vec::new(),
-                related: Vec::new(),
-                recommended: false,
-                added: None,
-                metrics: None,
+                intro: String::new(),
+                picks: vec![StackPick {
+                    tool: "ghost-tool".to_owned(),
+                    note: String::new(),
+                }],
             }],
         };
         assert!(catalog.validate().is_err());

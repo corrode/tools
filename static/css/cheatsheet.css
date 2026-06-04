@@ -340,6 +340,25 @@ a:hover {
     box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+/* The Stack filter is the editorial entry point, so it's tinted green to stand
+   out from the neutral Sort/License selects. */
+.select-filter-stack .select-filter-label {
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+.select-filter-stack select {
+    color: var(--accent-ink);
+    font-weight: 600;
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23157049' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+.select-filter-stack select:hover {
+    border-color: var(--accent-ink);
+}
+
 /* ------------------------------------------------------------- Category --- */
 
 .category {
@@ -872,4 +891,188 @@ span.relation-tool {
     .category-desc {
         grid-column: 1 / -1;
     }
+}
+
+/* ── Part-of chips (index tool rows) ─────────────────────────────────── */
+.part-of {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin-top: 7px;
+    font-size: 0.72rem;
+    color: var(--text-faint);
+}
+
+.stack-chip {
+    font-size: 0.72rem;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-xs);
+    padding: 1px 7px;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.stack-chip:hover {
+    background-color: var(--accent);
+    color: #fff;
+}
+
+/* ── Stacks: filter banner + inline notes ────────────────────────────── */
+
+/* The active stack's context banner, shown above the catalog when a stack is
+   selected. Carries the editorial intro and a derived install line that the
+   plain dropdown filter can't. */
+.stack-banner {
+    margin-bottom: 40px;
+    padding: 18px 20px;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-lg);
+    background-color: var(--accent-soft);
+    box-shadow: var(--shadow);
+}
+
+.stack-banner-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.stack-banner-heading {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stack-banner-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-ink);
+}
+
+.stack-banner-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.stack-banner-count {
+    font-size: 0.78rem;
+    color: var(--accent-ink);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.stack-banner-clear {
+    font: inherit;
+    font-size: 0.78rem;
+    color: var(--accent-ink);
+    background-color: transparent;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    padding: 4px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.stack-banner-clear:hover {
+    background-color: var(--accent);
+    color: #fff;
+}
+
+.stack-banner-desc {
+    margin: 10px 0 0;
+    font-size: 0.95rem;
+    color: var(--text-dim);
+}
+
+.stack-banner-intro {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.stack-banner-intro p {
+    margin: 0 0 10px;
+}
+
+.stack-banner-intro p:last-child {
+    margin-bottom: 0;
+}
+
+.stack-banner-install {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: var(--r-sm);
+    background-color: var(--ink);
+    color: #eef2f7;
+    font-size: 0.82rem;
+    overflow-x: auto;
+}
+
+.stack-banner-install-label {
+    flex-shrink: 0;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9fb3c8;
+}
+
+.stack-banner-install code {
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.stack-banner-uncovered {
+    margin: 10px 0 0;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+/* The per-pick "why it earns its place" note, revealed inline in a tool's
+   Notes cell while its stack is the active filter. */
+.stack-note {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-xs);
+    background-color: var(--surface);
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: var(--text);
+}
+
+.stack-note p {
+    margin: 0 0 8px;
+}
+
+.stack-note p:last-child {
+    margin-bottom: 0;
+}
+
+.stack-banner-intro code,
+.stack-note code {
+    font-size: 0.85em;
+    background-color: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    padding: 0 5px;
 }

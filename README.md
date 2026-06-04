@@ -23,6 +23,7 @@ when the server starts. Every tool file has two halves:
 data/
   categories.toml     # the allowed categories (CI checks every tool against it)
   tools/<id>.toml     # one file per tool
+  stacks/<id>.toml    # optional: curated, cross-cutting toolboxes
 crates/
   types/              # the data model: loading + validation
   server/             # the site, JSON API, and /llms.txt (axum + askama)
@@ -55,6 +56,8 @@ name = "cargo-nextest"
 repository = "https://github.com/nextest-rs/nextest"
 category = "testing"          # must exist in data/categories.toml
 crate = "cargo-nextest"       # optional, for crates.io metrics
+# installable = false         # for library crates (criterion, insta, …): keeps
+#                             # them out of derived stack install lines (default: true)
 
 remarks = """
 What it does, when to reach for it, and — just as important — when not to.
@@ -72,12 +75,52 @@ Then run the generator to fill in `[metrics]`, and `cargo test` to check the
 category exists and the id is unique. The `scripts/` helpers can speed up finding
 candidates.
 
+## Adding a stack
+
+A **stack** is a curated, opinionated toolbox for a kind of project (e.g. web,
+embedded). It's pure editorial — it *references* catalog tools by id and the
+metrics bot never touches it. Picks are grouped by each tool's own `category`
+(the index's existing sections), so a stack composes the existing vocabulary
+rather than adding a parallel one. There are only two concepts: `category` and
+`stack`.
+
+Drop a file in `data/stacks/<id>.toml`:
+
+```toml
+id = "web"
+name = "Web Frontend (WASM)"
+description = "Shipping a Rust app to the browser via WebAssembly."
+
+intro = """
+Markdown lead-in: what's distinctive about tooling for this domain, and — in the
+honest-take spirit — what it deliberately leaves out.
+"""
+
+[[pick]]
+tool = "trunk"            # must resolve to data/tools/trunk.toml
+note = "Why it earns a place here; the role is derived from its category."
+
+[[pick]]
+tool = "cargo-nextest"
+```
+
+`cargo test` checks that every `pick.tool` resolves to a known tool and that
+stack ids are unique. Stacks surface on the index as the green **Stack** dropdown
+(rightmost in the filter row): pick one and the page narrows to its tools. The
+stack's `intro` and a derived `cargo install` line show in a banner, and each
+pick's `note` appears inline on its tool's row. The install command is built
+automatically from the picks that ship an installable binary; toolchain
+components and library crates (marked `installable = false`) are listed as a
+caveat instead.
+
 ## API
 
 Everything is public and read-only:
 
 - `GET /api/v1/tools` — the whole catalog as JSON (`?category=<id>` to filter)
 - `GET /api/v1/tools/{id}` — a single tool
+- `GET /?stack={id}` — the index filtered to a curated stack (the retired
+  `/stacks` and `/stacks/{id}` pages redirect here)
 - `GET /api/v1/docs` — Swagger UI (`/api/v1/openapi.json` for the raw spec)
 - `GET /llms.txt` — the index as plain text, ready to paste into an LLM
 

@@ -1,0 +1,69 @@
+id = "library"
+name = "Publishing a Library"
+description = "Shipping a crate to crates.io and keeping its API honest over time."
+
+intro = """
+Publishing a library shifts the hard problems from "does it work" to "will this
+release break someone." That means watching the public API for accidental semver
+breaks, keeping changelogs and version bumps honest, and making sure what you
+ship is lean and license-clean.
+
+This stack is about release hygiene and API stewardship. `rustdoc` already gives
+you API docs for free, so it isn't listed; the prose guide below is for
+everything rustdoc can't express.
+"""
+
+[[pick]]
+tool = "cargo-semver-checks"
+note = """
+Scans your public API against the last published release and flags
+semver-breaking changes before you tag one. The single most valuable check a
+library can add to CI.
+"""
+
+[[pick]]
+tool = "release-plz"
+note = """
+A hands-off, PR-based release flow: it derives version bumps and changelog
+entries from your commits and publishes on merge. Start here unless you want to
+drive releases by hand.
+"""
+
+[[pick]]
+tool = "cargo-release"
+note = """
+The manual counterpart to release-plz: explicit, command-driven version bump,
+tag, and publish. Reach for it when you'd rather run each release step yourself
+than hand it to a bot.
+"""
+
+[[pick]]
+tool = "cargo-deny"
+note = """
+Gate CI on advisories, license policy, and banned or duplicate crates. It matters
+more for a library, whose dependency choices propagate into everyone downstream.
+"""
+
+[[pick]]
+tool = "cargo-machete"
+note = "Catches dependencies you declared but no longer use, so you don't ship dead weight to downstream crates. Fast enough for a CI gate."
+
+[[pick]]
+tool = "proptest"
+note = """
+Property tests fit libraries well: assert invariants over generated inputs rather
+than a handful of examples, and get a shrunk, saved counterexample when one
+fails. Added as a dev-dependency, not installed.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = "Fast, isolated runs for the growing test suite a published crate tends to accumulate."
+
+[[pick]]
+tool = "mdbook"
+note = """
+For the narrative guide rustdoc can't give you — tutorials, concepts, worked
+examples. Optional, but often the difference between a crate people adopt and one
+they bounce off.
+"""

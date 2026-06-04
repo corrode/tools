@@ -1,0 +1,57 @@
+id = "cli"
+name = "Command-Line Apps"
+description = "Building and shipping a binary that other people install and run."
+
+intro = """
+A CLI's distinctive problems aren't really in the code — they're at the edges:
+testing the actual terminal output, and getting the binary onto other people's
+machines across three operating systems without asking them to install a Rust
+toolchain first.
+
+This stack covers building, testing, and distributing a binary. It leaves the
+argument parser and TUI libraries (clap, ratatui, …) to the project — those are
+dependencies, not tooling.
+"""
+
+[[pick]]
+tool = "cargo-dist"
+note = """
+The headline pick: builds cross-platform artifacts and shell/PowerShell/Homebrew
+installers, and wires up release CI to produce them on a tag. Start here for
+distributing prebuilt binaries. (Now continuing under the name `dist`.)
+"""
+
+[[pick]]
+tool = "cargo-binstall"
+note = """
+The flip side of distribution: if you publish GitHub release binaries (e.g. via
+cargo-dist), users can `cargo binstall your-tool` and skip the compile entirely.
+"""
+
+[[pick]]
+tool = "insta"
+note = """
+Snapshot-test your CLI's real output — `--help`, error messages, formatted
+tables — instead of hand-writing brittle expected strings. `cargo insta review`
+makes accepting intentional changes painless. Added as a dev-dependency.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = "Fast, isolated test runs; pairs naturally with insta for the snapshot suite."
+
+[[pick]]
+tool = "just"
+note = """
+A `justfile` captures your build/lint/release incantations as named recipes, so
+contributors run `just release` instead of memorizing flags. Lighter than a
+Makefile and Rust-friendly.
+"""
+
+[[pick]]
+tool = "clippy"
+note = "Baseline lint gate — especially worth it on the argument-handling and error paths users hit first."
+
+[[pick]]
+tool = "rustfmt"
+note = "Canonical formatting, enforced in CI with `cargo fmt --check`."

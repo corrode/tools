@@ -3,6 +3,7 @@ name = "proptest"
 repository = "https://github.com/proptest-rs/proptest"
 category = "testing"
 crate = "proptest"
+installable = false
 
 remarks = """
 A property-based testing library: instead of hand-writing example inputs, you

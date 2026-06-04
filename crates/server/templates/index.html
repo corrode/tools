@@ -118,10 +118,68 @@
                             {% endfor %}
                         </select>
                     </label>
+                    {% if !view.stacks.is_empty() %}
+                    <label class="select-filter select-filter-stack">
+                        <span class="select-filter-label">Stack</span>
+                        <select id="stack-filter" aria-label="Filter by stack">
+                            <option value="">All tools</option>
+                            {% for stack in view.stacks %}
+                            <option value="{{ stack.id }}">
+                                {{ stack.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    {% endif %}
                 </div>
             </div>
 
-            {% for cat in view.categories %}
+            {% if !view.stacks.is_empty() %}{% for stack in view.stacks %}
+            <aside
+                class="stack-banner"
+                data-stack="{{ stack.id }}"
+                aria-label="{{ stack.name }} stack"
+                hidden
+            >
+                <div class="stack-banner-bar">
+                    <div class="stack-banner-heading">
+                        <span class="stack-banner-eyebrow">Stack</span>
+                        <h2 class="stack-banner-title">{{ stack.name }}</h2>
+                        <span class="stack-banner-count"
+                            >{{ stack.count }} tools</span
+                        >
+                    </div>
+                    <button
+                        type="button"
+                        class="stack-banner-clear"
+                        data-clear-stack
+                    >
+                        Clear filter
+                    </button>
+                </div>
+                {% if !stack.description.is_empty() %}
+                <p class="stack-banner-desc">{{ stack.description }}</p>
+                {% endif %} {% if !stack.intro_html.is_empty() %}
+                <div class="stack-banner-intro">
+                    {{ stack.intro_html|safe }}
+                </div>
+                {% endif %} {% if !stack.install_crates.is_empty() %}
+                <div class="stack-banner-install">
+                    <span class="stack-banner-install-label">Install</span>
+                    <code
+                        >cargo install {{ stack.install_crates|join(" ")
+                        }}</code
+                    >
+                </div>
+                {% if !stack.uncovered.is_empty() %}
+                <p class="stack-banner-uncovered">
+                    Not shown: {{ stack.uncovered|join(", ") }} — these ship
+                    with the toolchain, are added as dependencies, or have their
+                    own setup (see the rows below).
+                </p>
+                {% endif %} {% endif %}
+            </aside>
+            {% endfor %}{% endif %} {% for cat in view.categories %}
             <section
                 class="category"
                 id="cat-{{ cat.id }}"
@@ -168,6 +226,7 @@
                                 data-stars="{{ tool.sort_stars }}"
                                 data-updated="{{ tool.sort_updated }}"
                                 data-added="{{ tool.sort_added }}"
+                                data-stacks="{% for s in tool.stacks %}{{ s.id }} {% endfor %}"
                             >
                                 <td class="cell-tool">
                                     {% if tool.recommended %}<span
@@ -233,9 +292,27 @@
                                     {% if !tool.owners.is_empty() %}<span
                                         class="tool-maint"
                                         >by {{ tool.owners|join(", ") }}</span
+                                    >{% endif %} {% if !tool.stacks.is_empty()
+                                    %}<span class="part-of"
+                                        >In {% for s in tool.stacks %}<a
+                                            class="stack-chip"
+                                            href="/?stack={{ s.id }}"
+                                            data-stack="{{ s.id }}"
+                                            >{{ s.name }}</a
+                                        >{% endfor %}</span
                                     >{% endif %}
                                 </td>
                                 <td class="cell-notes">
+                                    {% for s in tool.stacks %}{% if
+                                    !s.note_html.is_empty() %}
+                                    <div
+                                        class="stack-note"
+                                        data-stack="{{ s.id }}"
+                                        hidden
+                                    >
+                                        {{ s.note_html|safe }}
+                                    </div>
+                                    {% endif %}{% endfor %}
                                     <div class="notes-body">
                                         {{ tool.remarks_html|safe }}
                                     </div>

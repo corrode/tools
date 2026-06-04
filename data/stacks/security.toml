@@ -1,0 +1,56 @@
+id = "security"
+name = "Security & Supply Chain"
+description = "Knowing — and gating — what's actually in your dependency tree."
+
+intro = """
+Most of a Rust project's code isn't yours; it's the transitive dependency tree.
+Securing it is layered: scan for known vulnerabilities, enforce policy on
+licenses and sources, optionally record human review, and keep deployed binaries
+auditable after the fact.
+
+This stack walks those layers from "everyone should run this" to "for teams that
+need it." Start at the top and add depth as the stakes rise.
+"""
+
+[[pick]]
+tool = "cargo-audit"
+note = """
+The baseline: checks your lockfile against the RUSTSEC advisory database. Cheap,
+fast, and worth running in CI from day one of any project.
+"""
+
+[[pick]]
+tool = "cargo-deny"
+note = """
+The policy layer on top: advisories plus license allow/deny, banned and
+duplicate crates, and permitted sources, all configured in `deny.toml`. Reach for
+it when "no known CVEs" isn't a strong enough bar.
+"""
+
+[[pick]]
+tool = "cargo-vet"
+note = """
+For organizations doing real source review: records and enforces that each
+dependency has been human-audited, with audits shared across the team. Overkill
+for a solo project; essential for some. It tracks judgment, not CVEs.
+"""
+
+[[pick]]
+tool = "cargo-auditable"
+note = """
+Embeds the dependency list into release binaries so they can be scanned with
+`cargo audit bin` later — even without the source or lockfile. Provenance for
+what you actually shipped.
+"""
+
+[[pick]]
+tool = "cargo-geiger"
+note = """
+Counts `unsafe` usage across the dependency tree, for when minimizing unsafe
+surface is a goal. Treat it as a heuristic, not a verdict — and confirm it builds
+on current toolchains before trusting it in CI.
+"""
+
+[[pick]]
+tool = "cargo-machete"
+note = "Security's quiet ally: every dependency you remove is attack surface gone. A fast unused-dependency scan that fits in a CI gate."

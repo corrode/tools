@@ -3,6 +3,7 @@ name = "quickcheck"
 repository = "https://github.com/BurntSushi/quickcheck"
 category = "testing"
 crate = "quickcheck"
+installable = false
 
 remarks = """
 A property-based testing library in the classic Haskell QuickCheck style: you

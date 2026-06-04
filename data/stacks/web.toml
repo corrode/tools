@@ -1,0 +1,65 @@
+id = "web"
+name = "Web Frontend (WASM)"
+description = "Shipping a Rust app to the browser via WebAssembly."
+
+intro = """
+Rust in the browser means compiling to `wasm32-unknown-unknown` and handing the
+result to JavaScript and the DOM. The friction is rarely the framework — it's
+the build pipeline: bundling the `.wasm`, generating JS bindings, serving with
+live reload, and keeping the artifact small.
+
+This stack covers that pipeline. It deliberately leaves out the **framework**
+(Leptos, Yew, Dioxus, …) and the **backend** — pick those per project. What's
+here is the tooling you'll reach for regardless of which framework wins.
+"""
+
+[[pick]]
+tool = "trunk"
+note = """
+The build-and-serve hub for WASM web apps: point it at an `index.html`, and it
+handles `wasm-bindgen`, asset hashing, and a dev server with live reload. Start
+here unless you're shipping a library to npm.
+"""
+
+[[pick]]
+tool = "wasm-bindgen-cli"
+note = """
+The interop layer between Rust and JavaScript/DOM. Trunk drives it for you;
+you'll invoke it directly only for custom build setups or when debugging the
+generated bindings.
+"""
+
+[[pick]]
+tool = "wasm-pack"
+note = """
+Reach for this *instead of* trunk when the deliverable is an npm package rather
+than a hosted app — it wraps the build into something publishable to a JS
+ecosystem. Overkill for a self-contained Rust site.
+"""
+
+[[pick]]
+tool = "bacon"
+note = """
+A background `cargo check`/`clippy` that repaints on save. Pairs with trunk's
+reload: trunk rebuilds the app, bacon keeps a fast type-error loop in a side
+pane without you re-running anything.
+"""
+
+[[pick]]
+tool = "cargo-nextest"
+note = """
+Most of your logic should be testable off-target as plain Rust. Run it here for
+the fast, isolated feedback loop; reserve in-browser `wasm-bindgen-test` runs
+for the genuinely DOM-bound parts.
+"""
+
+[[pick]]
+tool = "clippy"
+note = """
+Catches the usual bugs, plus it's where you'll notice accidental blocking calls
+or panics that are far nastier to debug once they're running inside WASM.
+"""
+
+[[pick]]
+tool = "rustfmt"
+note = "Non-negotiable baseline; wire it into the editor and CI and forget about it."
