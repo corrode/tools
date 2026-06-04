@@ -9,6 +9,7 @@
 
 :root {
     /* Surfaces & ink */
+    color-scheme: light;
     --bg: #f6f7f9;
     --surface: #ffffff;
     --surface-alt: #f8fafc;
@@ -30,6 +31,9 @@
     --accent-ink: #157049;
     --accent-soft: #eaf6f0;
     --accent-ring: rgba(31, 157, 107, 0.16);
+    /* Whisper-soft tint for the recommended row (kept very low so it marks
+       the row without dominating it). */
+    --accent-wash: rgba(31, 157, 107, 0.05);
 
     /* Status colours (kept friendly, softened) */
     --ok-ink: #1a7a4c;
@@ -51,6 +55,57 @@
     --max-width: 1200px;
     --gutter: 32px;
     --header-h: 65px;
+}
+
+/* =============================================================================
+   Dark theme: flips the palette tokens. Toggled by the header button (which
+   sets `data-theme="dark"` on <html>); an inline <head> script applies the
+   saved/system preference before first paint so there's no flash.
+   ============================================================================= */
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1419;
+    --surface: #161b22;
+    --surface-alt: #131820;
+    --surface-hover: #1b222c;
+
+    --border: #272e38;
+    --border-soft: #1f262f;
+    --border-strong: #333b46;
+
+    --ink: #e6edf3;
+    --text: #b6bfca;
+    --text-dim: #8b95a1;
+    --text-faint: #6b7480;
+
+    --accent: #28b07c;
+    --accent-ink: #4cd397;
+    --accent-soft: rgba(40, 176, 124, 0.16);
+    --accent-ring: rgba(40, 176, 124, 0.24);
+    --accent-wash: rgba(40, 176, 124, 0.08);
+
+    --ok-ink: #5ad19a;
+    --ok-bg: rgba(40, 176, 124, 0.16);
+    --warn-ink: #e0b758;
+    --warn-bg: rgba(224, 183, 88, 0.15);
+    --err-ink: #f0938a;
+    --err-bg: rgba(240, 147, 138, 0.15);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* The translucent sticky header needs a dark tint instead of a white one. */
+html[data-theme="dark"] .site-header {
+    background-color: rgba(15, 20, 25, 0.82);
+}
+
+/* Invert the black gear logo and the black corrode wordmark for dark mode. */
+html[data-theme="dark"] .brand-logo {
+    filter: invert(1);
+}
+
+html[data-theme="dark"] .footer-logo {
+    filter: grayscale(1) invert(1);
 }
 
 body {
@@ -205,6 +260,52 @@ a:hover {
     color: var(--accent-ink);
     border-color: var(--accent);
     opacity: 1;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 30px;
+    padding: 0;
+    color: var(--text-dim);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease;
+}
+
+.theme-toggle:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+}
+
+.theme-icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Show the icon for the mode you'll switch TO: a moon while light, a sun
+   while dark. */
+.theme-icon-sun {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-icon-moon {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-icon-sun {
+    display: block;
 }
 
 /* --------------------------------------------------------------- Catalog -- */
@@ -546,7 +647,7 @@ a:hover {
 
 /* Editor's pick: a prominent badge plus a subtle row accent. */
 .tool.is-recommended td {
-    background-color: var(--accent-soft);
+    background-color: var(--accent-wash);
 }
 
 .tool.is-recommended td:first-child {
@@ -613,6 +714,12 @@ a:hover {
     font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
     margin-top: 5px;
     max-width: 100%;
+}
+
+/* Keep the repo link neutral once visited (overrides the global `a:visited`
+   accent so GitLab/GitHub links don't turn green after a click). */
+.tool-repo:visited {
+    color: var(--text-faint);
 }
 
 .tool-repo:hover {

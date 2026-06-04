@@ -1,0 +1,40 @@
+name: Links
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Re-check weekly: upstream repositories get renamed, archived, or deleted
+    # over time, which silently rots the catalog's links.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lychee:
+    name: Link Checker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Only the human-owned, absolute links: every tool/stack repository
+          # and homepage (catalog TOML) plus the README. Templates are skipped
+          # on purpose — they're full of app-relative routes (/api, /static, …)
+          # that only resolve when the server is running.
+          args: >-
+            --no-progress
+            --exclude-all-private
+            './README.md'
+            './data/**/*.toml'
+          fail: true
+        env:
+          # Authenticated requests avoid GitHub's unauthenticated rate limits,
+          # which would otherwise make this job flaky.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

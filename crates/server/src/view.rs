@@ -101,6 +101,8 @@ pub(crate) struct ToolView {
     pub(crate) repo_label: String,
     /// Whether the repo is GitHub-hosted (controls the source icon).
     pub(crate) is_github: bool,
+    /// Whether the repo is GitLab-hosted (controls the source icon).
+    pub(crate) is_gitlab: bool,
     /// Rendered HTML of the human `remarks` markdown.
     pub(crate) remarks_html: String,
     /// Peer/replacement tools for comparison, with links when in-catalog.
@@ -327,6 +329,7 @@ impl ToolView {
             name: tool.name.clone(),
             repo_label: repo_label(&tool.repository),
             is_github: is_github(&tool.repository),
+            is_gitlab: is_gitlab(&tool.repository),
             repository: tool.repository.clone(),
             remarks_html: markdown(&tool.remarks),
             alternatives: relations(&tool.alternatives),
@@ -447,6 +450,12 @@ fn repo_label(url: &str) -> String {
 /// Whether the repository is hosted on GitHub.
 fn is_github(url: &str) -> bool {
     url.starts_with("https://github.com/") || url.starts_with("http://github.com/")
+}
+
+/// Whether the repository is hosted on GitLab (gitlab.com or a self-hosted
+/// instance under a `gitlab.` subdomain).
+fn is_gitlab(url: &str) -> bool {
+    url.starts_with("https://gitlab.") || url.starts_with("http://gitlab.")
 }
 
 /// Formats a count with thousands separators, e.g. `4821330` -> `4,821,330`.
