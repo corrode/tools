@@ -108,6 +108,14 @@ html[data-theme="dark"] .footer-logo {
     filter: grayscale(1) invert(1);
 }
 
+/* The install bar is a dark "terminal" chip. In light mode `--ink` provides that
+   surface for free, but in dark mode `--ink` is light — which left light text on
+   a light background. Pin an explicitly dark surface (its text/label are already
+   light, so they read fine against it). */
+html[data-theme="dark"] .stack-banner-install {
+    background-color: #0b0f14;
+}
+
 body {
     background-color: var(--bg);
     color: var(--text);
@@ -789,7 +797,7 @@ html[data-theme="dark"] .theme-icon-sun {
     border-radius: var(--r-xs);
     padding: 0.5px 5px;
     font-size: 0.82em;
-    color: #39455a;
+    color: var(--text);
     font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
 }
 
