@@ -1,6 +1,6 @@
 id = "security"
 name = "Security & Supply Chain"
-description = "Knowing — and gating — what's actually in your dependency tree."
+description = "Knowing (and gating) what's actually in your dependency tree."
 
 intro = """
 Most of a Rust project's code isn't yours; it's the transitive dependency tree.
@@ -39,7 +39,7 @@ for a solo project; essential for some. It tracks judgment, not CVEs.
 tool = "cargo-auditable"
 note = """
 Embeds the dependency list into release binaries so they can be scanned with
-`cargo audit bin` later — even without the source or lockfile. Provenance for
+`cargo audit bin` later, even without the source or lockfile. Provenance for
 what you actually shipped.
 """
 
@@ -47,7 +47,7 @@ what you actually shipped.
 tool = "cargo-geiger"
 note = """
 Counts `unsafe` usage across the dependency tree, for when minimizing unsafe
-surface is a goal. Treat it as a heuristic, not a verdict — and confirm it builds
+surface is a goal. Treat it as a heuristic, not a verdict, and confirm it builds
 on current toolchains before trusting it in CI.
 """
 

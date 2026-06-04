@@ -6,7 +6,7 @@
 # Why vendor: the deployed container makes no external calls, and we want the
 # exact icon sources (and their license) committed in-repo rather than hand-
 # transcribed path data. This script is the single source of truth for the
-# category iconography — edit the MAP below and re-run, don't hand-edit the
+# category iconography. Edit the MAP below and re-run, don't hand-edit the
 # generated sprite.
 #
 # Usage:
@@ -75,7 +75,7 @@ done
 {
   cat <<'HEAD'
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <!-- GENERATED FILE — do not edit by hand.
+  <!-- GENERATED FILE: do not edit by hand.
        Built by scripts/build_icons.sh from the vendored Lucide iconset in
        static/icons/lucide/ (ISC-licensed; see static/icons/lucide/LICENSE).
        To change an icon, edit the MAP in the script and re-run it.

@@ -1,5 +1,5 @@
 /* =============================================================================
-   Rust Tool Index — calm, professional, table-driven layout.
+   Rust Tool Index: calm, professional, table-driven layout.
 
    A restrained white/grey palette with hairline borders, barely-there shadows,
    tight radii, per-category icons, a roomy sticky search header, and one table
@@ -39,7 +39,7 @@
     --err-ink: #c0392b;
     --err-bg: #fcecea;
 
-    /* Geometry — deliberately tight & consistent */
+    /* Geometry: deliberately tight & consistent */
     --r-lg: 10px;
     --r-md: 8px;
     --r-sm: 6px;
@@ -732,7 +732,7 @@ span.relation-tool {
     text-align: right;
 }
 
-/* Status badges — friendly colours, gently rounded */
+/* Status badges: friendly colours, gently rounded */
 
 .pill {
     display: inline-block;

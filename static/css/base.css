@@ -491,7 +491,7 @@ html[data-theme="dark-cathode"] .hero-pattern::after {
     margin-right: 4px;
 }
 
-/* On narrow viewports collapse the pill to just the icon — keeps the
+/* On narrow viewports collapse the pill to just the icon, keeping the
    floating control compact and out of the way of mobile content. */
 @media (max-width: 640px) {
     .customize {

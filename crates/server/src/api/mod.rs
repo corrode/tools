@@ -3,8 +3,8 @@
 //! The `OpenAPI` 3.1 spec is built from the route registrations and the
 //! `ToSchema` derives on the shared [`types`] structs, and served at:
 //!
-//! - `GET /api/v1/openapi.json` — the raw spec.
-//! - `GET /api/v1/docs` — Swagger UI.
+//! - `GET /api/v1/openapi.json`: the raw spec.
+//! - `GET /api/v1/docs`: Swagger UI.
 
 use std::sync::Arc;
 

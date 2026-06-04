@@ -1,8 +1,8 @@
 //! Source-forge metric fetching.
 //!
 //! The forge is inferred from the repository URL's host. GitHub, GitLab, and
-//! Codeberg (Gitea) expose enough of a common shape — stars, forks, open
-//! issues, archived flag, last activity — to normalize into [`ForgeMetrics`].
+//! Codeberg (Gitea) expose enough of a common shape (stars, forks, open
+//! issues, archived flag, last activity) to normalize into [`ForgeMetrics`].
 //! Unknown hosts (e.g. sourcehut) return `None` rather than failing.
 
 use anyhow::{Context, Result, anyhow};

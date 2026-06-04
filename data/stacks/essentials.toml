@@ -8,7 +8,7 @@ baseline that pays off on essentially every Rust project: a managed toolchain,
 an editor that understands your code, a fast lint/format/test loop, and a way to
 install the rest without waiting on `cargo install` to compile from source.
 
-This is that baseline. Everything here is general-purpose and low-commitment — if
+This is that baseline. Everything here is general-purpose and low-commitment. If
 you adopt nothing else from the index, adopt these. The domain stacks build on
 top of it rather than repeating it.
 """
@@ -17,7 +17,7 @@ top of it rather than repeating it.
 tool = "rustup"
 note = """
 Manages your toolchains, components, and cross-compilation targets, and pins a
-per-project version via `rust-toolchain.toml`. Effectively mandatory — almost
+per-project version via `rust-toolchain.toml`. Effectively mandatory: almost
 everything else here assumes a rustup-managed toolchain.
 """
 
@@ -33,7 +33,7 @@ extension; it's the single biggest quality-of-life upgrade for writing Rust.
 tool = "clippy"
 note = """
 700+ lints that catch correctness traps and non-idiomatic code `rustc` waves
-through. Run `cargo clippy` locally and gate CI on it — there's rarely a reason
+through. Run `cargo clippy` locally and gate CI on it. There's rarely a reason
 not to.
 """
 

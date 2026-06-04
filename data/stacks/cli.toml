@@ -3,13 +3,13 @@ name = "Command-Line Apps"
 description = "Building and shipping a binary that other people install and run."
 
 intro = """
-A CLI's distinctive problems aren't really in the code — they're at the edges:
+A CLI's distinctive problems aren't really in the code. They're at the edges:
 testing the actual terminal output, and getting the binary onto other people's
 machines across three operating systems without asking them to install a Rust
 toolchain first.
 
 This stack covers building, testing, and distributing a binary. It leaves the
-argument parser and TUI libraries (clap, ratatui, …) to the project — those are
+argument parser and TUI libraries (clap, ratatui, …) to the project. Those are
 dependencies, not tooling.
 """
 
@@ -31,8 +31,8 @@ cargo-dist), users can `cargo binstall your-tool` and skip the compile entirely.
 [[pick]]
 tool = "insta"
 note = """
-Snapshot-test your CLI's real output — `--help`, error messages, formatted
-tables — instead of hand-writing brittle expected strings. `cargo insta review`
+Snapshot-test your CLI's real output (`--help`, error messages, formatted
+tables) instead of hand-writing brittle expected strings. `cargo insta review`
 makes accepting intentional changes painless. Added as a dev-dependency.
 """
 
@@ -50,7 +50,7 @@ Makefile and Rust-friendly.
 
 [[pick]]
 tool = "clippy"
-note = "Baseline lint gate — especially worth it on the argument-handling and error paths users hit first."
+note = "Baseline lint gate, especially worth it on the argument-handling and error paths users hit first."
 
 [[pick]]
 tool = "rustfmt"

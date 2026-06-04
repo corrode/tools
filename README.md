@@ -3,8 +3,8 @@
 A curated guide to Rust development tooling, live at
 [tools.corrode.dev](https://tools.corrode.dev).
 
-For each tool you get an honest, hand-written take — what it's good at and when
-*not* to reach for it — next to fresh numbers: downloads, stars, last activity,
+For each tool you get an honest, hand-written take (what it's good at and when
+*not* to reach for it) next to fresh numbers: downloads, stars, last activity,
 license, maintainers. Deprecated tools stay listed, clearly marked, and point you
 to what to use instead.
 
@@ -14,8 +14,8 @@ There's no database. The catalog is just TOML files in `data/`, loaded into memo
 when the server starts. Every tool file has two halves:
 
 - **The prose** (`name`, `repository`, `category`, `remarks`, `alternatives`,
-  `successors`) — written and owned by humans.
-- **The `[metrics]`** — refreshed daily by the `generator`, which pulls from the
+  `successors`): written and owned by humans.
+- **The `[metrics]`**: refreshed daily by the `generator`, which pulls from the
   source forge and crates.io and opens a single rolling PR for review. It never
   touches your words.
 
@@ -60,7 +60,7 @@ crate = "cargo-nextest"       # optional, for crates.io metrics
 #                             # them out of derived stack install lines (default: true)
 
 remarks = """
-What it does, when to reach for it, and — just as important — when not to.
+What it does, when to reach for it, and (just as important) when not to.
 """
 
 alternatives = ["cargo test (built-in)"]
@@ -78,7 +78,7 @@ candidates.
 ## Adding a stack
 
 A **stack** is a curated, opinionated toolbox for a kind of project (e.g. web,
-embedded). It's pure editorial — it *references* catalog tools by id and the
+embedded). It's pure editorial: it *references* catalog tools by id and the
 metrics bot never touches it. Picks are grouped by each tool's own `category`
 (the index's existing sections), so a stack composes the existing vocabulary
 rather than adding a parallel one. There are only two concepts: `category` and
@@ -92,8 +92,8 @@ name = "Web Frontend (WASM)"
 description = "Shipping a Rust app to the browser via WebAssembly."
 
 intro = """
-Markdown lead-in: what's distinctive about tooling for this domain, and — in the
-honest-take spirit — what it deliberately leaves out.
+Markdown lead-in: what's distinctive about tooling for this domain, and (in the
+honest-take spirit) what it deliberately leaves out.
 """
 
 [[pick]]
@@ -117,16 +117,16 @@ caveat instead.
 
 Everything is public and read-only:
 
-- `GET /api/v1/tools` — the whole catalog as JSON (`?category=<id>` to filter)
-- `GET /api/v1/tools/{id}` — a single tool
-- `GET /?stack={id}` — the index filtered to a curated stack (the retired
+- `GET /api/v1/tools`: the whole catalog as JSON (`?category=<id>` to filter)
+- `GET /api/v1/tools/{id}`: a single tool
+- `GET /?stack={id}`: the index filtered to a curated stack (the retired
   `/stacks` and `/stacks/{id}` pages redirect here)
-- `GET /api/v1/docs` — Swagger UI (`/api/v1/openapi.json` for the raw spec)
-- `GET /llms.txt` — the index as plain text, ready to paste into an LLM
+- `GET /api/v1/docs`: Swagger UI (`/api/v1/openapi.json` for the raw spec)
+- `GET /llms.txt`: the index as plain text, ready to paste into an LLM
 
 ## Deploying
 
 `docker.yml` bakes the `server` binary together with `data/` and `static/` into a
 small image, pushes it to ghcr.io, and triggers a Coolify redeploy. Since the data
-ships inside the image, the running container makes no external calls — and merging
+ships inside the image, the running container makes no external calls, and merging
 a metrics PR redeploys automatically.

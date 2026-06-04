@@ -4,12 +4,12 @@ description = "Shipping a Rust app to the browser via WebAssembly."
 
 intro = """
 Rust in the browser means compiling to `wasm32-unknown-unknown` and handing the
-result to JavaScript and the DOM. The friction is rarely the framework — it's
+result to JavaScript and the DOM. The friction is rarely the framework. It's
 the build pipeline: bundling the `.wasm`, generating JS bindings, serving with
 live reload, and keeping the artifact small.
 
 This stack covers that pipeline. It deliberately leaves out the **framework**
-(Leptos, Yew, Dioxus, …) and the **backend** — pick those per project. What's
+(Leptos, Yew, Dioxus, …) and the **backend**. Pick those per project. What's
 here is the tooling you'll reach for regardless of which framework wins.
 """
 
@@ -33,7 +33,7 @@ generated bindings.
 tool = "wasm-pack"
 note = """
 Reach for this *instead of* trunk when the deliverable is an npm package rather
-than a hosted app — it wraps the build into something publishable to a JS
+than a hosted app: it wraps the build into something publishable to a JS
 ecosystem. Overkill for a self-contained Rust site.
 """
 

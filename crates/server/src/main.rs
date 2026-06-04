@@ -1,11 +1,11 @@
-//! # Rust Tool Index — web server
+//! # Rust Tool Index: web server
 //!
 //! Serves the dense, single-page HTML reference, a machine-readable JSON API
 //! under `/api/v1`, and an LLM-friendly `/llms.txt` feed.
 //!
 //! The whole catalog is loaded from the `data/` TOML files into memory at
 //! startup (see [`types::Catalog`]); there is no database. To pick up data
-//! changes, restart the process — in production a merged metrics PR rebuilds
+//! changes, restart the process. In production a merged metrics PR rebuilds
 //! and redeploys the image automatically.
 
 mod api;

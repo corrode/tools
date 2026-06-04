@@ -40,7 +40,7 @@ jobs:
             Automated daily refresh of the bot-owned `[metrics]` tables from the
             source forges (GitHub/GitLab/Codeberg) and crates.io.
 
-            Only the `[metrics]` tables change — human-authored editorial fields
+            Only the `[metrics]` tables change. Human-authored editorial fields
             (`remarks`, `alternatives`, `successors`, …) are never modified.
 
             Review the diff and merge to publish. Merging rebuilds the image and

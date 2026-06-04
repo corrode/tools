@@ -1,6 +1,6 @@
 id = "performance"
 name = "Profiling & Optimization"
-description = "Measuring what's slow before — and after — you try to fix it."
+description = "Measuring what's slow before (and after) you try to fix it."
 
 intro = """
 The cardinal rule of performance work is to measure first, and the right
@@ -9,14 +9,14 @@ picture or an interactive dig? CPU time or async stalls? Reaching for a benchmar
 when you needed a profiler (or the reverse) wastes a lot of time.
 
 This stack is the measurement toolbox, end to end. The benchmarking libraries
-here — criterion and divan — are dev-dependencies you add to the project, not
+here (criterion and divan) are dev-dependencies you add to the project, not
 installed binaries.
 """
 
 [[pick]]
 tool = "cargo-flamegraph"
 note = """
-Start here for "where does the time go?" — one `cargo flamegraph` run yields a
+Start here for "where does the time go?" One `cargo flamegraph` run yields a
 shareable SVG of a whole execution. A good first look before you zoom in.
 """
 
@@ -38,7 +38,7 @@ you can defend. Added as a dev-dependency.
 [[pick]]
 tool = "divan"
 note = """
-A lighter, faster-to-compile benchmarking harness — annotate plain functions and
+A lighter, faster-to-compile benchmarking harness: annotate plain functions and
 read a compact tree. Prefer it over criterion when you want quick, readable
 numbers without the heavy statistics.
 """
@@ -49,7 +49,7 @@ note = "For when the unit under test is a whole command, not a function: warm-up
 
 [[pick]]
 tool = "cargo-show-asm"
-note = "The last mile: confirm the optimization you expected — inlining, vectorization, bounds-check elision — actually shows up in the generated assembly."
+note = "The last mile: confirm the optimization you expected (inlining, vectorization, bounds-check elision) actually shows up in the generated assembly."
 
 [[pick]]
 tool = "tokio-console"

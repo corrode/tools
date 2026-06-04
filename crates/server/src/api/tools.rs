@@ -21,8 +21,8 @@ pub(crate) struct ListParams {
 
 /// List every tool in the index.
 ///
-/// Returns the full catalog — editorial fields plus the latest auto-refreshed
-/// metrics — in load order (sorted by id). This is the bulk feed for external
+/// Returns the full catalog (editorial fields plus the latest auto-refreshed
+/// metrics) in load order (sorted by id). This is the bulk feed for external
 /// consumers and LLM clients. Pass `?category=<id>` to filter to one category.
 #[utoipa::path(
     get,

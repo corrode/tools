@@ -2,8 +2,8 @@
 //!
 //! The catalog is split across plain TOML files in `data/`:
 //!
-//! - `data/categories.toml` — the controlled category vocabulary.
-//! - `data/tools/<id>.toml` — one file per tool.
+//! - `data/categories.toml`: the controlled category vocabulary.
+//! - `data/tools/<id>.toml`: one file per tool.
 //!
 //! Each tool file mixes two ownership layers:
 //!
@@ -139,7 +139,7 @@ pub struct Tool {
     pub repository: String,
     /// Category id; must match an entry in `data/categories.toml`.
     pub category: String,
-    /// Markdown prose: what it's for, when to reach for it, and — crucially —
+    /// Markdown prose: what it's for, when to reach for it, and (crucially)
     /// when *not* to. This is the human-authored "proof of relevance".
     #[serde(default)]
     pub remarks: String,
@@ -155,7 +155,7 @@ pub struct Tool {
     /// Project homepage or documentation site, when distinct from the repo.
     #[serde(default)]
     pub homepage: Option<String>,
-    /// Peer tools worth comparing against — drop-in *replacements* you might
+    /// Peer tools worth comparing against: drop-in *replacements* you might
     /// pick instead (for *live* tools).
     #[serde(default)]
     pub alternatives: Vec<String>,
@@ -224,7 +224,7 @@ impl Tool {
 /// note on the role it plays in *this* stack.
 ///
 /// The tool's functional role is derived from its own [`Tool::category`], not
-/// stored here — a stack composes the existing category vocabulary rather than
+/// stored here: a stack composes the existing category vocabulary rather than
 /// inventing a parallel one.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
@@ -373,7 +373,7 @@ impl Catalog {
     ///
     /// A trailing parenthetical qualifier such as `" (deprecated)"` or
     /// `" (built-in)"` is ignored before matching against tool ids and names.
-    /// References with no entry — built-in cargo commands, non-Rust tools —
+    /// References with no entry (built-in cargo commands, non-Rust tools)
     /// return `None` and are meant to render as plain, unlinked text.
     #[must_use]
     pub fn resolve_relation(&self, reference: &str) -> Option<&Tool> {

@@ -8,7 +8,7 @@ that runs over and over in CI and Docker, and a binary whose provenance you may
 have to answer for later. The framework (axum, actix, tonic, …) is a per-project
 dependency; the operational tooling around it is not.
 
-This stack is that operational layer — keeping the async runtime observable,
+This stack is that operational layer: keeping the async runtime observable,
 builds fast, and what you deploy auditable. It deliberately says nothing about
 your web framework or database.
 """
@@ -18,7 +18,7 @@ tool = "tokio-console"
 note = """
 A live TUI into a running tokio app: per-task poll times, wakers, and resource
 usage. The fastest way to find the task that's stuck, busy-looping, or never
-waking. Development-time only — it needs `tokio_unstable`.
+waking. Development-time only: it needs `tokio_unstable`.
 """
 
 [[pick]]
@@ -27,7 +27,7 @@ note = "When a handler is slow under load, a flamegraph of a representative run 
 
 [[pick]]
 tool = "cargo-nextest"
-note = "Parallel, isolated tests with first-class partitioning — handy once an integration suite gets big enough to shard across CI."
+note = "Parallel, isolated tests with first-class partitioning, handy once an integration suite gets big enough to shard across CI."
 
 [[pick]]
 tool = "cargo-chef"

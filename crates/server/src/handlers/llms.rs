@@ -63,7 +63,7 @@ fn render_tool(out: &mut String, tool: &Tool) {
     if tool.is_archived() {
         out.push_str(" [DEPRECATED]");
     }
-    out.push_str(" — ");
+    out.push_str(": ");
     out.push_str(&tool.repository);
     out.push('\n');
 

@@ -63,7 +63,7 @@ note = "Fast, isolated runs for the growing test suite a published crate tends t
 [[pick]]
 tool = "mdbook"
 note = """
-For the narrative guide rustdoc can't give you — tutorials, concepts, worked
+For the narrative guide rustdoc can't give you: tutorials, concepts, worked
 examples. Optional, but often the difference between a crate people adopt and one
 they bounce off.
 """
