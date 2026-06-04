@@ -1,0 +1,23 @@
+id = "rstest"
+name = "rstest"
+repository = "https://github.com/la10736/rstest"
+category = "testing"
+crate = "rstest"
+installable = false
+
+remarks = """
+Adds fixtures and parameterized cases to ordinary `#[test]` functions. Declare a
+reusable `#[fixture]` and request it as an argument, or attach `#[case(...)]`
+rows (and `#[values(...)]` matrices) to run the same body across many inputs —
+each case reports as its own named test.
+
+It removes most of the copy-paste from table-driven tests while staying close to
+the built-in harness, so it composes with `cargo-nextest`, `insta`, and the rest
+rather than replacing them. For exhaustively *generated* inputs rather than a
+hand-written table, reach for property testing with `proptest`. Added as a
+`dev-dependency`, not installed.
+"""
+
+related = ["proptest", "insta"]
+recommended = true
+added = "2026-06-04"

@@ -1,0 +1,22 @@
+id = "cargo-bloat"
+name = "cargo-bloat"
+repository = "https://github.com/RazrFalcon/cargo-bloat"
+category = "performance"
+crate = "cargo-bloat"
+
+remarks = """
+Breaks down what's taking up space in a release binary, listing the largest
+functions and the per-crate contribution to the `.text` section. Run `cargo
+bloat --release` for the function view or `--crates` to see which dependencies
+pull their weight — the natural first step before reaching for linker flags,
+`opt-level = "z"`, or `panic = "abort"`.
+
+It measures machine-code size, not runtime cost, so the biggest function is not
+necessarily a slow one. Generic-heavy code is attributed to the crate that
+instantiates it, which can blur where size really comes from. For the matching
+instruction-level view of a single function, use `cargo-show-asm`.
+"""
+
+related = ["cargo-show-asm"]
+recommended = true
+added = "2026-06-04"

@@ -1,0 +1,21 @@
+id = "cargo-generate"
+name = "cargo-generate"
+repository = "https://github.com/cargo-generate/cargo-generate"
+category = "cargo-extensions"
+crate = "cargo-generate"
+
+remarks = """
+Scaffolds a new project from a Git template, filling in the crate name and other
+placeholders via Liquid templating and interactive prompts. It's the practical
+answer to "`cargo new`, but with my CI, lints, license, and module layout
+already wired up", and because templates are just ordinary repositories, teams
+can maintain their own.
+
+Reach for it when you spin up similar crates often or want to standardize a
+house style; for a genuine one-off, plain `cargo new` is still simpler. A
+template is third-party code that runs on your machine, so treat an unfamiliar
+one with the same caution as any dependency.
+"""
+
+recommended = true
+added = "2026-06-04"

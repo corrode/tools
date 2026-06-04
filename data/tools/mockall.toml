@@ -1,0 +1,23 @@
+id = "mockall"
+name = "mockall"
+repository = "https://github.com/asomers/mockall"
+category = "testing"
+crate = "mockall"
+installable = false
+
+remarks = """
+A powerful mocking library: generate mock implementations of your traits, then
+set expectations on which methods are called, with what arguments, how often,
+and what they return. It earns its place at the seams of a system — network,
+clock, filesystem — where you want to exercise logic without the real
+dependency.
+
+Mockall works best when your code already abstracts over traits rather than
+concrete types; retrofitting it can mean introducing traits purely for testing,
+which not every codebase wants. For simple cases a hand-written fake or a small
+trait impl is often clearer than the macro machinery. Added as a
+`dev-dependency`, not installed.
+"""
+
+recommended = true
+added = "2026-06-04"

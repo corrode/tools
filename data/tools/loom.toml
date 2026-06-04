@@ -1,0 +1,24 @@
+id = "loom"
+name = "loom"
+repository = "https://github.com/tokio-rs/loom"
+category = "testing"
+crate = "loom"
+installable = false
+
+remarks = """
+A model checker for concurrent Rust. Write a test against loom's drop-in
+replacements for `Atomic*`, `Mutex`, `UnsafeCell`, and friends, and it
+exhaustively explores the interleavings and memory orderings the C11 model
+permits — surfacing races and ordering bugs that may never appear on the
+hardware you happen to test on. It's how Tokio validates its own lock-free code.
+
+This is a tool for `unsafe`, lock-free, or hand-rolled synchronization, not for
+everyday application logic built on channels and `async`. The state space grows
+quickly, so loom tests must be kept small and gated behind a `cfg`. If you
+aren't writing your own concurrency primitives, you probably don't need it.
+Added as a `dev-dependency`, not installed.
+"""
+
+related = ["miri", "tokio-console"]
+recommended = true
+added = "2026-06-04"
