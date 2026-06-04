@@ -162,6 +162,14 @@
                         <span>Recommended only</span>
                     </label>
                     <span class="filter-spacer"></span>
+                    <button
+                        type="button"
+                        id="collapse-all"
+                        class="collapse-all"
+                        aria-pressed="false"
+                    >
+                        Collapse all
+                    </button>
                     <label class="select-filter">
                         <span class="select-filter-label">Jump to</span>
                         <select id="category-jump" aria-label="Jump to category">
@@ -253,6 +261,13 @@
                 data-cat="{{ cat.id }}"
             >
                 <div class="category-head">
+                    <svg
+                        class="category-chevron"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
                     <span class="category-icon">
                         <svg aria-hidden="true">
                             <use
@@ -260,14 +275,21 @@
                             ></use>
                         </svg>
                     </span>
-                    <div class="category-heading">
-                        <h2 class="category-title">{{ cat.name }}</h2>
+                    <h2 class="category-heading">
+                        <button
+                            type="button"
+                            class="category-toggle"
+                            aria-expanded="true"
+                            aria-controls="cat-{{ cat.id }}-body"
+                        >
+                            <span class="category-title">{{ cat.name }}</span>
+                        </button>
                         <span class="category-count">{{ cat.count }}</span>
-                    </div>
+                    </h2>
                     <p class="category-desc">{{ cat.description }}</p>
                 </div>
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="cat-{{ cat.id }}-body">
                     <table class="tool-table">
                         <thead>
                             <tr>

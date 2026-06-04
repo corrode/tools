@@ -22,6 +22,58 @@
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
+  const collapseAllBtn = document.getElementById("collapse-all");
+
+  // ── Collapsible categories ──────────────────────────────────────
+  // Manual collapse is a navigation aid, persisted per-browser. It's a layer on
+  // top of filtering, not part of it: an active search always wins, so matches
+  // are never hidden inside a folded section.
+  const COLLAPSE_KEY = "collapsedCategories";
+  const collapsed = new Set(loadCollapsed());
+
+  function loadCollapsed() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(COLLAPSE_KEY) || "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistCollapsed() {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsed]));
+    } catch (e) {}
+  }
+
+  // Reflect the collapse set into the DOM. A non-empty query forces every
+  // category open so results stay visible; the saved set returns when it clears.
+  function renderCollapsed() {
+    const searchActive = input.value.trim() !== "";
+    for (const cat of categories) {
+      const isCollapsed = !searchActive && collapsed.has(cat.dataset.cat);
+      cat.classList.toggle("collapsed", isCollapsed);
+      const toggle = cat.querySelector(".category-toggle");
+      if (toggle) {
+        toggle.setAttribute("aria-expanded", String(!isCollapsed));
+      }
+    }
+    if (collapseAllBtn) {
+      const shown = categories.filter((c) => !c.hidden);
+      const allCollapsed =
+        shown.length > 0 && shown.every((c) => collapsed.has(c.dataset.cat));
+      collapseAllBtn.disabled = searchActive;
+      collapseAllBtn.setAttribute("aria-pressed", String(allCollapsed));
+      collapseAllBtn.textContent = allCollapsed ? "Expand all" : "Collapse all";
+    }
+  }
+
+  function setCollapsed(id, value) {
+    if (value) collapsed.add(id);
+    else collapsed.delete(id);
+    persistCollapsed();
+    renderCollapsed();
+  }
 
   // Remember each tool's original (server-ranked) position so the "Relevance"
   // sort can always restore it.
@@ -100,6 +152,7 @@
     }
 
     noResults.hidden = visible !== 0;
+    renderCollapsed();
     updateStackContext(stack);
     syncUrl();
   }
@@ -168,6 +221,35 @@
   licenseFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
 
+  // Click a category header (or its chevron) to fold it away. The chevron is a
+  // real <button>, so keyboard users get the same toggle for free.
+  for (const cat of categories) {
+    const head = cat.querySelector(".category-head");
+    if (!head) continue;
+    head.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && head.contains(sel.anchorNode)) return;
+      setCollapsed(cat.dataset.cat, !collapsed.has(cat.dataset.cat));
+    });
+  }
+
+  // Fold or unfold every visible category at once — turns the page into a
+  // scannable index of category headers.
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener("click", () => {
+      const shown = categories.filter((c) => !c.hidden);
+      const allCollapsed = shown.every((c) => collapsed.has(c.dataset.cat));
+      if (allCollapsed) {
+        collapsed.clear();
+      } else {
+        for (const c of shown) collapsed.add(c.dataset.cat);
+      }
+      persistCollapsed();
+      renderCollapsed();
+    });
+  }
+
   // Stack selection flows through the hidden <select> (the single source of
   // truth for the active stack, URL sync, and row filtering): the picker cards,
   // the "In <stack>" row chips, and a banner's "Clear filter" button all just
@@ -206,6 +288,8 @@
       const id = categoryJump.value;
       const section = id && document.getElementById(id);
       if (section && !section.hidden) {
+        // Unfold the target so the jump lands on content, not a folded header.
+        setCollapsed(section.dataset.cat, false);
         section.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       categoryJump.value = "";

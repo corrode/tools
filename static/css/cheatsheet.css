@@ -464,6 +464,37 @@ html[data-theme="dark"] .theme-icon-sun {
     gap: 12px 18px;
 }
 
+.collapse-all {
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 4px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.collapse-all:hover:not(:disabled) {
+    color: var(--ink);
+    border-color: var(--accent);
+}
+
+.collapse-all:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.collapse-all:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* Pushes the Jump-to/Sort/License selects to the right edge; collapses on
    narrow screens so the controls simply wrap left-aligned. */
 .filter-spacer {
@@ -516,14 +547,78 @@ html[data-theme="dark"] .theme-icon-sun {
 
 .category-head {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto auto 1fr;
     column-gap: 14px;
     row-gap: 3px;
     align-items: center;
-    margin-bottom: 16px;
+    margin: 0 -12px 16px;
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.category-head:hover {
+    background-color: var(--surface);
+}
+
+/* ── Collapsible categories ──────────────────────────────── */
+.category-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--r-sm);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.category-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.category-chevron {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: 14px;
+    height: 14px;
+    color: var(--text-dim);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+        transform 0.18s ease,
+        color 0.15s ease;
+}
+
+.category-head:hover .category-chevron {
+    color: var(--ink);
+}
+
+.category.collapsed .category-chevron {
+    transform: rotate(-90deg);
+}
+
+.category.collapsed {
+    margin-bottom: 18px;
+}
+
+.category.collapsed .category-desc {
+    display: none;
+}
+
+.category.collapsed .table-wrap {
+    display: none;
 }
 
 .category-icon {
+    grid-column: 2;
     grid-row: 1 / span 2;
     align-self: center;
     display: inline-flex;
@@ -542,6 +637,9 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .category-heading {
+    grid-column: 3;
+    grid-row: 1;
+    margin: 0;
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -570,7 +668,7 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .category-desc {
-    grid-column: 2;
+    grid-column: 3;
     font-size: 0.85rem;
     color: var(--text-dim);
     margin: 0;
