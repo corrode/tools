@@ -3,7 +3,7 @@
 //! Handlers build these owned structs so the Askama templates stay free of
 //! formatting logic (number grouping, relative dates, markdown rendering).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{NaiveDate, Utc};
 use pulldown_cmark::{Options, Parser, html};
@@ -11,6 +11,12 @@ use types::{Catalog, Tool};
 
 /// How recently a tool must have been added to earn the "New" badge.
 const NEW_WINDOW_DAYS: i64 = 30;
+
+/// The stack that every other stack is assumed to build on. Its picks render as
+/// a labeled, de-emphasized baseline layer on every domain stack's view, so the
+/// essentials are shown consistently everywhere instead of being hand-listed
+/// (inconsistently) in each stack file.
+const BASELINE_STACK_ID: &str = "essentials";
 
 /// The whole page: every non-empty category with its ranked tools.
 #[derive(Debug)]
@@ -25,6 +31,13 @@ pub(crate) struct IndexView {
     pub(crate) licenses: Vec<LicenseOption>,
     /// Curated stacks, powering the stack picker and its banner.
     pub(crate) stacks: Vec<StackInfo>,
+    /// Names of the baseline (Everyday Essentials) picks, in pick order. Shown
+    /// on every stack's banner as the assumed groundwork.
+    pub(crate) baseline_names: Vec<String>,
+    /// Crate names to `cargo install` for the baseline's installable picks,
+    /// shown alongside `baseline_names` so the baseline can still be bootstrapped
+    /// even though it has no card of its own.
+    pub(crate) baseline_install: Vec<String>,
 }
 
 /// One entry in the license filter dropdown.
@@ -145,6 +158,14 @@ pub(crate) struct ToolView {
     /// Stacks this tool is a pick in (for "In <stack>" cross-links and the
     /// per-stack note shown inline when that stack is the active filter).
     pub(crate) stacks: Vec<ToolStack>,
+    /// Whether this tool is part of the Everyday Essentials baseline. Baseline
+    /// tools surface on every stack's view (de-emphasized) as the assumed
+    /// groundwork the domain picks build on.
+    pub(crate) baseline: bool,
+    /// Rendered HTML of this tool's baseline note (its editorial line in the
+    /// Everyday Essentials), shown on the baseline row under any active stack.
+    /// Empty for non-baseline tools.
+    pub(crate) baseline_note_html: String,
     /// Recent (or total) downloads as a raw number, for client-side sorting.
     pub(crate) sort_downloads: u64,
     /// Star count as a raw number, for client-side sorting.
@@ -163,6 +184,15 @@ impl IndexView {
         let mut total = 0;
         let mut last_updated: Option<NaiveDate> = None;
 
+        // The Everyday Essentials baseline. It isn't a pickable stack of its
+        // own; it's shown automatically (de-emphasized) under whatever stack is
+        // active.
+        let Baseline {
+            ids: baseline_ids,
+            names: baseline_names,
+            install: baseline_install,
+        } = baseline_layer(catalog);
+
         let categories = groups
             .into_iter()
             .map(|group| {
@@ -179,7 +209,7 @@ impl IndexView {
                         {
                             last_updated = Some(last_updated.map_or(date, |cur| cur.max(date)));
                         }
-                        ToolView::build(tool, catalog, today)
+                        ToolView::build(tool, catalog, today, &baseline_ids)
                     })
                     .collect();
                 CategoryView {
@@ -207,11 +237,12 @@ impl IndexView {
             .map(|(value, label)| LicenseOption { value, label })
             .collect();
 
-        // Curated stacks: one picker card each, carrying the editorial
-        // payload (intro + derived install line) for the in-page banner.
+        // Curated stacks for the picker, minus the baseline (which is implicit,
+        // not a card you select).
         let stacks = catalog
             .stacks()
             .iter()
+            .filter(|stack| stack.id != BASELINE_STACK_ID)
             .map(|stack| {
                 let mut install_crates = Vec::new();
                 let mut uncovered = Vec::new();
@@ -242,15 +273,23 @@ impl IndexView {
             categories,
             licenses,
             stacks,
+            baseline_names,
+            baseline_install,
         }
     }
 }
 
 impl ToolView {
     /// Projects a single [`Tool`] into its presentation form. The `catalog`
-    /// is used to resolve relation references to in-page links, and `today`
-    /// anchors relative dates and the "new" window.
-    pub(crate) fn build(tool: &Tool, catalog: &Catalog, today: NaiveDate) -> Self {
+    /// is used to resolve relation references to in-page links, `today`
+    /// anchors relative dates and the "new" window, and `baseline_ids` flags
+    /// the Everyday Essentials so they can render as the assumed baseline.
+    pub(crate) fn build(
+        tool: &Tool,
+        catalog: &Catalog,
+        today: NaiveDate,
+        baseline_ids: &BTreeSet<&str>,
+    ) -> Self {
         let metrics = tool.metrics.as_ref();
         let krate = metrics.and_then(|m| m.krate.as_ref());
 
@@ -311,18 +350,9 @@ impl ToolView {
                 .collect()
         };
 
-        let stacks = catalog
-            .stacks()
-            .iter()
-            .filter_map(|s| {
-                let pick = s.picks.iter().find(|p| p.tool == tool.id)?;
-                Some(ToolStack {
-                    id: s.id.clone(),
-                    name: s.name.clone(),
-                    note_html: markdown(&pick.note),
-                })
-            })
-            .collect();
+        // Navigable stack memberships (the "In <stack>" chips) and the baseline
+        // note, split in one pass: the baseline isn't a pickable stack.
+        let (stacks, baseline_note_html) = tool_stack_memberships(catalog, &tool.id);
 
         Self {
             id: tool.id.clone(),
@@ -351,6 +381,8 @@ impl ToolView {
             status_class,
             keywords,
             stacks,
+            baseline: baseline_ids.contains(tool.id.as_str()),
+            baseline_note_html,
             sort_downloads: downloads_value,
             sort_stars: stars_value,
             sort_updated,
@@ -385,6 +417,70 @@ fn install_crate(tool: &Tool) -> Option<String> {
             .and_then(|m| m.krate.as_ref())
             .map(|c| c.name.clone())
     })
+}
+
+/// The Everyday Essentials baseline, resolved from its stack: the picked tool
+/// ids (to flag rows), their display names, and the installable crates (for the
+/// "on top of the Everyday Essentials" banner note). It's editorial groundwork
+/// shown under every stack, not a pickable card of its own.
+struct Baseline<'a> {
+    ids: BTreeSet<&'a str>,
+    names: Vec<String>,
+    install: Vec<String>,
+}
+
+fn baseline_layer(catalog: &Catalog) -> Baseline<'_> {
+    let stack = catalog.stacks().iter().find(|s| s.id == BASELINE_STACK_ID);
+    let ids = stack
+        .map(|s| s.picks.iter().map(|p| p.tool.as_str()).collect())
+        .unwrap_or_default();
+    let names = stack
+        .map(|s| {
+            s.picks
+                .iter()
+                .filter_map(|p| catalog.get(&p.tool))
+                .map(|t| t.name.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    let install = stack
+        .map(|s| {
+            s.picks
+                .iter()
+                .filter_map(|p| catalog.get(&p.tool))
+                .filter_map(install_crate)
+                .collect()
+        })
+        .unwrap_or_default();
+    Baseline {
+        ids,
+        names,
+        install,
+    }
+}
+
+/// Splits a tool's stack memberships into navigable picks (the "In <stack>"
+/// chips and their inline notes) and its baseline note (the Everyday Essentials
+/// line, revealed under any active stack). The baseline stack is groundwork, not
+/// a pickable card, so it never renders as a chip.
+fn tool_stack_memberships(catalog: &Catalog, tool_id: &str) -> (Vec<ToolStack>, String) {
+    let mut stacks = Vec::new();
+    let mut baseline_note = String::new();
+    for stack in catalog.stacks() {
+        let Some(pick) = stack.picks.iter().find(|p| p.tool == tool_id) else {
+            continue;
+        };
+        if stack.id == BASELINE_STACK_ID {
+            baseline_note = markdown(&pick.note);
+        } else {
+            stacks.push(ToolStack {
+                id: stack.id.clone(),
+                name: stack.name.clone(),
+                note_html: markdown(&pick.note),
+            });
+        }
+    }
+    (stacks, baseline_note)
 }
 
 /// Renders trusted, human-authored markdown to HTML.

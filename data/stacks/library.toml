@@ -57,10 +57,6 @@ fails. Added as a dev-dependency, not installed.
 """
 
 [[pick]]
-tool = "cargo-nextest"
-note = "Fast, isolated runs for the growing test suite a published crate tends to accumulate."
-
-[[pick]]
 tool = "mdbook"
 note = """
 For the narrative guide rustdoc can't give you: tutorials, concepts, worked

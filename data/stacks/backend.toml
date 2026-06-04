@@ -26,10 +26,6 @@ tool = "cargo-flamegraph"
 note = "When a handler is slow under load, a flamegraph of a representative run shows where the wall-clock time actually goes."
 
 [[pick]]
-tool = "cargo-nextest"
-note = "Parallel, isolated tests with first-class partitioning, handy once an integration suite gets big enough to shard across CI."
-
-[[pick]]
 tool = "cargo-chef"
 note = """
 Caches dependency compilation as a separate Docker layer, so an app-only change

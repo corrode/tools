@@ -124,19 +124,19 @@
                 <div class="stack-picker-head">
                     <h2 class="stack-picker-title">Start with a stack</h2>
                     <p class="stack-picker-sub">
-                        Curated tool sets for a use case — pick one to filter the
-                        index.
+                        Curated tool sets for a use case — pick one to filter
+                        the index. Each builds on the Everyday Essentials, shown
+                        automatically as the baseline.
                     </p>
                 </div>
                 <div class="stack-cards">
                     {% for stack in view.stacks %}
                     <button
                         type="button"
-                        class="stack-card{% if stack.id == "essentials" %} stack-card--featured{% endif %}"
+                        class="stack-card"
                         data-stack="{{ stack.id }}"
                         aria-pressed="false"
                     >
-                        {% if stack.id == "essentials" %}<span class="stack-card-star" aria-hidden="true">★</span>{% endif %}
                         <span class="stack-card-name">{{ stack.name }}</span>
                         <span class="stack-card-count">{{ stack.count }}</span>
                     </button>
@@ -172,7 +172,10 @@
                     </button>
                     <label class="select-filter">
                         <span class="select-filter-label">Jump to</span>
-                        <select id="category-jump" aria-label="Jump to category">
+                        <select
+                            id="category-jump"
+                            aria-label="Jump to category"
+                        >
                             <option value="">Category…</option>
                             {% for cat in view.categories %}
                             <option value="cat-{{ cat.id }}">
@@ -238,7 +241,19 @@
                 <div class="stack-banner-intro">
                     {{ stack.intro_html|safe }}
                 </div>
-                {% endif %} {% if !stack.install_crates.is_empty() %}
+                {% endif %}
+                <p class="stack-banner-baseline">
+                    On top of the <strong>Everyday Essentials</strong>{% if
+                    !view.baseline_names.is_empty() %} — {{
+                    view.baseline_names|join(", ") }} —{% endif %} shown below
+                    as the assumed baseline.{% if
+                    !view.baseline_install.is_empty() %} Binaries:
+                    <code
+                        >cargo install {{ view.baseline_install|join(" ")
+                        }}</code
+                    >.{% endif %}
+                </p>
+                {% if !stack.install_crates.is_empty() %}
                 <div class="stack-banner-install">
                     <span class="stack-banner-install-label">Install</span>
                     <code
@@ -248,9 +263,9 @@
                 </div>
                 {% if !stack.uncovered.is_empty() %}
                 <p class="stack-banner-uncovered">
-                    Not shown: {{ stack.uncovered|join(", ") }}. These ship
-                    with the toolchain, are added as dependencies, or have their
-                    own setup (see the rows below).
+                    Not shown: {{ stack.uncovered|join(", ") }}. These ship with
+                    the toolchain, are added as dependencies, or have their own
+                    setup (see the rows below).
                 </p>
                 {% endif %} {% endif %}
             </aside>
@@ -316,6 +331,7 @@
                                 data-updated="{{ tool.sort_updated }}"
                                 data-added="{{ tool.sort_added }}"
                                 data-stacks="{% for s in tool.stacks %}{{ s.id }} {% endfor %}"
+                                data-baseline="{{ tool.baseline }}"
                             >
                                 <td class="cell-tool">
                                     {% if tool.recommended %}<span
@@ -370,8 +386,8 @@
                                         <span>{{ tool.repo_label }}</span>
                                     </a>
                                     {% if tool.version.is_some() ||
-                                    tool.license.is_some() || tool.msrv.is_some()
-                                    %}
+                                    tool.license.is_some() ||
+                                    tool.msrv.is_some() %}
                                     <span class="tool-meta">
                                         {% if let Some(version) = tool.version
                                         %}<span class="meta-item"
@@ -386,18 +402,23 @@
                                             >Rust {{ msrv }}+</span
                                         >{% endif %}
                                     </span>
-                                    {% endif %}
-                                    {% if !tool.owners.is_empty() %}<span
-                                        class="tool-maint"
+                                    {% endif %} {% if !tool.owners.is_empty()
+                                    %}<span class="tool-maint"
                                         >by {{ tool.owners|join(", ") }}</span
-                                    >{% endif %} {% if !tool.stacks.is_empty()
-                                    %}<span class="part-of"
-                                        >In {% for s in tool.stacks %}<a
+                                    >{% endif %} {% if tool.baseline ||
+                                    !tool.stacks.is_empty() %}<span
+                                        class="part-of"
+                                        >{% if tool.baseline %}<span
+                                            class="baseline-pill"
+                                            >Essentials</span
+                                        >{% endif %}{% if
+                                        !tool.stacks.is_empty() %}In {% for s in
+                                        tool.stacks %}<a
                                             class="chip"
                                             href="/?stack={{ s.id }}"
                                             data-stack="{{ s.id }}"
                                             >{{ s.name }}</a
-                                        >{% endfor %}</span
+                                        >{% endfor %}{% endif %}</span
                                     >{% endif %}
                                 </td>
                                 <td class="cell-notes">
@@ -410,7 +431,16 @@
                                     >
                                         {{ s.note_html|safe }}
                                     </div>
-                                    {% endif %}{% endfor %}
+                                    {% endif %}{% endfor %} {% if
+                                    !tool.baseline_note_html.is_empty() %}
+                                    <div
+                                        class="stack-note stack-note--baseline"
+                                        data-baseline-note
+                                        hidden
+                                    >
+                                        {{ tool.baseline_note_html|safe }}
+                                    </div>
+                                    {% endif %}
                                     <div class="notes-body">
                                         {{ tool.remarks_html|safe }}
                                     </div>

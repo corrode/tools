@@ -10,7 +10,10 @@ live reload, and keeping the artifact small.
 
 This stack covers that pipeline. It deliberately leaves out the **framework**
 (Leptos, Yew, Dioxus, …) and the **backend**. Pick those per project. What's
-here is the tooling you'll reach for regardless of which framework wins.
+here is the tooling you'll reach for regardless of which framework wins. Most of
+your logic is plain Rust you can test and check off-target on the host (the
+Everyday Essentials cover that); reserve in-browser `wasm-bindgen-test` runs for
+the genuinely DOM-bound parts.
 """
 
 [[pick]]
@@ -36,30 +39,3 @@ Reach for this *instead of* trunk when the deliverable is an npm package rather
 than a hosted app: it wraps the build into something publishable to a JS
 ecosystem. Overkill for a self-contained Rust site.
 """
-
-[[pick]]
-tool = "bacon"
-note = """
-A background `cargo check`/`clippy` that repaints on save. Pairs with trunk's
-reload: trunk rebuilds the app, bacon keeps a fast type-error loop in a side
-pane without you re-running anything.
-"""
-
-[[pick]]
-tool = "cargo-nextest"
-note = """
-Most of your logic should be testable off-target as plain Rust. Run it here for
-the fast, isolated feedback loop; reserve in-browser `wasm-bindgen-test` runs
-for the genuinely DOM-bound parts.
-"""
-
-[[pick]]
-tool = "clippy"
-note = """
-Catches the usual bugs, plus it's where you'll notice accidental blocking calls
-or panics that are far nastier to debug once they're running inside WASM.
-"""
-
-[[pick]]
-tool = "rustfmt"
-note = "Non-negotiable baseline; wire it into the editor and CI and forget about it."

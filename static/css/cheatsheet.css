@@ -426,18 +426,6 @@ html[data-theme="dark"] .theme-icon-sun {
     color: var(--accent-ink);
 }
 
-/* "Everyday Essentials" leads (order) and gets a star, matching the site's
-   star = recommended convention, so it reads as the place to start. */
-.stack-card--featured {
-    order: -1;
-}
-
-.stack-card-star {
-    color: var(--accent);
-    font-size: 0.82rem;
-    line-height: 1;
-}
-
 .toggle {
     display: inline-flex;
     align-items: center;
@@ -1035,6 +1023,26 @@ a.chip:focus-visible {
     color: var(--text-dim);
 }
 
+/* A baseline (Everyday Essentials) tool, shown as the assumed groundwork beneath
+   a domain stack's own picks while that stack is the active filter. Kept visible
+   for readers who open a stack cold, but de-emphasized — with an accent edge so
+   it reads as "baseline", not the grey of a deprecated row. */
+.tool.is-baseline td {
+    background-color: var(--surface-alt);
+}
+
+.tool.is-baseline td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.tool.is-baseline .tool-name {
+    color: var(--text-dim);
+}
+
+.tool.is-baseline .notes-body {
+    color: var(--text-dim);
+}
+
 /* ------------------------------------------------------------- Utilities -- */
 
 .no-results {
@@ -1170,6 +1178,20 @@ a.chip:focus-visible {
     color: var(--text-faint);
 }
 
+/* Inert tag marking an Everyday Essentials (baseline) tool. Unlike the "In
+   <stack>" chips it isn't a link: the baseline isn't a pickable stack. */
+.baseline-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border-radius: var(--r-xs);
+}
+
 /* ── Stacks: filter banner + inline notes ────────────────────────────── */
 
 /* The active stack's context banner, shown above the catalog when a stack is
@@ -1296,6 +1318,16 @@ a.chip:focus-visible {
     color: var(--text-dim);
 }
 
+/* "On top of the Everyday Essentials …": names the assumed baseline that every
+   domain stack inherits, so a reader who opens a stack cold still sees the
+   groundwork (shown, de-emphasized, in the rows below). */
+.stack-banner-baseline {
+    margin: 12px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
 /* The per-pick "why it earns its place" note, revealed inline in a tool's
    Notes cell while its stack is the active filter. */
 .stack-note {
@@ -1317,6 +1349,14 @@ a.chip:focus-visible {
     margin-bottom: 0;
 }
 
+/* The baseline (Everyday Essentials) note: quieter than a stack pick note, so
+   the de-emphasized baseline row doesn't compete with the stack's own picks. */
+.stack-note--baseline {
+    border-color: var(--border);
+    color: var(--text-dim);
+}
+
+.stack-banner-baseline code,
 .stack-banner-intro code,
 .stack-note code {
     font-size: 0.85em;

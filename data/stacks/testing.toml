@@ -11,17 +11,11 @@ depends on the question you're asking.
 
 This stack is the correctness toolbox, from everyday ergonomics to the
 specialist instruments. It leaves out benchmarking (that's the Profiling &
-Optimization stack) and stays focused on *does it behave*, not *how fast*. The
+Optimization stack) and stays focused on *does it behave*, not *how fast*.
+`cargo-nextest` from the Everyday Essentials is the runner the rest of these plug
+into (it skips doctests, so keep `cargo test --doc` alongside it). The
 generated-input and mocking libraries here are dev-dependencies you add to the
 project, not installed binaries.
-"""
-
-[[pick]]
-tool = "cargo-nextest"
-note = """
-The runner everything else plugs into: per-test process isolation, a clean
-summary, retries for flaky tests, and partitioning to shard a slow suite across
-CI jobs. Note it doesn't run doctests, so keep `cargo test --doc` alongside it.
 """
 
 [[pick]]

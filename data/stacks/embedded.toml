@@ -8,8 +8,11 @@ logging), which are per-chip choices the index doesn't try to rank. What it can
 offer is the host-side tooling that's the same whatever the target: getting code
 onto the chip, watching it run, and keeping an eye on code size.
 
-This stack is deliberately small and honest about that. The big omissions (a HAL,
-an async/RTOS framework, `defmt`) are dependencies you pick per board.
+This stack is deliberately small and honest about that. Most logic — protocol
+parsing, state machines — is plain Rust you can test and check on the host with
+the Everyday Essentials' `cargo-nextest` and `bacon`, so reserve the slow
+flash-and-run cycle for the genuinely device-bound parts. The big omissions (a
+HAL, an async/RTOS framework, `defmt`) are dependencies you pick per board.
 """
 
 [[pick]]
@@ -35,23 +38,3 @@ Flash and RAM are the budget. `cargo bloat` attributes `.text` size to crates an
 functions, so when a build stops fitting you can see what grew instead of
 guessing — a natural companion to the assembly view above.
 """
-
-[[pick]]
-tool = "cargo-nextest"
-note = """
-Most logic (protocol parsing, state machines) should be testable off-target as
-plain Rust. Run that here for a fast loop, and reserve on-hardware runs for the
-genuinely device-bound parts.
-"""
-
-[[pick]]
-tool = "bacon"
-note = "A background check loop is doubly welcome on embedded, where the full flash-and-run cycle is slow; keep type errors in a side pane."
-
-[[pick]]
-tool = "clippy"
-note = "Catches the usual bugs, plus accidental panics or blocking calls that are far nastier to chase down on a microcontroller than on a host."
-
-[[pick]]
-tool = "rustfmt"
-note = "Baseline formatting: one less thing to think about in already fiddly register-level code."

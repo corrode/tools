@@ -113,6 +113,15 @@ automatically from the picks that ship an installable binary; toolchain
 components and library crates (marked `installable = false`) are listed as a
 caveat instead.
 
+The **Everyday Essentials** (`data/stacks/essentials.toml`) are special: they're
+the assumed baseline, not a pickable stack. The picker shows no card for them;
+instead they ride along automatically under whatever stack you select — shown
+(de-emphasized) in the rows, with an "on top of the Everyday Essentials" note in
+the banner. So a domain stack should list only what's *distinctive* to it; don't
+re-add baseline picks like `clippy`, `rustfmt`, or `cargo-nextest`. If a baseline
+tool deserves a domain-specific spin (say, running tests off-target), fold that
+into the stack's `intro` rather than re-listing the pick.
+
 ## API
 
 Everything is public and read-only:

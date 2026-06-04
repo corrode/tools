@@ -126,13 +126,23 @@
         .split(/\s+/)
         .filter(Boolean);
       const stacks = (tool.dataset.stacks || "").split(/\s+/).filter(Boolean);
+      const isPick = !stack || stacks.includes(stack);
+      const isBaseline = tool.dataset.baseline === "true";
+      // Baseline (Everyday Essentials) tools show under every stack as the
+      // assumed groundwork, even when they aren't one of its own picks.
       const matches =
         (!skipDeprecated || !deprecated) &&
         (!onlyRecommended || recommended) &&
         (!license || licenses.includes(license)) &&
-        (!stack || stacks.includes(stack)) &&
+        (isPick || isBaseline) &&
         terms.every((t) => haystack.includes(t));
       tool.hidden = !matches;
+      // Dim a row that's shown only because it's the baseline: a stack is
+      // active and this tool isn't one of that stack's own picks.
+      tool.classList.toggle(
+        "is-baseline",
+        matches && !!stack && isBaseline && !stacks.includes(stack),
+      );
       if (matches) visible++;
     }
 
@@ -157,14 +167,18 @@
     syncUrl();
   }
 
-  // Reveal the selected stack's banner and its picks' inline notes; everything
-  // for other stacks (and all of it, when no stack is active) stays hidden.
+  // Reveal the selected stack's banner and its picks' inline notes, plus the
+  // Everyday Essentials baseline notes that ride along under any active stack;
+  // everything else (and all of it, when no stack is active) stays hidden.
   function updateStackContext(active) {
     for (const banner of stackBanners) {
       banner.hidden = banner.dataset.stack !== active;
     }
     for (const note of stackNotes) {
-      note.hidden = note.dataset.stack !== active;
+      const show = note.hasAttribute("data-baseline-note")
+        ? !!active
+        : note.dataset.stack === active;
+      note.hidden = !show;
     }
     for (const card of stackCards) {
       card.setAttribute("aria-pressed", String(card.dataset.stack === active));

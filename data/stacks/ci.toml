@@ -9,27 +9,14 @@ route around it. The individual tools appear in other stacks too; what's
 distinctive here is assembling them into one merge-blocking pass.
 
 This is the pipeline layer. It assumes the Everyday Essentials are already in
-place locally. CI is where you enforce them for everyone.
-"""
-
-[[pick]]
-tool = "cargo-nextest"
-note = """
-The CI test runner of choice: fast, clean output, and first-class partitioning so
-you can shard a slow suite across parallel jobs.
+place locally; CI is where you enforce them for everyone — `clippy -D warnings`
+and `cargo fmt --check` turn the baseline into hard gates — and add the checks
+and caches only a pipeline needs.
 """
 
 [[pick]]
 tool = "cargo-llvm-cov"
 note = "Source-based coverage you can publish or gate on, so coverage trends are visible rather than assumed."
-
-[[pick]]
-tool = "clippy"
-note = "Run with `-D warnings` to make lints a hard gate, not a suggestion that scrolls past in the logs."
-
-[[pick]]
-tool = "rustfmt"
-note = "`cargo fmt --check` fails the build on unformatted code: the cheapest gate you'll add."
 
 [[pick]]
 tool = "taplo"
