@@ -94,6 +94,17 @@
                         <span>Recommended only</span>
                     </label>
                     <label class="select-filter">
+                        <span class="select-filter-label">Sort</span>
+                        <select id="sort-select" aria-label="Sort tools">
+                            <option value="default">Relevance</option>
+                            <option value="downloads">Most downloads</option>
+                            <option value="stars">Most stars</option>
+                            <option value="updated">Recently active</option>
+                            <option value="added">Recently added</option>
+                            <option value="name">Name (A–Z)</option>
+                        </select>
+                    </label>
+                    <label class="select-filter">
                         <span class="select-filter-label">License</span>
                         <select
                             id="license-filter"
@@ -152,6 +163,11 @@
                                 data-archived="{{ tool.archived }}"
                                 data-recommended="{{ tool.recommended }}"
                                 data-license="{{ tool.license_tokens }}"
+                                data-name="{{ tool.name }}"
+                                data-downloads="{{ tool.sort_downloads }}"
+                                data-stars="{{ tool.sort_stars }}"
+                                data-updated="{{ tool.sort_updated }}"
+                                data-added="{{ tool.sort_added }}"
                             >
                                 <td class="cell-tool">
                                     {% if tool.recommended %}<span
@@ -166,6 +182,10 @@
                                                 d="M12 2.5l2.92 5.92 6.54.95-4.73 4.61 1.12 6.52L12 17.93 6.15 21l1.12-6.52L2.54 9.87l6.54-.95z"
                                             /></svg
                                         >Recommended</span
+                                    >{% endif %}{% if tool.is_new %}<span
+                                        class="new-badge"
+                                        title="Recently added"
+                                        >New</span
                                     >{% endif %}
                                     <a
                                         class="tool-name"
@@ -203,6 +223,11 @@
                                         >{% endif %} {% if let Some(license) =
                                         tool.license %}<span class="tag"
                                             >{{ license }}</span
+                                        >{% endif %} {% if let Some(msrv) =
+                                        tool.msrv %}<span
+                                            class="tag"
+                                            title="Minimum supported Rust version"
+                                            >Rust {{ msrv }}+</span
                                         >{% endif %}
                                     </span>
                                     {% if !tool.owners.is_empty() %}<span

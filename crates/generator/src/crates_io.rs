@@ -16,6 +16,7 @@ pub(crate) struct CrateData {
     pub(crate) downloads_recent: Option<u64>,
     pub(crate) latest_version: Option<String>,
     pub(crate) latest_release: Option<NaiveDate>,
+    pub(crate) msrv: Option<String>,
     pub(crate) license: Option<String>,
     pub(crate) owners: Vec<String>,
 }
@@ -40,6 +41,7 @@ struct VersionInner {
     num: String,
     created_at: Option<String>,
     license: Option<String>,
+    rust_version: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,6 +86,7 @@ pub(crate) async fn fetch(client: &reqwest::Client, crate_name: &str) -> Result<
         downloads_recent: resp.krate.recent_downloads,
         latest_version: resp.krate.newest_version,
         latest_release,
+        msrv: newest.and_then(|v| v.rust_version.clone()),
         license: newest.and_then(|v| v.license.clone()),
         owners: Vec::new(),
     };

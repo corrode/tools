@@ -63,6 +63,7 @@ What it does, when to reach for it, and — just as important — when not to.
 alternatives = ["cargo test (built-in)"]
 related = ["cargo-llvm-cov"]   # complementary tools, not replacements
 recommended = true              # editor's pick: badge + floats to top, filterable
+added = "2025-01-15"            # optional; shows a "New" badge for 30 days, enables "recently added" sort
 # Deprecated instead? Point at the replacements:
 # successors = ["bacon", "watchexec"]
 ```
@@ -75,7 +76,7 @@ candidates.
 
 Everything is public and read-only:
 
-- `GET /api/v1/tools` — the whole catalog as JSON
+- `GET /api/v1/tools` — the whole catalog as JSON (`?category=<id>` to filter)
 - `GET /api/v1/tools/{id}` — a single tool
 - `GET /api/v1/docs` — Swagger UI (`/api/v1/openapi.json` for the raw spec)
 - `GET /llms.txt` — the index as plain text, ready to paste into an LLM

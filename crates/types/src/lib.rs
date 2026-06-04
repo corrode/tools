@@ -66,6 +66,10 @@ pub struct CrateMetrics {
     /// Release date of the latest published version.
     #[serde(default)]
     pub latest_release: Option<NaiveDate>,
+    /// Minimum supported Rust version (`rust-version`) declared by the latest
+    /// published version, when set.
+    #[serde(default)]
+    pub msrv: Option<String>,
     /// SPDX license expression as published to crates.io.
     #[serde(default)]
     pub license: Option<String>,
@@ -155,6 +159,10 @@ pub struct Tool {
     /// by hand; it is never touched by the metrics bot.
     #[serde(default)]
     pub recommended: bool,
+    /// Date the tool was first added to the index. Human-owned and optional;
+    /// used to surface a "New" badge and the "recently added" sort.
+    #[serde(default)]
+    pub added: Option<NaiveDate>,
     /// Bot-owned live metrics. Absent until the generator first runs.
     #[serde(default)]
     pub metrics: Option<Metrics>,
@@ -171,6 +179,14 @@ impl Tool {
     #[must_use]
     pub fn is_stale(&self) -> bool {
         self.metrics.as_ref().is_some_and(|m| m.stale)
+    }
+
+    /// Returns `true` if the tool was added to the index within the last
+    /// `window_days` relative to `today`.
+    #[must_use]
+    pub fn is_new(&self, today: NaiveDate, window_days: i64) -> bool {
+        self.added
+            .is_some_and(|added| (today - added).num_days() < window_days && added <= today)
     }
 
     /// The primary relevance signal: recent crates.io downloads when the tool
@@ -449,6 +465,7 @@ mod tests {
                 successors: Vec::new(),
                 related: Vec::new(),
                 recommended: false,
+                added: None,
                 metrics: None,
             }],
         };

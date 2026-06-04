@@ -517,6 +517,22 @@ a:hover {
     stroke: none;
 }
 
+.new-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 6px;
+    margin-left: 4px;
+    padding: 2px 8px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-xs);
+}
+
 .cell-tool .tool-name {
     display: block;
     font-size: 0.95rem;

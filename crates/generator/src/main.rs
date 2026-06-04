@@ -207,6 +207,9 @@ fn build_crate_table(c: &CrateData) -> Table {
     if let Some(date) = c.latest_release {
         table["latest_release"] = value(date.format("%Y-%m-%d").to_string());
     }
+    if let Some(msrv) = &c.msrv {
+        table["msrv"] = value(msrv.clone());
+    }
     if let Some(license) = &c.license {
         table["license"] = value(license.clone());
     }

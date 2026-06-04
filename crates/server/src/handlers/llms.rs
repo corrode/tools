@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use std::fmt::Write as _;
+
 use axum::{
     extract::State,
     http::{HeaderValue, header},
@@ -23,16 +25,21 @@ pub(crate) async fn llms_txt(State(catalog): State<Arc<Catalog>>) -> impl IntoRe
 /// Renders the catalog as a compact, sectioned plaintext document.
 fn render(catalog: &Catalog) -> String {
     let mut out = String::new();
+    let groups = catalog.grouped();
+    let total: usize = groups.iter().map(|g| g.tools.len()).sum();
+
     out.push_str("# Rust Tool Index\n");
     out.push_str(
         "A curated reference of Rust development tooling. \
          Metrics are auto-refreshed from the source forge and crates.io.\n",
     );
+    let _ = writeln!(out, "{total} tools across {} categories.", groups.len());
     out.push_str("Full data: https://tools.corrode.dev/api/v1/tools\n\n");
 
-    for group in catalog.grouped() {
+    for group in groups {
         out.push_str("## ");
         out.push_str(&group.category.name);
+        let _ = write!(out, " ({})", group.tools.len());
         out.push('\n');
         if !group.category.description.is_empty() {
             out.push_str(&group.category.description);
@@ -68,6 +75,9 @@ fn render_tool(out: &mut String, tool: &Tool) {
             }
             if let Some(v) = &krate.latest_version {
                 facts.push(format!("v{v}"));
+            }
+            if let Some(msrv) = &krate.msrv {
+                facts.push(format!("Rust {msrv}+"));
             }
         }
         if let Some(s) = metrics.stars {

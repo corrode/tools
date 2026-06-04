@@ -9,6 +9,9 @@ use chrono::{NaiveDate, Utc};
 use pulldown_cmark::{Options, Parser, html};
 use types::{Catalog, Tool};
 
+/// How recently a tool must have been added to earn the "New" badge.
+const NEW_WINDOW_DAYS: i64 = 30;
+
 /// The whole page: every non-empty category with its ranked tools.
 #[derive(Debug)]
 pub(crate) struct IndexView {
@@ -59,6 +62,10 @@ pub(crate) struct RelationView {
 
 /// One tool row.
 #[derive(Debug)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent display flags for a presentation-only view"
+)]
 pub(crate) struct ToolView {
     /// Stable slug.
     pub(crate) id: String,
@@ -82,6 +89,8 @@ pub(crate) struct ToolView {
     pub(crate) archived: bool,
     /// Editor's pick: hand-curated recommendation, shown with a badge.
     pub(crate) recommended: bool,
+    /// Whether the tool was recently added to the index (shows a "New" badge).
+    pub(crate) is_new: bool,
     /// Compact recent-downloads string (e.g. `1.2M`), if a published crate.
     pub(crate) downloads: Option<String>,
     /// Exact total downloads with thousands separators, for the tooltip.
@@ -90,6 +99,8 @@ pub(crate) struct ToolView {
     pub(crate) stars: Option<String>,
     /// Latest published version.
     pub(crate) version: Option<String>,
+    /// Minimum supported Rust version (`rust-version`), when published.
+    pub(crate) msrv: Option<String>,
     /// Relative last-activity string (e.g. `3d ago`).
     pub(crate) last_activity: Option<String>,
     /// SPDX license expression.
@@ -105,12 +116,21 @@ pub(crate) struct ToolView {
     pub(crate) status_class: &'static str,
     /// Lowercased haystack for the client-side filter.
     pub(crate) keywords: String,
+    /// Recent (or total) downloads as a raw number, for client-side sorting.
+    pub(crate) sort_downloads: u64,
+    /// Star count as a raw number, for client-side sorting.
+    pub(crate) sort_stars: u64,
+    /// Last-activity date as an ISO string (`YYYY-MM-DD`), for sorting.
+    pub(crate) sort_updated: String,
+    /// Date added as an ISO string (`YYYY-MM-DD`), for the "recently added" sort.
+    pub(crate) sort_added: String,
 }
 
 impl IndexView {
     /// Builds the full page view from the in-memory catalog.
     pub(crate) fn build(catalog: &Catalog) -> Self {
         let groups = catalog.grouped();
+        let today = Utc::now().date_naive();
         let mut total = 0;
         let mut last_updated: Option<NaiveDate> = None;
 
@@ -130,7 +150,7 @@ impl IndexView {
                         {
                             last_updated = Some(last_updated.map_or(date, |cur| cur.max(date)));
                         }
-                        ToolView::build(tool, catalog)
+                        ToolView::build(tool, catalog, today)
                     })
                     .collect();
                 CategoryView {
@@ -169,20 +189,27 @@ impl IndexView {
 
 impl ToolView {
     /// Projects a single [`Tool`] into its presentation form. The `catalog`
-    /// is used to resolve relation references to in-page links.
-    pub(crate) fn build(tool: &Tool, catalog: &Catalog) -> Self {
+    /// is used to resolve relation references to in-page links, and `today`
+    /// anchors relative dates and the "new" window.
+    pub(crate) fn build(tool: &Tool, catalog: &Catalog, today: NaiveDate) -> Self {
         let metrics = tool.metrics.as_ref();
         let krate = metrics.and_then(|m| m.krate.as_ref());
 
+        let downloads_value = krate
+            .and_then(|c| c.downloads_recent.or(c.downloads_total))
+            .unwrap_or(0);
         let downloads = krate
             .and_then(|c| c.downloads_recent.or(c.downloads_total))
             .map(compact);
         let downloads_full = krate.and_then(|c| c.downloads_total).map(group_thousands);
+        let stars_value = u64::from(metrics.and_then(|m| m.stars).unwrap_or(0));
         let stars = metrics.and_then(|m| m.stars).map(|s| compact(u64::from(s)));
         let version = krate.and_then(|c| c.latest_version.clone());
-        let last_activity = metrics
-            .and_then(|m| m.last_commit)
-            .map(|d| relative_date(d, Utc::now().date_naive()));
+        let msrv = krate.and_then(|c| c.msrv.clone());
+        let last_commit = metrics.and_then(|m| m.last_commit);
+        let last_activity = last_commit.map(|d| relative_date(d, today));
+        let sort_updated = last_commit.map(|d| d.to_string()).unwrap_or_default();
+        let sort_added = tool.added.map(|d| d.to_string()).unwrap_or_default();
         let license = krate
             .and_then(|c| c.license.clone())
             .or_else(|| metrics.and_then(|m| m.license.clone()));
@@ -237,10 +264,12 @@ impl ToolView {
             related: relations(&tool.related),
             archived: tool.is_archived(),
             recommended: tool.recommended,
+            is_new: tool.is_new(today, NEW_WINDOW_DAYS),
             downloads,
             downloads_full,
             stars,
             version,
+            msrv,
             last_activity,
             license,
             owners,
@@ -248,6 +277,10 @@ impl ToolView {
             status_label,
             status_class,
             keywords,
+            sort_downloads: downloads_value,
+            sort_stars: stars_value,
+            sort_updated,
+            sort_added,
         }
     }
 }
