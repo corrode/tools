@@ -1,6 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /monitoring
 Disallow: /api/
-
-Sitemap: https://search.corrode.dev/sitemap.xml
