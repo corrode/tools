@@ -1,0 +1,20 @@
+id = "miri"
+name = "miri"
+repository = "https://github.com/rust-lang/miri"
+category = "testing"
+
+remarks = """
+An interpreter for Rust's mid-level IR that runs your test suite and flags
+undefined behavior in `unsafe` code: out-of-bounds accesses, use-after-free,
+invalid alignment, data races, and leaks that compile cleanly and pass under a
+normal build.
+
+Installed as a rustup component with `rustup +nightly component add miri`, then
+run via `cargo +nightly miri test`. It is nightly-only and interprets rather
+than compiles, so runs are many times slower than native and most FFI and raw
+syscalls are unsupported. Reach for it to vet `unsafe` blocks, not as a general
+test runner.
+"""
+
+related = ["cargo-fuzz"]
+recommended = true

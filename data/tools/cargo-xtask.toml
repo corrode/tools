@@ -1,0 +1,21 @@
+id = "cargo-xtask"
+name = "cargo-xtask"
+repository = "https://github.com/matklad/cargo-xtask"
+category = "productivity"
+installable = false
+
+remarks = """
+A convention rather than a binary: you add an `xtask` package to the workspace
+and alias `cargo xtask` (in `.cargo/config.toml`) to `cargo run --package
+xtask`, so build automation, codegen, and release chores are written in plain
+Rust with no extra tool to install.
+
+Reach for it when you want dev and CI tasks that are cross-platform and can
+share your crates' own types instead of drifting shell or `make` scripts. The
+cost is boilerplate and compile time, so for a handful of simple commands `just`
+or `cargo-make` stay lighter; there is nothing to install here, only a pattern
+to copy.
+"""
+
+alternatives = ["just", "cargo-make"]
+recommended = true
