@@ -717,6 +717,7 @@ html[data-theme="dark"] .theme-icon-sun {
 .tool-table tbody tr {
     border-bottom: 1px solid var(--border-soft);
     transition: background-color 0.1s ease;
+    scroll-margin-top: calc(var(--header-h) + 16px);
 }
 
 .tool-table tbody tr:last-child {
