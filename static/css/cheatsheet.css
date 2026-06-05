@@ -452,6 +452,104 @@ html[data-theme="dark"] .theme-icon-sun {
     gap: 12px 18px;
 }
 
+/* Staff-picks filter: the award glyph marks the toggle, and a small info
+   bubble (hover or keyboard focus) explains what a staff pick is and who
+   stands behind it — so the meaning travels without a permanent legend. */
+.filter-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toggle-pick .pick-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.info {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-faint);
+    cursor: help;
+    border-radius: 999px;
+}
+
+.info:hover {
+    color: var(--text-dim);
+}
+
+.info:focus-visible {
+    color: var(--text-dim);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.info-icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.info-bubble {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+    z-index: 60;
+    width: max-content;
+    max-width: 260px;
+    padding: 9px 11px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow:
+        var(--shadow),
+        0 8px 24px rgba(20, 28, 44, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-3px);
+    transition:
+        opacity 0.12s ease,
+        transform 0.12s ease;
+}
+
+/* Invisible bridge across the gap so the pointer can travel from the icon into
+   the bubble without it closing. */
+.info-bubble::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 0;
+    right: 0;
+    height: 7px;
+}
+
+.info:hover .info-bubble,
+.info:focus-within .info-bubble {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.info-bubble a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-ring);
+    text-underline-offset: 2px;
+}
+
+.info-bubble a:hover {
+    text-decoration-color: var(--accent);
+}
+
 .collapse-all {
     font: inherit;
     font-size: 0.8rem;
@@ -692,26 +790,19 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .col-tool {
-    width: 17%;
-    min-width: 176px;
+    width: 18%;
+    min-width: 188px;
 }
-.col-num {
-    width: 88px;
-    text-align: right !important;
-}
-.col-status {
-    width: 112px;
-    text-align: right !important;
+.col-stats {
+    width: 168px;
+    text-align: left !important;
 }
 
-/* Tighten the right-hand metric cluster so the numbers and status badge read
-   as one neat, right-aligned block instead of drifting apart. */
-.tool-table thead th.col-num,
-.tool-table thead th.col-status,
-.cell-num,
-.cell-status {
-    padding-left: 8px;
-    padding-right: 18px;
+/* Right-hand metric column header sits above the stacked stat block. */
+.tool-table thead th.col-stats,
+.cell-stats {
+    padding-left: 12px;
+    padding-right: 20px;
 }
 
 .tool-table tbody tr {
@@ -734,8 +825,8 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .tool-table tbody tr:target {
-    background-color: var(--accent-soft);
-    box-shadow: inset 3px 0 0 var(--accent);
+    background-color: var(--border-soft);
+    box-shadow: inset 3px 0 0 var(--border-strong);
 }
 
 /* Tool cell */
@@ -749,16 +840,16 @@ html[data-theme="dark"] .theme-icon-sun {
     box-shadow: inset 3px 0 0 var(--accent);
 }
 
-/* Eyebrow badges above the tool name. One shape; the pick is filled (the single
-   loud accent in a row), and "new" is a softer, quieter variant. */
+/* Eyebrow badge above the tool name. Only "New" lives here now (the staff
+   pick moved down into the part-of tag row); kept quiet so the name leads. */
 .badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 7px;
-    padding: 2px 8px;
+    margin-bottom: 8px;
+    padding: 1.5px 7px;
     border-radius: var(--r-sm);
-    font-size: 0.64rem;
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -769,30 +860,29 @@ html[data-theme="dark"] .theme-icon-sun {
     margin-left: 5px;
 }
 
-.badge-pick {
-    padding-left: 6px;
-    color: #fff;
-    background-color: var(--accent);
-}
-
 .badge-new {
-    color: var(--accent-ink);
-    background-color: var(--accent-soft);
+    color: var(--text-dim);
+    background-color: var(--surface-alt);
+    border: 1px solid var(--border);
 }
 
-.pick-star {
+.pick-icon {
     width: 11px;
     height: 11px;
-    fill: currentColor;
-    stroke: none;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .cell-tool .tool-name {
     display: block;
-    font-size: 0.95rem;
+    font-size: 1.08rem;
     font-weight: 700;
     color: var(--ink);
-    letter-spacing: -0.005em;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
 }
 
 .cell-tool .tool-name:hover {
@@ -964,22 +1054,56 @@ a.chip:focus-visible {
     cursor: default;
 }
 
-/* Numeric cells */
+/* Metrics cell: a compact, left-aligned stat block so downloads, stars and
+   recency read as one tidy cluster instead of drifting across wide columns.
+   Each line is icon + value + quiet label; the status pill anchors the bottom. */
 
-.cell-num {
-    text-align: right;
-    font-size: 0.82rem;
+.cell-stats {
+    vertical-align: top;
+}
+
+.stats {
+    margin: 0 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    line-height: 1.2;
     color: var(--text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.cell-num .muted {
+.stat-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--text-faint);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.stat-val {
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.stat-val.muted {
+    font-weight: 500;
     color: var(--text-faint);
 }
 
-.cell-status {
-    text-align: right;
+.stat-label {
+    color: var(--text-faint);
+    font-size: 0.72rem;
 }
 
 /* Status badges: friendly colours, gently rounded */
@@ -1150,7 +1274,7 @@ a.chip:focus-visible {
     }
 
     .tool-table {
-        min-width: 760px;
+        min-width: 600px;
     }
 }
 
@@ -1177,6 +1301,28 @@ a.chip:focus-visible {
     margin-top: 8px;
     font-size: 0.72rem;
     color: var(--text-faint);
+}
+
+/* Staff pick tag, shown in the part-of row alongside the Essentials/stack
+   chips. Accent-outlined with the award glyph; its meaning and provenance are
+   spelled out once by the legend under the filters. */
+.pick-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent-ring);
+    border-radius: var(--r-xs);
+}
+
+.pick-pill .pick-icon {
+    width: 11px;
+    height: 11px;
 }
 
 /* Inert tag marking an Everyday Essentials (baseline) tool. Unlike the "In

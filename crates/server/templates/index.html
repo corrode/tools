@@ -157,10 +157,44 @@
                         <input type="checkbox" id="hide-deprecated" />
                         <span>Hide deprecated</span>
                     </label>
-                    <label class="toggle toggle-pick">
-                        <input type="checkbox" id="recommended-only" />
-                        <span>Recommended only</span>
-                    </label>
+                    <span class="filter-pick">
+                        <label class="toggle toggle-pick">
+                            <input type="checkbox" id="recommended-only" />
+                            <svg
+                                class="pick-icon toggle-pick-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <circle cx="12" cy="8" r="6" />
+                                <path
+                                    d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+                                />
+                            </svg>
+                            <span>Staff picks only</span>
+                        </label>
+                        <span
+                            class="info"
+                            tabindex="0"
+                            role="note"
+                            aria-label="Staff picks are hand-selected by corrode.dev, an independent Rust consultancy"
+                        >
+                            <svg
+                                class="info-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <circle cx="12" cy="12" r="9" />
+                                <line x1="12" y1="11" x2="12" y2="16" />
+                                <line x1="12" y1="8" x2="12" y2="8" />
+                            </svg>
+                            <span class="info-bubble" role="tooltip">
+                                Staff picks are hand-selected by
+                                <a href="https://corrode.dev" rel="noopener"
+                                    >corrode.dev</a
+                                >, an independent Rust consultancy.
+                            </span>
+                        </span>
+                    </span>
                     <span class="filter-spacer"></span>
                     <button
                         type="button"
@@ -310,10 +344,7 @@
                             <tr>
                                 <th class="col-tool">Tool</th>
                                 <th class="col-notes">Notes</th>
-                                <th class="col-num">Downloads</th>
-                                <th class="col-num">Stars</th>
-                                <th class="col-num">Updated</th>
-                                <th class="col-status">Status</th>
+                                <th class="col-stats">Metrics</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -334,19 +365,7 @@
                                 data-baseline="{{ tool.baseline }}"
                             >
                                 <td class="cell-tool">
-                                    {% if tool.recommended %}<span
-                                        class="badge badge-pick"
-                                        title="Editor's pick"
-                                        ><svg
-                                            class="pick-star"
-                                            viewBox="0 0 24 24"
-                                            aria-hidden="true"
-                                        >
-                                            <path
-                                                d="M12 2.5l2.92 5.92 6.54.95-4.73 4.61 1.12 6.52L12 17.93 6.15 21l1.12-6.52L2.54 9.87l6.54-.95z"
-                                            /></svg
-                                        >Recommended</span
-                                    >{% endif %}{% if tool.is_new %}<span
+                                    {% if tool.is_new %}<span
                                         class="badge badge-new"
                                         title="Recently added"
                                         >New</span
@@ -405,10 +424,24 @@
                                     {% endif %} {% if !tool.owners.is_empty()
                                     %}<span class="tool-maint"
                                         >by {{ tool.owners|join(", ") }}</span
-                                    >{% endif %} {% if tool.baseline ||
-                                    !tool.stacks.is_empty() %}<span
-                                        class="part-of"
-                                        >{% if tool.baseline %}<span
+                                    >{% endif %} {% if tool.recommended ||
+                                    tool.baseline || !tool.stacks.is_empty()
+                                    %}<span class="part-of"
+                                        >{% if tool.recommended %}<span
+                                            class="pick-pill"
+                                            title="Staff pick — hand-selected by corrode.dev"
+                                            aria-label="Staff pick, hand-selected by corrode.dev"
+                                            ><svg
+                                                class="pick-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <circle cx="12" cy="8" r="6" />
+                                                <path
+                                                    d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+                                                /></svg
+                                            >Staff pick</span
+                                        >{% endif %}{% if tool.baseline %}<span
                                             class="baseline-pill"
                                             >Essentials</span
                                         >{% endif %}{% if
@@ -495,26 +528,77 @@
                                     </p>
                                     {% endif %}
                                 </td>
-                                <td class="cell-num" data-label="Downloads">
-                                    {% if let Some(downloads) = tool.downloads
-                                    %}<span
-                                        title="{% if let Some(full) = tool.downloads_full %}{{ full }} total downloads{% else %}recent downloads{% endif %}"
-                                        >{{ downloads }}</span
-                                    >{% else %}<span class="muted">—</span>{%
-                                    endif %}
-                                </td>
-                                <td class="cell-num" data-label="Stars">
-                                    {% if let Some(stars) = tool.stars %}{{
-                                    stars }}{% else %}<span class="muted"
-                                        >—</span
-                                    >{% endif %}
-                                </td>
-                                <td class="cell-num" data-label="Updated">
-                                    {% if let Some(activity) =
-                                    tool.last_activity %}{{ activity }}{% else
-                                    %}<span class="muted">—</span>{% endif %}
-                                </td>
-                                <td class="cell-status" data-label="Status">
+                                <td class="cell-stats">
+                                    <dl class="stats">
+                                        <div
+                                            class="stat"
+                                            data-label="Downloads"
+                                        >
+                                            <svg
+                                                class="stat-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M12 3v11m0 0l-4-4m4 4l4-4M5 19h14"
+                                                />
+                                            </svg>
+                                            {% if let Some(downloads) =
+                                            tool.downloads %}<span
+                                                class="stat-val"
+                                                title="{% if let Some(full) = tool.downloads_full %}{{ full }} total downloads{% else %}recent downloads{% endif %}"
+                                                >{{ downloads }}</span
+                                            >{% else %}<span
+                                                class="stat-val muted"
+                                                >—</span
+                                            >{% endif %}
+                                            <span class="stat-label"
+                                                >downloads</span
+                                            >
+                                        </div>
+                                        <div class="stat" data-label="Stars">
+                                            <svg
+                                                class="stat-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L12 16.77l-5.2 2.74.99-5.79-4.21-4.1 5.82-.85z"
+                                                />
+                                            </svg>
+                                            {% if let Some(stars) = tool.stars
+                                            %}<span class="stat-val"
+                                                >{{ stars }}</span
+                                            >{% else %}<span
+                                                class="stat-val muted"
+                                                >—</span
+                                            >{% endif %}
+                                            <span class="stat-label"
+                                                >stars</span
+                                            >
+                                        </div>
+                                        <div class="stat" data-label="Updated">
+                                            <svg
+                                                class="stat-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <circle cx="12" cy="12" r="8" />
+                                                <path d="M12 8v4l2.5 1.5" />
+                                            </svg>
+                                            {% if let Some(activity) =
+                                            tool.last_activity %}<span
+                                                class="stat-val"
+                                                >{{ activity }}</span
+                                            >{% else %}<span
+                                                class="stat-val muted"
+                                                >—</span
+                                            >{% endif %}
+                                            <span class="stat-label"
+                                                >updated</span
+                                            >
+                                        </div>
+                                    </dl>
                                     <span class="pill {{ tool.status_class }}"
                                         >{{ tool.status_label }}</span
                                     >
