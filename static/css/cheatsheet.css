@@ -1758,3 +1758,301 @@ a.chip:focus-visible {
     border-radius: var(--r-xs);
     padding: 0 5px;
 }
+
+/* =============================================================================
+   API reference page (/api): hand-styled to match the index instead of the
+   third-party Swagger UI (which stays available, linked from here).
+   ============================================================================= */
+
+.api {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px var(--gutter) 96px;
+    width: 100%;
+    flex: 1;
+}
+
+.api-hero {
+    margin-bottom: 36px;
+}
+
+.api-eyebrow {
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border-radius: var(--r-sm);
+    padding: 3px 9px;
+    margin-bottom: 14px;
+}
+
+.api-title {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin: 0 0 12px;
+}
+
+.api-lead {
+    font-size: 1.02rem;
+    line-height: 1.6;
+    color: var(--text);
+    margin: 0 0 22px;
+    max-width: 64ch;
+}
+
+.api-lead abbr {
+    text-decoration-style: dotted;
+    cursor: help;
+}
+
+.api-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.api-btn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    padding: 9px 16px;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease,
+        background-color 0.12s ease;
+}
+
+.api-btn:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.api-btn-primary {
+    color: #fff;
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.api-btn-primary:hover {
+    color: #fff;
+    background-color: var(--accent-ink);
+    border-color: var(--accent-ink);
+}
+
+/* Quick-facts strip and the "other formats" cards share this grid. */
+.api-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.api-fact {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+}
+
+.api-fact-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+.api-fact-value {
+    font-size: 0.92rem;
+    color: var(--ink);
+}
+
+code.api-fact-value {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 0.85rem;
+}
+
+.api-fact-link {
+    text-decoration: none;
+}
+
+.api-fact-link:hover {
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.api-fact-link .api-fact-label {
+    color: var(--accent-ink);
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.api-fact-link .api-fact-value {
+    color: var(--text-dim);
+    font-size: 0.82rem;
+}
+
+.api-section {
+    margin-top: 48px;
+}
+
+.api-section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0 0 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.api-section-lead {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    margin: 14px 0 16px;
+}
+
+.api-endpoint {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 22px 24px;
+    margin-top: 20px;
+    box-shadow: var(--shadow);
+}
+
+/* Compact endpoint map: one row per route, no per-parameter docs (those live in
+   the interactive Swagger docs, generated from the same spec). */
+.api-routes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.api-route {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+}
+
+.api-route-note {
+    font-size: 0.86rem;
+    color: var(--text-dim);
+}
+
+.api-method {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ok-ink);
+    background-color: var(--ok-bg);
+    border-radius: var(--r-sm);
+    padding: 3px 9px;
+}
+
+.api-path {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.api-endpoint .api-subhead:first-child {
+    margin-top: 0;
+}
+
+.api-subhead {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 22px 0 8px;
+}
+
+.api-code {
+    margin: 0;
+    background-color: #0d1117;
+    color: #e6edf3;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    overflow-x: auto;
+}
+
+.api-code code {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    white-space: pre;
+}
+
+.api-code-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* Inline code inside the section leads. */
+.api-section-lead code {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 0.85em;
+    background-color: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    padding: 0 5px;
+}
+
+.api-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.api-chip {
+    text-decoration: none;
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    padding: 5px 10px;
+    transition:
+        border-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.api-chip code {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+.api-chip:hover {
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.api-chip:hover code {
+    color: var(--accent-ink);
+}

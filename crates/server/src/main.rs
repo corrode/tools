@@ -50,6 +50,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handlers::index))
+        .route("/api", get(handlers::api_docs))
         .route("/health", get(|| async { "OK" }))
         .route("/llms.txt", get(handlers::llms_txt))
         .route("/sitemap.xml", get(handlers::sitemap))

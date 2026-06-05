@@ -130,8 +130,11 @@ Everything is public and read-only:
 - `GET /api/v1/tools/{id}`: a single tool
 - `GET /?stack={id}`: the index filtered to a curated stack (the retired
   `/stacks` and `/stacks/{id}` pages redirect here)
+- `GET /api`: a hand-styled overview of the API, matching the site (links out to
+  the Swagger UI and raw spec)
 - `GET /api/v1/docs`: Swagger UI (`/api/v1/openapi.json` for the raw spec)
 - `GET /llms.txt`: the index as plain text, ready to paste into an LLM
+- `GET /sitemap.xml`: the index plus each curated stack view, for crawlers
 
 ## Deploying
 
