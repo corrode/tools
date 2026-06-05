@@ -12,6 +12,7 @@
   const hideDeprecated = document.getElementById("hide-deprecated");
   const recommendedOnly = document.getElementById("recommended-only");
   const licenseFilter = document.getElementById("license-filter");
+  const msrvFilter = document.getElementById("msrv-filter");
   const sortSelect = document.getElementById("sort-select");
   const stackFilter = document.getElementById("stack-filter");
   const stackBanners = Array.from(document.querySelectorAll(".stack-banner"));
@@ -87,6 +88,18 @@
   const num = (el, key) => Number(el.dataset[key] || 0);
   const str = (el, key) => el.dataset[key] || "";
 
+  // Compare dotted version strings numerically: negative when a < b, positive
+  // when a > b. Missing components count as 0, so `1.65` < `1.65.1`.
+  function cmpVersion(a, b) {
+    const pa = a.split(".");
+    const pb = b.split(".");
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const d = (Number(pa[i]) || 0) - (Number(pb[i]) || 0);
+      if (d !== 0) return d;
+    }
+    return 0;
+  }
+
   // Comparators return rows in display order. All but `name`/`default` are
   // descending; rows missing a value sort last.
   const comparators = {
@@ -118,6 +131,7 @@
     const skipDeprecated = hideDeprecated.checked;
     const onlyRecommended = recommendedOnly.checked;
     const license = licenseFilter.value;
+    const msrv = msrvFilter ? msrvFilter.value : "";
     const stack = stackFilter ? stackFilter.value : "";
     let visible = 0;
 
@@ -129,6 +143,11 @@
         .split(/\s+/)
         .filter(Boolean);
       const stacks = (tool.dataset.stacks || "").split(/\s+/).filter(Boolean);
+      const toolMsrv = tool.dataset.msrv || "";
+      // MSRV filter keeps tools known to build on the chosen version, i.e. whose
+      // MSRV is at most the selection. Tools with unknown MSRV can't be
+      // guaranteed, so they drop out while the filter is active.
+      const msrvOk = !msrv || (toolMsrv && cmpVersion(toolMsrv, msrv) <= 0);
       const isPick = !stack || stacks.includes(stack);
       const isBaseline = tool.dataset.baseline === "true";
       // Baseline (Everyday Essentials) tools show under every stack as the
@@ -137,6 +156,7 @@
         (!skipDeprecated || !deprecated) &&
         (!onlyRecommended || recommended) &&
         (!license || licenses.includes(license)) &&
+        msrvOk &&
         (isPick || isBaseline) &&
         terms.every((t) => haystack.includes(t));
       tool.hidden = !matches;
@@ -210,6 +230,7 @@
     const params = new URLSearchParams();
     if (input.value.trim()) params.set("q", input.value.trim());
     if (licenseFilter.value) params.set("license", licenseFilter.value);
+    if (msrvFilter && msrvFilter.value) params.set("msrv", msrvFilter.value);
     if (sortSelect.value !== "default") params.set("sort", sortSelect.value);
     if (hideDeprecated.checked) params.set("deprecated", "0");
     if (recommendedOnly.checked) params.set("recommended", "1");
@@ -229,6 +250,14 @@
       [...licenseFilter.options].some((o) => o.value === license)
     ) {
       licenseFilter.value = license;
+    }
+    const msrv = params.get("msrv");
+    if (
+      msrvFilter &&
+      msrv &&
+      [...msrvFilter.options].some((o) => o.value === msrv)
+    ) {
+      msrvFilter.value = msrv;
     }
     const sort = params.get("sort");
     if (sort && comparators[sort]) sortSelect.value = sort;
@@ -258,6 +287,7 @@
   hideDeprecated.addEventListener("change", apply);
   recommendedOnly.addEventListener("change", apply);
   licenseFilter.addEventListener("change", apply);
+  if (msrvFilter) msrvFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
 
   // Click a category header (or its chevron) to fold it away. The chevron is a
@@ -370,6 +400,51 @@
     if (e.key === "/" && document.activeElement !== input) {
       e.preventDefault();
       input.focus();
+    }
+  });
+
+  // ── Copy install command ─────────────────────────────────────────────────
+  // Each installable tool ships a small "install" button carrying its
+  // `cargo install …` line in data-copy. Click it to put the command on the
+  // clipboard, with a brief inline confirmation.
+  let copyResetTimer = null;
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".copy-install");
+    if (!btn) return;
+    e.preventDefault();
+    const command = btn.dataset.copy || "";
+    if (!command) return;
+
+    const confirm = () => {
+      const label = btn.querySelector(".copy-label");
+      btn.classList.add("is-copied");
+      if (label) label.textContent = "copied";
+      clearTimeout(copyResetTimer);
+      copyResetTimer = setTimeout(() => {
+        btn.classList.remove("is-copied");
+        if (label) label.textContent = "install";
+      }, 1500);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(command).then(confirm, fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+
+    function fallbackCopy() {
+      const ta = document.createElement("textarea");
+      ta.value = command;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        confirm();
+      } catch (err) {}
+      document.body.removeChild(ta);
     }
   });
 

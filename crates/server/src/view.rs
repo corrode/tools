@@ -29,6 +29,8 @@ pub(crate) struct IndexView {
     pub(crate) last_updated: Option<String>,
     /// Distinct license families across the catalog, for the license filter.
     pub(crate) licenses: Vec<LicenseOption>,
+    /// Distinct MSRVs across the catalog (ascending), for the MSRV filter.
+    pub(crate) msrvs: Vec<MsrvOption>,
     /// Curated stacks, powering the stack picker and its banner.
     pub(crate) stacks: Vec<StackInfo>,
     /// Names of the baseline (Everyday Essentials) picks, in pick order. Shown
@@ -47,6 +49,15 @@ pub(crate) struct LicenseOption {
     pub(crate) value: String,
     /// Display label (original SPDX case, e.g. `Apache-2.0`).
     pub(crate) label: String,
+}
+
+/// One entry in the MSRV (minimum supported Rust version) filter dropdown.
+/// Selecting a version keeps tools whose MSRV is at most that version.
+#[derive(Debug)]
+pub(crate) struct MsrvOption {
+    /// The version string used both as the option value and for comparison
+    /// against a tool's `data-msrv` (e.g. `1.65`).
+    pub(crate) value: String,
 }
 
 /// A curated stack as it appears on the index: one card in the stack picker,
@@ -140,6 +151,9 @@ pub(crate) struct ToolView {
     pub(crate) version: Option<String>,
     /// Minimum supported Rust version (`rust-version`), when published.
     pub(crate) msrv: Option<String>,
+    /// The `cargo install` command for installable binary crates, ready to
+    /// copy. `None` for libraries and toolchain components.
+    pub(crate) install_command: Option<String>,
     /// Relative last-activity string (e.g. `3d ago`).
     pub(crate) last_activity: Option<String>,
     /// SPDX license expression.
@@ -237,6 +251,10 @@ impl IndexView {
             .map(|(value, label)| LicenseOption { value, label })
             .collect();
 
+        // Distinct MSRVs across the catalog, ascending, for the MSRV dropdown.
+        // Selecting one keeps tools whose MSRV is at most that version.
+        let msrvs = msrv_options(catalog);
+
         // Curated stacks for the picker, minus the baseline (which is implicit,
         // not a card you select).
         let stacks = catalog
@@ -272,6 +290,7 @@ impl IndexView {
             last_updated: last_updated.map(|d| d.format("%-d %b %Y").to_string()),
             categories,
             licenses,
+            msrvs,
             stacks,
             baseline_names,
             baseline_install,
@@ -304,6 +323,7 @@ impl ToolView {
         let stars = metrics.and_then(|m| m.stars).map(|s| compact(u64::from(s)));
         let version = krate.and_then(|c| c.latest_version.clone());
         let msrv = krate.and_then(|c| c.msrv.clone());
+        let install_command = install_crate(tool).map(|c| format!("cargo install {c}"));
         let last_commit = metrics.and_then(|m| m.last_commit);
         let last_activity = last_commit.map(|d| relative_date(d, today));
         let sort_updated = last_commit.map(|d| d.to_string()).unwrap_or_default();
@@ -373,6 +393,7 @@ impl ToolView {
             stars,
             version,
             msrv,
+            install_command,
             last_activity,
             license,
             owners,
@@ -582,6 +603,36 @@ fn compact(n: u64) -> String {
     } else {
         n.to_string()
     }
+}
+
+/// Parses a dotted version string (e.g. `1.74.0`) into a comparable
+/// `(major, minor, patch)` tuple. Missing or non-numeric components are treated
+/// as `0`, so partial versions like `1.65` sort correctly against `1.65.1`.
+fn parse_version(v: &str) -> (u32, u32, u32) {
+    let mut parts = v.split('.').map(|p| p.trim().parse::<u32>().unwrap_or(0));
+    (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    )
+}
+
+/// Collects the catalog's distinct MSRVs into ascending dropdown options.
+fn msrv_options(catalog: &Catalog) -> Vec<MsrvOption> {
+    let mut set: BTreeSet<String> = BTreeSet::new();
+    for tool in catalog.tools() {
+        if let Some(msrv) = tool
+            .metrics
+            .as_ref()
+            .and_then(|m| m.krate.as_ref())
+            .and_then(|c| c.msrv.clone())
+        {
+            let _ = set.insert(msrv);
+        }
+    }
+    let mut options: Vec<MsrvOption> = set.into_iter().map(|value| MsrvOption { value }).collect();
+    options.sort_by_key(|option| parse_version(&option.value));
+    options
 }
 
 /// Renders a coarse relative date like `today`, `3d ago`, `5mo ago`, `2y ago`.

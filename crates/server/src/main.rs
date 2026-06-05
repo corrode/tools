@@ -52,6 +52,7 @@ async fn main() -> Result<()> {
         .route("/", get(handlers::index))
         .route("/health", get(|| async { "OK" }))
         .route("/llms.txt", get(handlers::llms_txt))
+        .route("/sitemap.xml", get(handlers::sitemap))
         .route(
             "/favicon.ico",
             get(|| async { Redirect::permanent("/static/logo.svg") }),

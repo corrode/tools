@@ -3,7 +3,9 @@
 mod index;
 mod llms;
 mod not_found;
+mod sitemap;
 
 pub(crate) use index::index;
 pub(crate) use llms::llms_txt;
 pub(crate) use not_found::not_found;
+pub(crate) use sitemap::sitemap;

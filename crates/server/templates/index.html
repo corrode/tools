@@ -208,96 +208,117 @@
         <main class="catalog" id="catalog">
             <div class="catalog-controls">
                 <div class="filter-controls">
-                    <label class="toggle">
-                        <input type="checkbox" id="hide-deprecated" />
-                        <span>Hide deprecated</span>
-                    </label>
-                    <span class="filter-pick">
-                        <label class="toggle toggle-pick">
-                            <input type="checkbox" id="recommended-only" />
-                            <svg
-                                class="pick-icon toggle-pick-icon"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <circle cx="12" cy="8" r="6" />
-                                <path
-                                    d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
-                                />
-                            </svg>
-                            <span>Staff picks only</span>
-                        </label>
-                        <span
-                            class="info"
-                            tabindex="0"
-                            role="note"
-                            aria-label="Staff picks are hand-selected by corrode.dev, an independent Rust consultancy"
+                    <div class="filter-actions">
+                        <button
+                            type="button"
+                            id="collapse-all"
+                            class="collapse-all"
+                            aria-pressed="false"
                         >
-                            <svg
-                                class="info-icon"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
+                            Collapse all
+                        </button>
+                        <label class="select-filter">
+                            <span class="select-filter-label">Jump to</span>
+                            <select
+                                id="category-jump"
+                                aria-label="Jump to category"
                             >
-                                <circle cx="12" cy="12" r="9" />
-                                <line x1="12" y1="11" x2="12" y2="16" />
-                                <line x1="12" y1="8" x2="12" y2="8" />
-                            </svg>
-                            <span class="info-bubble" role="tooltip">
-                                Staff picks are hand-selected by
-                                <a href="https://corrode.dev" rel="noopener"
-                                    >corrode.dev</a
-                                >, an independent Rust consultancy.
+                                <option value="">Category…</option>
+                                {% for cat in view.categories %}
+                                <option value="cat-{{ cat.id }}">
+                                    {{ cat.name }} ({{ cat.count }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="select-filter">
+                            <span class="select-filter-label">Sort</span>
+                            <select id="sort-select" aria-label="Sort tools">
+                                <option value="default">Relevance</option>
+                                <option value="downloads">
+                                    Most downloads
+                                </option>
+                                <option value="stars">Most stars</option>
+                                <option value="updated">Recently active</option>
+                                <option value="added">Recently added</option>
+                                <option value="name">Name (A–Z)</option>
+                            </select>
+                        </label>
+                        <label class="select-filter">
+                            <span class="select-filter-label">License</span>
+                            <select
+                                id="license-filter"
+                                aria-label="Filter by license"
+                            >
+                                <option value="">All licenses</option>
+                                {% for lic in view.licenses %}
+                                <option value="{{ lic.value }}">
+                                    {{ lic.label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        {% if !view.msrvs.is_empty() %}
+                        <label class="select-filter">
+                            <span class="select-filter-label">MSRV</span>
+                            <select
+                                id="msrv-filter"
+                                aria-label="Filter by maximum supported Rust version"
+                            >
+                                <option value="">Any MSRV</option>
+                                {% for msrv in view.msrvs %}
+                                <option value="{{ msrv.value }}">
+                                    Rust {{ msrv.value }} or earlier
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        {% endif %}
+                    </div>
+                    <div class="filter-toggles">
+                        <label class="toggle">
+                            <input type="checkbox" id="hide-deprecated" />
+                            <span>Hide deprecated</span>
+                        </label>
+                        <span class="filter-pick">
+                            <label class="toggle toggle-pick">
+                                <input type="checkbox" id="recommended-only" />
+                                <svg
+                                    class="pick-icon toggle-pick-icon"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <circle cx="12" cy="8" r="6" />
+                                    <path
+                                        d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+                                    />
+                                </svg>
+                                <span>Staff picks only</span>
+                            </label>
+                            <span
+                                class="info"
+                                tabindex="0"
+                                role="note"
+                                aria-label="Staff picks are hand-selected by corrode.dev, an independent Rust consultancy"
+                            >
+                                <svg
+                                    class="info-icon"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <circle cx="12" cy="12" r="9" />
+                                    <line x1="12" y1="11" x2="12" y2="16" />
+                                    <line x1="12" y1="8" x2="12" y2="8" />
+                                </svg>
+                                <span class="info-bubble" role="tooltip">
+                                    Staff picks are hand-selected by
+                                    <a href="https://corrode.dev" rel="noopener"
+                                        >corrode.dev</a
+                                    >, an independent Rust consultancy.
+                                </span>
                             </span>
                         </span>
-                    </span>
-                    <span class="filter-spacer"></span>
-                    <button
-                        type="button"
-                        id="collapse-all"
-                        class="collapse-all"
-                        aria-pressed="false"
-                    >
-                        Collapse all
-                    </button>
-                    <label class="select-filter">
-                        <span class="select-filter-label">Jump to</span>
-                        <select
-                            id="category-jump"
-                            aria-label="Jump to category"
-                        >
-                            <option value="">Category…</option>
-                            {% for cat in view.categories %}
-                            <option value="cat-{{ cat.id }}">
-                                {{ cat.name }} ({{ cat.count }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label class="select-filter">
-                        <span class="select-filter-label">Sort</span>
-                        <select id="sort-select" aria-label="Sort tools">
-                            <option value="default">Relevance</option>
-                            <option value="downloads">Most downloads</option>
-                            <option value="stars">Most stars</option>
-                            <option value="updated">Recently active</option>
-                            <option value="added">Recently added</option>
-                            <option value="name">Name (A–Z)</option>
-                        </select>
-                    </label>
-                    <label class="select-filter">
-                        <span class="select-filter-label">License</span>
-                        <select
-                            id="license-filter"
-                            aria-label="Filter by license"
-                        >
-                            <option value="">All licenses</option>
-                            {% for lic in view.licenses %}
-                            <option value="{{ lic.value }}">
-                                {{ lic.label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </label>
+                    </div>
                 </div>
             </div>
 
@@ -416,6 +437,7 @@
                                 data-stars="{{ tool.sort_stars }}"
                                 data-updated="{{ tool.sort_updated }}"
                                 data-added="{{ tool.sort_added }}"
+                                data-msrv="{% if let Some(msrv) = tool.msrv %}{{ msrv }}{% endif %}"
                                 data-stacks="{% for s in tool.stacks %}{{ s.id }} {% endfor %}"
                                 data-baseline="{{ tool.baseline }}"
                             >
@@ -459,7 +481,34 @@
                                         </svg>
                                         <span>{{ tool.repo_label }}</span>
                                     </a>
-                                    {% if tool.version.is_some() ||
+                                    {% if let Some(install) =
+                                    tool.install_command %}<button
+                                        type="button"
+                                        class="copy-install"
+                                        data-copy="{{ install }}"
+                                        title="Copy: {{ install }}"
+                                        aria-label="Copy install command: {{ install }}"
+                                    >
+                                        <svg
+                                            class="copy-icon"
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <rect
+                                                x="9"
+                                                y="9"
+                                                width="11"
+                                                height="11"
+                                                rx="2"
+                                            />
+                                            <path
+                                                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                                            />
+                                        </svg>
+                                        <span class="copy-label"
+                                            >install</span
+                                        ></button
+                                    >{% endif %} {% if tool.version.is_some() ||
                                     tool.license.is_some() ||
                                     tool.msrv.is_some() %}
                                     <span class="tool-meta">

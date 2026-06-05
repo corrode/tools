@@ -626,8 +626,18 @@ html[data-theme="dark"] .theme-icon-sun {
    band beneath the stack picker. */
 .filter-controls {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+/* Second row: the boolean toggles, right-aligned beneath the dropdown
+   filters. */
+.filter-toggles {
+    display: flex;
     align-items: center;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 12px 18px;
 }
 
@@ -760,10 +770,15 @@ html[data-theme="dark"] .theme-icon-sun {
     cursor: default;
 }
 
-/* Pushes the Jump-to/Sort/License selects to the right edge; collapses on
-   narrow screens so the controls simply wrap left-aligned. */
-.filter-spacer {
-    flex: 1 1 auto;
+/* The dropdown-filter row (collapse + the select filters). One flex group so
+   that, when the row runs out of room, the whole cluster wraps together and
+   stays right-aligned instead of dropping a lone control. */
+.filter-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px 18px;
 }
 
 .select-filter {
@@ -1101,6 +1116,56 @@ html[data-theme="dark"] .theme-icon-sun {
     fill: currentColor;
     flex-shrink: 0;
     margin-top: 1px;
+}
+
+/* Inline "install" button next to the repo link: copies the tool's
+   `cargo install …` line to the clipboard, with a brief copied state. */
+.copy-install {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+    padding: 2px 7px 2px 5px;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-dim);
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease,
+        background-color 0.12s ease;
+}
+
+.copy-install:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+}
+
+.copy-install:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.copy-install.is-copied {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+}
+
+.copy-icon {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
 }
 
 /* Compact metadata line under the repo link: version, license, MSRV as plain
@@ -1466,10 +1531,6 @@ a.chip:focus-visible {
 @media (max-width: 620px) {
     :root {
         --gutter: 18px;
-    }
-
-    .filter-spacer {
-        display: none;
     }
 
     .category-desc {
