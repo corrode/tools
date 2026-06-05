@@ -8,6 +8,7 @@
 
 (function () {
   const input = document.getElementById("filter");
+  const searchClear = document.getElementById("search-clear");
   const hideDeprecated = document.getElementById("hide-deprecated");
   const recommendedOnly = document.getElementById("recommended-only");
   const licenseFilter = document.getElementById("license-filter");
@@ -18,6 +19,8 @@
   const stackCards = Array.from(
     document.querySelectorAll(".stack-card[data-stack]"),
   );
+  const stackTrigger = document.getElementById("stack-trigger");
+  const stackPanel = document.getElementById("stack-panel");
   const categoryJump = document.getElementById("category-jump");
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
@@ -162,6 +165,7 @@
     }
 
     noResults.hidden = visible !== 0;
+    if (searchClear) searchClear.hidden = input.value.length === 0;
     renderCollapsed();
     updateStackContext(stack);
     syncUrl();
@@ -183,6 +187,20 @@
     for (const card of stackCards) {
       card.setAttribute("aria-pressed", String(card.dataset.stack === active));
     }
+    if (stackTrigger) {
+      const label = stackTrigger.querySelector(".stack-trigger-label");
+      const opt =
+        active && stackFilter
+          ? [...stackFilter.options].find((o) => o.value === active)
+          : null;
+      if (label) {
+        label.textContent = opt
+          ? opt.textContent.trim()
+          : label.dataset.defaultLabel || "Select stack";
+      }
+    }
+    const panelClear = document.querySelector(".stack-panel-clear");
+    if (panelClear) panelClear.hidden = !active;
   }
 
   // ── Shareable URL state ──────────────────────────────────────────────────
@@ -230,6 +248,13 @@
   apply();
 
   input.addEventListener("input", apply);
+  if (searchClear) {
+    searchClear.addEventListener("click", () => {
+      input.value = "";
+      input.focus();
+      apply();
+    });
+  }
   hideDeprecated.addEventListener("change", apply);
   recommendedOnly.addEventListener("change", apply);
   licenseFilter.addEventListener("change", apply);
@@ -278,6 +303,7 @@
       const id = card.dataset.stack;
       stackFilter.value = stackFilter.value === id ? "" : id;
       apply();
+      closeStackMenu();
       return;
     }
     const chip = e.target.closest(".chip[data-stack]");
@@ -292,8 +318,37 @@
       e.preventDefault();
       stackFilter.value = "";
       apply();
+      closeStackMenu();
     }
   });
+
+  // ── Stacks popover ───────────────────────────────────────────────────────
+  // The header trigger toggles a panel of the curated stack chips; selecting a
+  // chip (handled above) or clicking outside / pressing Escape closes it.
+  function closeStackMenu() {
+    if (!stackTrigger || !stackPanel || stackPanel.hidden) return;
+    stackPanel.hidden = true;
+    stackTrigger.setAttribute("aria-expanded", "false");
+  }
+  if (stackTrigger && stackPanel) {
+    stackTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = stackPanel.hidden;
+      stackPanel.hidden = !open;
+      stackTrigger.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", (e) => {
+      if (!stackPanel.hidden && !e.target.closest(".stack-menu")) {
+        closeStackMenu();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !stackPanel.hidden) {
+        closeStackMenu();
+        stackTrigger.focus();
+      }
+    });
+  }
 
   // "Jump to category" is pure navigation: scroll to the chosen section, then
   // reset so the control always reads "Category…".

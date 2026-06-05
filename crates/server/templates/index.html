@@ -76,7 +76,94 @@
                         autofocus
                         aria-label="Search tools"
                     />
+                    <button
+                        type="button"
+                        id="search-clear"
+                        class="search-clear"
+                        aria-label="Clear search"
+                        hidden
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                        </svg>
+                    </button>
                 </div>
+                {% if !view.stacks.is_empty() %}
+                <div class="stack-menu">
+                    <button
+                        type="button"
+                        id="stack-trigger"
+                        class="stack-trigger"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="stack-panel"
+                    >
+                        <svg
+                            class="stack-trigger-icon"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3 3 8l9 5 9-5-9-5Z" />
+                            <path d="M3 13l9 5 9-5" />
+                        </svg>
+                        <span
+                            class="stack-trigger-label"
+                            data-default-label="Select stack"
+                            >Select stack</span
+                        >
+                        <svg
+                            class="stack-trigger-caret"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="stack-panel" id="stack-panel" hidden>
+                        <div class="stack-panel-head">
+                            <h2 class="stack-panel-title">
+                                Start with a stack
+                            </h2>
+                            <p class="stack-panel-sub">
+                                Curated tool sets for a use case — each builds
+                                on the Everyday Essentials baseline.
+                            </p>
+                        </div>
+                        <div class="stack-cards">
+                            {% for stack in view.stacks %}
+                            <button
+                                type="button"
+                                class="stack-card"
+                                data-stack="{{ stack.id }}"
+                                aria-pressed="false"
+                            >
+                                <span class="stack-card-name"
+                                    >{{ stack.name }}</span
+                                >
+                                <span class="stack-card-count"
+                                    >{{ stack.count }}</span
+                                >
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <button
+                            type="button"
+                            class="stack-panel-clear"
+                            data-clear-stack
+                            hidden
+                        >
+                            Clear stack filter
+                        </button>
+                    </div>
+                    <select id="stack-filter" hidden>
+                        <option value="">All tools</option>
+                        {% for stack in view.stacks %}
+                        <option value="{{ stack.id }}">{{ stack.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
                 <div class="header-meta">
                     {% if let Some(updated) = view.last_updated %}
                     <span class="header-stat" title="Metrics last refreshed"
@@ -119,38 +206,6 @@
         </header>
 
         <main class="catalog" id="catalog">
-            {% if !view.stacks.is_empty() %}
-            <section class="stack-picker" aria-label="Curated stacks">
-                <div class="stack-picker-head">
-                    <h2 class="stack-picker-title">Start with a stack</h2>
-                    <p class="stack-picker-sub">
-                        Curated tool sets for a use case — pick one to filter
-                        the index. Each builds on the Everyday Essentials, shown
-                        automatically as the baseline.
-                    </p>
-                </div>
-                <div class="stack-cards">
-                    {% for stack in view.stacks %}
-                    <button
-                        type="button"
-                        class="stack-card"
-                        data-stack="{{ stack.id }}"
-                        aria-pressed="false"
-                    >
-                        <span class="stack-card-name">{{ stack.name }}</span>
-                        <span class="stack-card-count">{{ stack.count }}</span>
-                    </button>
-                    {% endfor %}
-                </div>
-                <select id="stack-filter" hidden>
-                    <option value="">All tools</option>
-                    {% for stack in view.stacks %}
-                    <option value="{{ stack.id }}">{{ stack.name }}</option>
-                    {% endfor %}
-                </select>
-            </section>
-            {% endif %}
-
             <div class="catalog-controls">
                 <div class="filter-controls">
                     <label class="toggle">

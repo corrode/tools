@@ -192,7 +192,7 @@ a:hover {
 .search-wrap {
     position: relative;
     flex: 1;
-    max-width: 440px;
+    max-width: none;
 }
 
 .search-icon {
@@ -218,10 +218,16 @@ a:hover {
     color: var(--ink);
     font-size: 0.92rem;
     font-family: inherit;
-    padding: 9px 16px 9px 40px;
+    padding: 9px 38px 9px 40px;
     transition:
         border-color 0.12s ease,
         box-shadow 0.12s ease;
+}
+
+/* Suppress the inconsistent native clear affordance; we provide our own. */
+.filter-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .filter-input::placeholder {
@@ -236,6 +242,51 @@ a:hover {
 
 .search-wrap:focus-within .search-icon {
     stroke: var(--accent);
+}
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: var(--r-sm);
+    background: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    transition:
+        color 0.12s ease,
+        background-color 0.12s ease;
+}
+
+.search-clear[hidden] {
+    display: none;
+}
+
+.search-clear:hover {
+    color: var(--text);
+    background-color: var(--surface-hover);
+}
+
+.search-clear:focus-visible {
+    outline: none;
+    color: var(--text);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.search-clear svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
 }
 
 .header-meta {
@@ -338,28 +389,156 @@ html[data-theme="dark"] .theme-icon-sun {
     scroll-margin-top: calc(var(--header-h) + 16px);
 }
 
-/* ── Stack picker: the headline "pick a use case" hero ───────────────────── */
+/* ── Stacks menu: a highlighted header trigger opens a popover of the curated
+   stack chips, reclaiming the old hero band's vertical space while keeping the
+   stacks one persistent (sticky-header) click away. ─────────────────────────── */
 
-.stack-picker {
-    margin-bottom: 24px;
+.stack-menu {
+    position: relative;
+    flex: 0 0 auto;
 }
 
-.stack-picker-head {
+.stack-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 14px;
+    color: #fff;
+    background-color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-md);
+    white-space: nowrap;
+    transition:
+        filter 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.stack-trigger:hover {
+    filter: brightness(0.95);
+}
+
+.stack-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.stack-trigger-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.stack-trigger-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stack-trigger-caret {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
+    transition: transform 0.15s ease;
+}
+
+.stack-trigger[aria-expanded="true"] .stack-trigger-caret {
+    transform: rotate(180deg);
+}
+
+.stack-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 80;
+    width: 360px;
+    max-width: calc(100vw - 2 * var(--gutter));
+    max-height: min(70vh, 460px);
+    overflow-y: auto;
+    padding: 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow:
+        var(--shadow),
+        0 14px 40px rgba(20, 28, 44, 0.14);
+}
+
+.stack-panel[hidden] {
+    display: none;
+}
+.stack-panel-head {
     margin-bottom: 12px;
 }
 
-.stack-picker-title {
+.stack-panel-title {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--ink);
 }
 
-.stack-picker-sub {
-    margin: 3px 0 0;
-    font-size: 0.85rem;
+.stack-panel-sub {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
     color: var(--text-dim);
+}
+
+.stack-panel-clear {
+    margin-top: 12px;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+.stack-panel-clear:hover {
+    color: var(--accent-ink);
+}
+
+/* Inside the popover the chips become a clean full-width menu list: name on
+   the left, count on the right, a quiet row highlight on hover/active. */
+.stack-panel .stack-cards {
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stack-panel .stack-card {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.stack-panel .stack-card:hover {
+    background-color: var(--surface-hover);
+    border-color: transparent;
+}
+
+.stack-panel .stack-card[aria-pressed="true"] {
+    background-color: var(--accent-soft);
+    border-color: transparent;
+    box-shadow: none;
 }
 
 /* Compact, scannable chip row: prominent and first, but small enough that the
@@ -1263,6 +1442,12 @@ a.chip:focus-visible {
         order: 3;
         flex-basis: 100%;
         max-width: none;
+    }
+
+    /* On the wrapped header the trigger sits inline with the brand/meta, so it
+       reverts to its natural width instead of stretching across the row. */
+    .stack-menu {
+        flex: 0 1 auto;
     }
 
     .header-meta {
