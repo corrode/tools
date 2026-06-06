@@ -27,6 +27,9 @@
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
   const collapseAllBtn = document.getElementById("collapse-all");
+  const filtersToggle = document.getElementById("filters-toggle");
+  const catalogControls = document.querySelector(".catalog-controls");
+  const filtersCount = document.querySelector(".filters-count");
 
   // ── Collapsible categories ──────────────────────────────────────
   // Manual collapse is a navigation aid, persisted per-browser. It's a layer on
@@ -188,7 +191,24 @@
     if (searchClear) searchClear.hidden = input.value.length === 0;
     renderCollapsed();
     updateStackContext(stack);
+    updateFilterCount();
     syncUrl();
+  }
+
+  // Number of active filters, surfaced as a badge on the mobile "Filters"
+  // toggle so the collapsed state still signals that filtering is in effect.
+  // "Jump to" is navigation, not a filter, so it doesn't count.
+  function updateFilterCount() {
+    if (!filtersCount) return;
+    let n = 0;
+    if (stackFilter && stackFilter.value) n++;
+    if (licenseFilter.value) n++;
+    if (msrvFilter && msrvFilter.value) n++;
+    if (sortSelect.value !== "default") n++;
+    if (hideDeprecated.checked) n++;
+    if (recommendedOnly.checked) n++;
+    filtersCount.textContent = String(n);
+    filtersCount.hidden = n === 0;
   }
 
   // Reveal the selected stack's banner and its picks' inline notes, plus the
@@ -317,6 +337,16 @@
       }
       persistCollapsed();
       renderCollapsed();
+    });
+  }
+
+  // On small screens the filter controls collapse behind a "Filters" toggle to
+  // keep the catalog near the top; the button just flips a class (the panel and
+  // its collapsed state are styled in the mobile media query).
+  if (filtersToggle && catalogControls) {
+    filtersToggle.addEventListener("click", () => {
+      const open = catalogControls.classList.toggle("filters-open");
+      filtersToggle.setAttribute("aria-expanded", String(open));
     });
   }
 

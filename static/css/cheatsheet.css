@@ -633,6 +633,12 @@ html[data-theme="dark"] .theme-icon-sun {
     gap: 12px;
 }
 
+/* The "Filters" disclosure button is mobile-only; on wider screens the
+   controls are always shown inline. */
+.filters-toggle {
+    display: none;
+}
+
 /* Second row: the boolean toggles, right-aligned beneath the dropdown
    filters. */
 .filter-toggles {
@@ -1588,8 +1594,98 @@ a.chip:focus-visible {
         display: none;
     }
 
+    /* The "Filters" disclosure button: a full-width control that opens the
+       organized filter panel below it. An accent badge shows how many filters
+       are active while collapsed. */
+    .filters-toggle {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text);
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 11px 14px;
+        cursor: pointer;
+        transition:
+            border-color 0.12s ease,
+            box-shadow 0.12s ease;
+    }
+
+    .filters-toggle:focus-visible {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+
+    .filters-open .filters-toggle {
+        border-color: var(--border-strong);
+    }
+
+    .filters-toggle-icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .filters-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #fff;
+        background-color: var(--accent);
+        border-radius: 999px;
+    }
+
+    .filters-count[hidden] {
+        display: none;
+    }
+
+    .filters-toggle-caret {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        margin-left: auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        opacity: 0.8;
+        transition: transform 0.15s ease;
+    }
+
+    .filters-open .filters-toggle-caret {
+        transform: rotate(180deg);
+    }
+
+    /* Collapsed by default; opens into a clean card panel below the button. */
     .filter-controls {
-        gap: 14px;
+        display: none;
+        margin-top: 12px;
+        gap: 16px;
+        padding: 16px;
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+    }
+
+    .filters-open .filter-controls {
+        display: flex;
     }
 
     .filter-actions {

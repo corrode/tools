@@ -199,7 +199,31 @@
 
         <main class="catalog" id="catalog">
             <div class="catalog-controls">
-                <div class="filter-controls">
+                <button
+                    type="button"
+                    id="filters-toggle"
+                    class="filters-toggle"
+                    aria-expanded="false"
+                    aria-controls="filter-controls"
+                >
+                    <svg
+                        class="filters-toggle-icon"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+                    </svg>
+                    <span>Filters</span>
+                    <span class="filters-count" hidden>0</span>
+                    <svg
+                        class="filters-toggle-caret"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="filter-controls" id="filter-controls">
                     <div class="filter-actions">
                         {% if !view.stacks.is_empty() %}
                         <label class="select-filter stack-select">
