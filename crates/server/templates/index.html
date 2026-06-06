@@ -156,12 +156,6 @@
                             Clear stack filter
                         </button>
                     </div>
-                    <select id="stack-filter" hidden>
-                        <option value="">All tools</option>
-                        {% for stack in view.stacks %}
-                        <option value="{{ stack.id }}">{{ stack.name }}</option>
-                        {% endfor %}
-                    </select>
                 </div>
                 {% endif %}
                 <div class="header-meta">
@@ -207,6 +201,32 @@
             <div class="catalog-controls">
                 <div class="filter-controls">
                     <div class="filter-actions">
+                        {% if !view.stacks.is_empty() %}
+                        <label class="select-filter stack-select">
+                            <svg
+                                class="stack-select-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 3 3 8l9 5 9-5-9-5Z" />
+                                <path d="M3 13l9 5 9-5" />
+                            </svg>
+                            <span class="select-filter-label"
+                                >Start with a stack</span
+                            >
+                            <select
+                                id="stack-filter"
+                                aria-label="Filter by curated stack"
+                            >
+                                <option value="">All tools</option>
+                                {% for stack in view.stacks %}
+                                <option value="{{ stack.id }}">
+                                    {{ stack.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        {% endif %}
                         <button
                             type="button"
                             id="collapse-all"

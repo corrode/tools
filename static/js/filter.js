@@ -289,6 +289,7 @@
   licenseFilter.addEventListener("change", apply);
   if (msrvFilter) msrvFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
+  if (stackFilter) stackFilter.addEventListener("change", apply);
 
   // Click a category header (or its chevron) to fold it away. The chevron is a
   // real <button>, so keyboard users get the same toggle for free.
@@ -319,10 +320,10 @@
     });
   }
 
-  // Stack selection flows through the hidden <select> (the single source of
-  // truth for the active stack, URL sync, and row filtering): the picker cards,
-  // the "In <stack>" row chips, and a banner's "Clear filter" button all just
-  // set its value and re-apply.
+  // Stack selection flows through the <select> in the catalog controls (the
+  // single source of truth for the active stack, URL sync, and row filtering):
+  // the header picker cards, the "In <stack>" row chips, and a banner's "Clear
+  // filter" button all just set its value and re-apply.
   document.addEventListener("click", (e) => {
     // Picker chips toggle the stack on/off in place. We deliberately do NOT
     // scroll: the chips sit at the top, the banner appears just below them, and

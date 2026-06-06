@@ -407,18 +407,20 @@ html[data-theme="dark"] .theme-icon-sun {
     font-weight: 600;
     cursor: pointer;
     padding: 8px 14px;
-    color: #fff;
-    background-color: var(--accent);
-    border: 1px solid var(--accent);
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--r-md);
     white-space: nowrap;
     transition:
-        filter 0.12s ease,
+        background-color 0.12s ease,
+        border-color 0.12s ease,
         box-shadow 0.12s ease;
 }
 
 .stack-trigger:hover {
-    filter: brightness(0.95);
+    background-color: var(--surface-hover);
+    border-color: var(--border-strong);
 }
 
 .stack-trigger:focus-visible {
@@ -816,6 +818,45 @@ html[data-theme="dark"] .theme-icon-sun {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* The curated stacks are the recommended starting point, so the catalog-row
+   control carries the prominent accent treatment (the header trigger is the
+   quiet, always-reachable twin). `margin-right: auto` anchors it to the left,
+   apart from the right-aligned utility filters. */
+.stack-select {
+    margin-right: auto;
+    gap: 9px;
+}
+
+.stack-select .select-filter-label {
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+.stack-select-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.stack-select select {
+    color: #fff;
+    font-weight: 600;
+    background-color: var(--accent);
+    border-color: var(--accent);
+    padding: 6px 28px 6px 11px;
+    /* White caret to read on the accent fill. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+.stack-select select:hover {
+    filter: brightness(0.96);
 }
 
 /* ------------------------------------------------------------- Category --- */
