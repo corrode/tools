@@ -1569,16 +1569,169 @@ a.chip:focus-visible {
     }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 640px) {
     :root {
-        --gutter: 18px;
+        --gutter: 16px;
+    }
+
+    .site-header-inner {
+        gap: 12px 14px;
+    }
+
+    /* ── Catalog controls ────────────────────────────────────────────────
+       Condense the filters into a structured block. The header already carries
+       a stack entry on desktop; on a phone the in-content picker below is the
+       single, clearer one, so hide the redundant header trigger. Each filter
+       becomes a small label stacked above a full-width control, two per row,
+       instead of a ragged label-left / control-right stack. */
+    .stack-menu {
+        display: none;
+    }
+
+    .filter-controls {
+        gap: 14px;
+    }
+
+    .filter-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 12px;
+    }
+
+    .select-filter {
+        flex: initial;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        white-space: normal;
+    }
+
+    .select-filter-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .select-filter select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* The stack picker leads the block full-width; Collapse all is an action,
+       not a filter, so it drops to the end on its own row. */
+    .stack-select {
+        grid-column: 1 / -1;
+        margin-right: 0;
+    }
+
+    .collapse-all {
+        order: 9;
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .filter-toggles {
+        justify-content: flex-start;
+        gap: 10px 18px;
+    }
+
+    /* ── Tool table → stacked cards ──────────────────────────────────────
+       A three-column table can't fit a phone without horizontal scroll that
+       clips the Notes column — the most valuable content. Reflow each row
+       into a vertically-stacked card: identity, then prose, then a compact
+       inline metrics strip. */
+    .table-wrap {
+        overflow: visible;
+    }
+
+    .tool-table {
+        min-width: 0;
+        table-layout: auto;
+        display: block;
+    }
+
+    .tool-table thead {
+        display: none;
+    }
+
+    .tool-table tbody,
+    .tool-table tbody tr,
+    .tool-table td {
+        display: block;
+        width: auto;
+    }
+
+    .tool-table tbody tr {
+        padding: 18px 16px;
+    }
+
+    .tool-table td {
+        padding: 0;
+    }
+
+    .cell-notes {
+        margin-top: 12px;
+    }
+
+    .cell-stats {
+        margin-top: 14px;
+        padding-left: 0;
+    }
+
+    /* Metrics become a wrapping inline strip instead of a stacked column. */
+    .stats {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin: 0 0 10px;
+    }
+
+    /* Move the recommended accent bar from the first cell to the whole card. */
+    .tool.is-recommended td:first-child {
+        box-shadow: none;
+    }
+
+    .tool.is-recommended {
+        box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    /* ── Tighter vertical rhythm on small screens ─────────────────────── */
+    .catalog {
+        padding-top: 22px;
+    }
+
+    .catalog-controls {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+    }
+
+    .category {
+        margin-bottom: 32px;
     }
 
     .category-desc {
         grid-column: 1 / -1;
     }
-}
 
+    /* The staff-picks tooltip is anchored to an icon near the right edge; at
+       phone widths its default left-anchored box runs off-screen and adds a
+       horizontal scrollbar even while hidden. Open it leftward and clamp it to
+       the viewport. */
+    .info-bubble {
+        left: auto;
+        right: 0;
+        max-width: calc(100vw - 24px);
+    }
+
+    /* Let long inline install commands in the stack banner break instead of
+       pushing the page wider than the smallest phones. */
+    .stack-banner-baseline code,
+    .stack-banner-intro code {
+        overflow-wrap: anywhere;
+    }
+}
 /* ── Part-of chips (index tool rows) ─────────────────────────────────── */
 .part-of {
     display: inline-flex;
