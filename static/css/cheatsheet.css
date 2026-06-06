@@ -639,6 +639,12 @@ html[data-theme="dark"] .theme-icon-sun {
     display: none;
 }
 
+/* The filter panel footer (Reset + Apply) is mobile-only and appears once a
+   filter is active. */
+.filters-foot {
+    display: none;
+}
+
 /* Second row: the boolean toggles, right-aligned beneath the dropdown
    filters. */
 .filter-toggles {
@@ -1686,6 +1692,10 @@ a.chip:focus-visible {
 
     .filters-open .filter-controls {
         display: flex;
+        /* When open the bar is pinned, so cap the panel to the space below the
+           header and let it scroll internally on short screens. */
+        max-height: calc(100dvh - var(--header-sticky-h, 65px) - 72px);
+        overflow-y: auto;
     }
 
     .filter-actions {
@@ -1731,6 +1741,57 @@ a.chip:focus-visible {
     .filter-toggles {
         justify-content: flex-start;
         gap: 10px 18px;
+    }
+
+    /* Panel footer: a quiet Reset beside the prominent confirm/close action,
+       revealed only once a filter is active. */
+    .has-active-filters .filters-foot {
+        display: flex;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .filters-reset,
+    .filters-apply {
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border-radius: var(--r-md);
+        padding: 11px 14px;
+        cursor: pointer;
+        transition:
+            filter 0.12s ease,
+            color 0.12s ease,
+            border-color 0.12s ease;
+    }
+
+    .filters-reset {
+        flex: 0 0 auto;
+        color: var(--text-dim);
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+    }
+
+    .filters-reset:hover {
+        color: var(--ink);
+        border-color: var(--border-strong);
+    }
+
+    .filters-apply {
+        flex: 1;
+        color: #fff;
+        background-color: var(--accent);
+        border: 1px solid var(--accent);
+    }
+
+    .filters-apply:hover {
+        filter: brightness(0.96);
+    }
+
+    .filters-reset:focus-visible,
+    .filters-apply:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--accent-ring);
     }
 
     /* ── Tool table → stacked cards ──────────────────────────────────────
@@ -1799,8 +1860,22 @@ a.chip:focus-visible {
     }
 
     .catalog-controls {
-        margin-bottom: 20px;
-        padding-bottom: 14px;
+        /* Keep the filter bar pinned just beneath the sticky header while
+           scrolling. Bleed the background to the viewport edges so tool rows
+           pass cleanly underneath. */
+        position: sticky;
+        top: var(--header-sticky-h, 0);
+        z-index: 40;
+        margin: 0 calc(-1 * var(--gutter)) 20px;
+        padding: 12px var(--gutter) 14px;
+        background-color: var(--bg);
+    }
+
+    /* Anchored jumps must clear the header plus the pinned filter bar. */
+    .category,
+    .stack-banner,
+    .tool-table tbody tr {
+        scroll-margin-top: calc(var(--header-sticky-h, 65px) + 80px);
     }
 
     .category {

@@ -30,6 +30,7 @@
   const filtersToggle = document.getElementById("filters-toggle");
   const catalogControls = document.querySelector(".catalog-controls");
   const filtersCount = document.querySelector(".filters-count");
+  const siteHeader = document.querySelector(".site-header");
 
   // ── Collapsible categories ──────────────────────────────────────
   // Manual collapse is a navigation aid, persisted per-browser. It's a layer on
@@ -209,6 +210,11 @@
     if (recommendedOnly.checked) n++;
     filtersCount.textContent = String(n);
     filtersCount.hidden = n === 0;
+    // The panel footer (Reset + Apply) is only meaningful once something is
+    // filtered, so reveal it on the first active filter.
+    if (catalogControls) {
+      catalogControls.classList.toggle("has-active-filters", n > 0);
+    }
   }
 
   // Reveal the selected stack's banner and its picks' inline notes, plus the
@@ -343,12 +349,56 @@
   // On small screens the filter controls collapse behind a "Filters" toggle to
   // keep the catalog near the top; the button just flips a class (the panel and
   // its collapsed state are styled in the mobile media query).
+  function closeFilters() {
+    if (!catalogControls) return;
+    catalogControls.classList.remove("filters-open");
+    if (filtersToggle) filtersToggle.setAttribute("aria-expanded", "false");
+  }
+
   if (filtersToggle && catalogControls) {
     filtersToggle.addEventListener("click", () => {
       const open = catalogControls.classList.toggle("filters-open");
       filtersToggle.setAttribute("aria-expanded", String(open));
     });
   }
+
+  // "Apply filters" just confirms and closes the panel — filtering itself is
+  // already live as each control changes.
+  const filtersApply = document.getElementById("filters-apply");
+  if (filtersApply) {
+    filtersApply.addEventListener("click", () => {
+      closeFilters();
+      if (filtersToggle) filtersToggle.focus();
+    });
+  }
+
+  // "Reset all" returns every filter to its default in one tap (search is left
+  // alone — it has its own clear button). Live filtering re-runs via apply().
+  const filtersReset = document.getElementById("filters-reset");
+  if (filtersReset) {
+    filtersReset.addEventListener("click", () => {
+      if (stackFilter) stackFilter.value = "";
+      licenseFilter.value = "";
+      if (msrvFilter) msrvFilter.value = "";
+      sortSelect.value = "default";
+      hideDeprecated.checked = false;
+      recommendedOnly.checked = false;
+      apply();
+    });
+  }
+
+  // The filter bar is pinned just below the (sticky) header. Since the header
+  // wraps to a taller stack on small screens, measure it and expose the height
+  // so CSS can park the bar at exactly the right offset.
+  function syncHeaderHeight() {
+    if (!siteHeader) return;
+    document.documentElement.style.setProperty(
+      "--header-sticky-h",
+      siteHeader.offsetHeight + "px",
+    );
+  }
+  syncHeaderHeight();
+  window.addEventListener("resize", syncHeaderHeight);
 
   // Stack selection flows through the <select> in the catalog controls (the
   // single source of truth for the active stack, URL sync, and row filtering):
@@ -420,6 +470,9 @@
       if (section && !section.hidden) {
         // Unfold the target so the jump lands on content, not a folded header.
         setCollapsed(section.dataset.cat, false);
+        // Collapse the (sticky) filter panel first so it doesn't cover the
+        // landing spot on mobile.
+        closeFilters();
         section.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       categoryJump.value = "";
