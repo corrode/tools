@@ -1259,6 +1259,7 @@ html[data-theme="dark"] .theme-icon-sun {
 
 .notes-body p {
     margin: 0 0 8px;
+    text-wrap: pretty;
 }
 
 .notes-body p:last-child {

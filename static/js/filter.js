@@ -322,10 +322,25 @@
   for (const cat of categories) {
     const head = cat.querySelector(".category-head");
     if (!head) continue;
+    // Track where the pointer went down so a click-to-toggle isn't confused
+    // with a text drag-select. Inspecting window.getSelection() instead was
+    // unreliable (a stale selection left the header stuck, needing several
+    // clicks); comparing down/up positions only suppresses a real drag.
+    let downX = 0;
+    let downY = 0;
+    head.addEventListener("mousedown", (e) => {
+      downX = e.clientX;
+      downY = e.clientY;
+    });
     head.addEventListener("click", (e) => {
       if (e.target.closest("a")) return;
-      const sel = window.getSelection();
-      if (sel && !sel.isCollapsed && head.contains(sel.anchorNode)) return;
+      // Keyboard activation (Enter/Space on the toggle button) reports detail 0
+      // and carries no coordinates, so always toggle in that case.
+      if (e.detail !== 0) {
+        const moved =
+          Math.abs(e.clientX - downX) > 4 || Math.abs(e.clientY - downY) > 4;
+        if (moved) return;
+      }
       setCollapsed(cat.dataset.cat, !collapsed.has(cat.dataset.cat));
     });
   }
