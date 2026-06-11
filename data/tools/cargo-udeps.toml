@@ -6,7 +6,7 @@ crate = "cargo-udeps"
 
 remarks = """
 Finds unused dependencies by inspecting actual compiler output, so it knows
-which crates were genuinely linked rather than guessing from source text. This
+which crates were actually linked rather than guessing from source text. This
 makes it more accurate than heuristic scanners, catching cases that pure text
 analysis misses and avoiding some false positives.
 

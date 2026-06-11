@@ -12,7 +12,7 @@ already wired up", and because templates are just ordinary repositories, teams
 can maintain their own.
 
 Reach for it when you spin up similar crates often or want to standardize a
-house style; for a genuine one-off, plain `cargo new` is still simpler. A
+house style; for a true one-off, plain `cargo new` is still simpler. A
 template is third-party code that runs on your machine, so treat an unfamiliar
 one with the same caution as any dependency.
 """

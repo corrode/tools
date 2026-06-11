@@ -5,8 +5,8 @@ category = "build"
 crate = "cargo-wizard"
 
 remarks = """
-An interactive assistant for Cargo build configuration. Pick a goal — fast
-compiles, fast runtime, or small binaries — and it writes the matching
+An interactive assistant for Cargo build configuration. Pick a goal (fast
+compiles, fast runtime, or small binaries) and it writes the matching
 `[profile]` settings (and relevant `.cargo/config.toml` entries), including the
 less-obvious knobs like `codegen-units`, `lto`, `panic`, and `opt-level`. A TUI
 lets you inspect and adjust each choice before it's applied.
@@ -14,7 +14,7 @@ lets you inspect and adjust each choice before it's applied.
 It's a one-shot setup helper, not something you run continuously: useful for
 learning which profile settings matter and getting a sensible baseline, after
 which the output is ordinary TOML you own and tune by hand. It changes how you
-build, not how well the build is cached — pair it with `sccache` for the latter.
+build, not how well the build is cached; pair it with `sccache` for the latter.
 """
 
 related = ["sccache"]

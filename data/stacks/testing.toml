@@ -4,9 +4,9 @@ description = "Proving the code does what you think, beyond a handful of example
 
 intro = """
 Rust's built-in `#[test]` harness is deliberately minimal: it runs functions and
-checks assertions, and stops there. Everything past that — parameterizing cases,
+checks assertions, and stops there. Everything past that (parameterizing cases,
 faking a dependency, generating inputs, locking down large outputs, measuring
-what the suite actually exercises — is left to the ecosystem, and the right tool
+what the suite actually exercises) is left to the ecosystem, and the right tool
 depends on the question you're asking.
 
 This stack is the correctness toolbox, from everyday ergonomics to the
@@ -45,7 +45,7 @@ scalar checks where a plain `assert_eq!` reads better.
 [[pick]]
 tool = "mockall"
 note = """
-Fakes the seams — network, clock, filesystem — so logic can be tested without the
+Fakes the seams (network, clock, filesystem) so logic can be tested without the
 real dependency. Pays off when your code already abstracts over traits; if it
 doesn't, a hand-written fake is often clearer than the macro machinery. A
 dev-dependency.
@@ -63,7 +63,7 @@ assumed. Integrates with nextest.
 tool = "cargo-mutants"
 note = """
 The second, deeper measure: it mutates your code and reruns the tests, exposing
-assertions that don't truly pin behavior — gaps coverage can't see. It's slow, so
+assertions that don't truly pin behavior, the gaps coverage can't see. It's slow, so
 scope it to changed files in CI rather than the whole tree.
 """
 

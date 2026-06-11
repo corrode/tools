@@ -5,8 +5,8 @@ category = "testing"
 crate = "cargo-mutants"
 
 remarks = """
-Mutation testing for Rust: it injects small changes — a `>` becomes `>=`, a
-function returns `Default::default()` — and reruns your tests, reporting any
+Mutation testing for Rust: it injects small changes (a `>` becomes `>=`, a
+function returns `Default::default()`) and reruns your tests, reporting any
 mutant that survives as a gap in your suite. Where line coverage only proves
 code was *executed*, surviving mutants show where your assertions don't actually
 *pin down* behavior.
@@ -14,7 +14,7 @@ code was *executed*, surviving mutants show where your assertions don't actually
 It's CPU-hungry: every mutant is a fresh build-and-test cycle, so scope it to
 changed files or specific modules in CI rather than re-running the whole tree.
 It pairs naturally with `cargo-nextest` as the runner and complements
-`cargo-llvm-cov` — use coverage to find untested lines, mutants to find
+`cargo-llvm-cov`: use coverage to find untested lines, mutants to find
 under-tested ones.
 """
 

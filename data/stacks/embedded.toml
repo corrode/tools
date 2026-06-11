@@ -8,10 +8,10 @@ logging), which are per-chip choices the index doesn't try to rank. What it can
 offer is the host-side tooling that's the same whatever the target: getting code
 onto the chip, watching it run, and keeping an eye on code size.
 
-This stack is deliberately small and honest about that. Most logic — protocol
-parsing, state machines — is plain Rust you can test and check on the host with
+This stack is deliberately small and honest about that. Most logic (protocol
+parsing, state machines) is plain Rust you can test and check on the host with
 the Everyday Essentials' `cargo-nextest` and `bacon`, so reserve the slow
-flash-and-run cycle for the genuinely device-bound parts. The big omissions (a
+flash-and-run cycle for the parts that are actually device-bound. The big omissions (a
 HAL, an async/RTOS framework, `defmt`) are dependencies you pick per board.
 """
 
@@ -36,5 +36,5 @@ tool = "cargo-bloat"
 note = """
 Flash and RAM are the budget. `cargo bloat` attributes `.text` size to crates and
 functions, so when a build stops fitting you can see what grew instead of
-guessing — a natural companion to the assembly view above.
+guessing. A natural companion to the assembly view above.
 """

@@ -13,7 +13,7 @@ This stack covers that pipeline. It deliberately leaves out the **framework**
 here is the tooling you'll reach for regardless of which framework wins. Most of
 your logic is plain Rust you can test and check off-target on the host (the
 Everyday Essentials cover that); reserve in-browser `wasm-bindgen-test` runs for
-the genuinely DOM-bound parts.
+the parts that are actually DOM-bound.
 """
 
 [[pick]]

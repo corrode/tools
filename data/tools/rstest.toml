@@ -8,8 +8,8 @@ installable = false
 remarks = """
 Adds fixtures and parameterized cases to ordinary `#[test]` functions. Declare a
 reusable `#[fixture]` and request it as an argument, or attach `#[case(...)]`
-rows (and `#[values(...)]` matrices) to run the same body across many inputs —
-each case reports as its own named test.
+rows (and `#[values(...)]` matrices) to run the same body across many inputs.
+Each case reports as its own named test.
 
 It removes most of the copy-paste from table-driven tests while staying close to
 the built-in harness, so it composes with `cargo-nextest`, `insta`, and the rest

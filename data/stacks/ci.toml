@@ -9,8 +9,8 @@ route around it. The individual tools appear in other stacks too; what's
 distinctive here is assembling them into one merge-blocking pass.
 
 This is the pipeline layer. It assumes the Everyday Essentials are already in
-place locally; CI is where you enforce them for everyone — `clippy -D warnings`
-and `cargo fmt --check` turn the baseline into hard gates — and add the checks
+place locally; CI is where you enforce them for everyone (`clippy -D warnings`
+and `cargo fmt --check` turn the baseline into hard gates) and add the checks
 and caches only a pipeline needs.
 """
 
