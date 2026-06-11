@@ -21,10 +21,10 @@
     --border-strong: #d7dce4;
 
     /* Text ramp (warm slate greys) */
-    --ink: #18222f;
-    --text: #45505f;
-    --text-dim: #69727f;
-    --text-faint: #98a1ae;
+    --ink: #131c27;
+    --text: #333d4b;
+    --text-dim: #545e6c;
+    --text-faint: #79828f;
 
     /* Friendly green accent */
     --accent: #1f9d6b;
@@ -73,10 +73,10 @@ html[data-theme="dark"] {
     --border-soft: #1f262f;
     --border-strong: #333b46;
 
-    --ink: #e6edf3;
-    --text: #b6bfca;
-    --text-dim: #8b95a1;
-    --text-faint: #6b7480;
+    --ink: #f4f7fa;
+    --text: #d5dce5;
+    --text-dim: #b0b9c5;
+    --text-faint: #909aa7;
 
     --accent: #28b07c;
     --accent-ink: #4cd397;
@@ -1391,11 +1391,6 @@ a.chip:focus-visible {
 .stat-val {
     font-weight: 600;
     color: var(--ink);
-}
-
-.stat-val.muted {
-    font-weight: 500;
-    color: var(--text-faint);
 }
 
 .stat-label {
