@@ -5,9 +5,9 @@ description = "Firmware for microcontrollers, flashed and debugged on real hardw
 intro = """
 Embedded Rust puts firmware on small devices with little memory and often no
 normal operating system. The libraries (HALs, `embassy` or RTIC, `defmt` for
-logging) depend on the chip, so the index doesn't try to rank them. The host-side
-tooling stays useful whatever the target: getting code onto the chip, watching
-it run, and keeping an eye on code size.
+logging) depend on the chip, so the index doesn't try to rank them. The same
+host-side tooling remains useful for any target. It gets code onto the chip,
+lets you watch it run, and keeps an eye on code size.
 
 This stack is deliberately small. Most logic, such as protocol parsing and state
 machines, is plain Rust you can test on your computer with `cargo-nextest` and
@@ -17,10 +17,10 @@ machines, is plain Rust you can test on your computer with `cargo-nextest` and
 [[pick]]
 tool = "probe-rs"
 note = """
-The center of an embedded workflow: it talks to a debug probe, the hardware link
-between your computer and board, to flash firmware, reset, and stream RTT logs.
-It also provides `cargo embed` and connects to editor debuggers. Install the CLI
-with `cargo install probe-rs-tools`.
+Probe-rs talks to a debug probe, the hardware link between your computer and
+board. It can flash firmware, reset the device, stream RTT logs, and connect to
+editor debuggers through `cargo embed`. Install the CLI with
+`cargo install probe-rs-tools`.
 """
 
 [[pick]]

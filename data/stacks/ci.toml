@@ -25,7 +25,7 @@ note = "Extends the formatting gate to `Cargo.toml` and other config with `taplo
 
 [[pick]]
 tool = "cargo-deny"
-note = "One pass for known vulnerabilities, licenses, and banned crates: the supply-chain gate that belongs on every PR."
+note = "Checks known vulnerabilities, licenses, and banned crates in one pass. It gives every PR the same supply-chain check."
 
 [[pick]]
 tool = "sccache"

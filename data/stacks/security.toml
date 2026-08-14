@@ -4,35 +4,36 @@ description = "Knowing and controlling what's actually in your dependency tree."
 
 intro = """
 Most of a Rust project's code comes from direct and indirect dependencies.
-Securing it happens in layers: scan for known vulnerabilities, enforce rules for
-licenses and download sources, optionally record human review, and keep deployed
-binaries auditable after the fact.
+Checking that code involves several steps. You can scan for known
+vulnerabilities, enforce rules for licenses and download sources, record human
+reviews, and keep deployed binaries auditable after the fact.
 
-This stack walks those layers from "everyone should run this" to "for teams that
-need it." Start at the top and add depth as the stakes rise.
+Start with cargo-audit and add the other tools when the project needs stricter
+policy or more detailed review.
 """
 
 [[pick]]
 tool = "cargo-audit"
 note = """
-The baseline: checks your lockfile against the RustSec advisory database. Cheap,
-fast, and worth running in CI from day one of any project.
+Cargo-audit checks your lockfile against the RustSec advisory database. It is
+cheap, fast, and worth running in CI from the start of a project.
 """
 
 [[pick]]
 tool = "cargo-deny"
 note = """
-The policy layer on top: known vulnerabilities plus license allow/deny, banned
-and duplicate crates, and permitted sources, all configured in `deny.toml`.
-Reach for it when "no known vulnerabilities" isn't a strong enough bar.
+Cargo-deny adds policy checks for known vulnerabilities, licenses, banned and
+duplicate crates, and permitted sources. Configure them in `deny.toml` when a
+vulnerability scan alone is not enough.
 """
 
 [[pick]]
 tool = "cargo-vet"
 note = """
-For organizations doing real source review: records and enforces that each
-dependency has been human-audited, with audits shared across the team. Overkill
-for a solo project; essential for some. It tracks judgment, not advisories.
+Cargo-vet records which dependencies people have reviewed and shares those
+audits across a team. This process is usually unnecessary for a solo project,
+but some organizations require it. Its focus is human judgment; cargo-audit
+handles advisories.
 """
 
 [[pick]]
@@ -54,4 +55,4 @@ before trusting it in CI.
 
 [[pick]]
 tool = "cargo-machete"
-note = "Security's quiet ally: every dependency you remove is attack surface gone. A fast unused-dependency scan that fits in a CI gate."
+note = "Finds unused dependencies quickly enough to run in CI. Removing them leaves less third-party code to review and maintain."

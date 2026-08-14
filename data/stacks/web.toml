@@ -4,9 +4,9 @@ description = "Shipping a Rust app to the browser through WebAssembly."
 
 intro = """
 Rust in the browser means compiling to `wasm32-unknown-unknown` and handing the
-result to JavaScript and the DOM. The friction is rarely the UI framework. It's
-the build pipeline: bundling the `.wasm`, generating the JavaScript glue,
-serving with live reload, and keeping the result small.
+result to JavaScript and the DOM. Most of the tooling work is in the build
+pipeline. It bundles the `.wasm`, generates the JavaScript glue, serves the app
+with live reload, and keeps the result small.
 
 This stack covers that pipeline. It deliberately leaves out the framework
 (Leptos, Yew, Dioxus, …) and the backend; pick those per project. Most application
@@ -17,9 +17,9 @@ logic is plain Rust you can test on your computer. Save in-browser
 [[pick]]
 tool = "trunk"
 note = """
-The build-and-serve hub for WASM web apps: point it at an `index.html`, and it
-handles `wasm-bindgen`, asset hashing, and a development server with live reload.
-Start here unless you're shipping a library to npm.
+Trunk builds and serves WASM web apps from an `index.html`. It handles
+`wasm-bindgen`, asset hashing, and a development server with live reload. Start
+here unless you're shipping a library to npm.
 """
 
 [[pick]]
@@ -33,7 +33,7 @@ bindings.
 [[pick]]
 tool = "wasm-pack"
 note = """
-Reach for this instead of Trunk when the deliverable is an npm package rather
-than a hosted app: it wraps the build into something publishable to the
-JavaScript ecosystem. Overkill for a self-contained Rust site.
+Use wasm-pack instead of Trunk when you need an npm package rather than a hosted
+app. It wraps the build into something publishable to the JavaScript ecosystem
+and is usually unnecessary for a self-contained Rust site.
 """

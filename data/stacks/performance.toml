@@ -3,15 +3,14 @@ name = "Profiling & Optimization"
 description = "Measuring what's slow before (and after) you try to fix it."
 
 intro = """
-The first rule of performance work is to measure, and the right instrument
-depends on the problem. Is the whole program slow, or one function? Do you need
-a shareable picture or an interactive dig? Is the CPU busy, or is an async task
-stalled? Reaching for a benchmark when you needed a profiler (or the reverse)
-wastes a lot of time.
+Performance work starts with measurement, and the right tool depends on the
+problem. A profiler shows where a whole program spends its time. A benchmark
+compares one function or command across runs. Async stalls may need a view of
+task scheduling instead. Picking the wrong kind of measurement wastes time.
 
-This stack is the measurement toolbox, end to end. The benchmarking libraries
-here (criterion and divan) are dev-dependencies you add to the project, not
-installed binaries.
+This stack is the measurement toolbox, end to end. Add the benchmarking
+libraries (criterion and divan) to `[dev-dependencies]`; install the other picks
+as command-line tools.
 """
 
 [[pick]]
@@ -32,35 +31,35 @@ glance.
 [[pick]]
 tool = "criterion"
 note = """
-The rigorous choice for benchmarking a small function: many samples, confidence
-intervals, and regression detection between runs, on stable Rust. Use it when
-you need numbers you can defend. Added as a dev-dependency.
+Criterion benchmarks a small function with many samples, confidence intervals,
+and regression detection between runs. Use it when you need numbers you can
+defend. Criterion belongs in `[dev-dependencies]`.
 """
 
 [[pick]]
 tool = "divan"
 note = """
-A lighter, faster-to-compile benchmarking library: annotate plain functions and
-read a compact tree. Prefer it over criterion when you want quick, readable
-numbers without the heavy statistics.
+Divan is a lighter benchmarking library that compiles quickly. Annotate plain
+functions and read the results in a compact tree. Prefer it when you want
+readable numbers without Criterion's heavier statistics.
 """
 
 [[pick]]
 tool = "hyperfine"
-note = "For when the unit under test is a whole command, not a function: warm-up runs, statistical timing, and A/B comparison of two binaries."
+note = "Hyperfine benchmarks a whole command. It supports warm-up runs, statistical timing, and A/B comparison of two binaries."
 
 [[pick]]
 tool = "cargo-show-asm"
-note = "The last mile: confirm the optimization you expected (inlining, vectorization, removing bounds checks) actually shows up in the generated assembly."
+note = "Shows whether an expected optimization, such as inlining, vectorization, or removing bounds checks, appears in the generated assembly."
 
 [[pick]]
 tool = "cargo-bloat"
 note = """
-Optimization and size pull in opposite directions, so keep an eye on the binary:
-`cargo bloat --release --crates` shows which dependencies dominate code size
-before you reach for `opt-level = "z"`, LTO, or trimming features.
+Optimization and size can pull in opposite directions, so keep an eye on the
+binary. `cargo bloat --release --crates` shows which dependencies dominate code
+size before you reach for `opt-level = "z"`, LTO, or trimming features.
 """
 
 [[pick]]
 tool = "tokio-console"
-note = "Async slowness is usually a scheduling problem, not a CPU one. This surfaces stuck or busy-looping tasks that a CPU profiler can't see."
+note = "Async slowness often comes from scheduling even when a CPU profile looks normal. This surfaces stuck or busy-looping tasks that an ordinary profiler can't see."

@@ -8,17 +8,17 @@ past that, such as repeating cases, faking a dependency, generating inputs,
 locking down large outputs, or measuring what the suite exercises, is left to
 the ecosystem. The right tool depends on the question you're asking.
 
-This stack is the correctness toolbox, from everyday conveniences to specialist
-instruments. It stays focused on *does it behave*, not *how fast*. `cargo-nextest`
-from the Everyday Essentials runs these tests (but skips doctests, so keep
-`cargo test --doc` alongside it). The generated-input and mocking libraries are
-dev-dependencies you add to the project, not installed binaries.
+The tools here focus on behavior and correctness. Performance measurements live
+in the Profiling & Optimization stack. `cargo-nextest` from the Everyday
+Essentials runs these tests, but skips doctests, so keep `cargo test --doc`
+alongside it. Add the generated-input and mocking libraries to
+`[dev-dependencies]`; install the `cargo-*` tools separately.
 """
 
 [[pick]]
 tool = "rstest"
 note = """
-Cuts the copy-paste out of running one test with many inputs: `#[case(...)]` rows
+Cuts the copy-paste out of running one test with many inputs. `#[case(...)]` rows
 and `#[values(...)]` matrices expand into individually named tests, while
 `#[fixture]` provides reusable setup.
 """
@@ -35,9 +35,9 @@ dev-dependency.
 [[pick]]
 tool = "insta"
 note = """
-Snapshot testing for large or structured output (debug, JSON, YAML, RON): record
-once, then fail on change and `cargo insta review` the diff. Skip it for small
-values where a plain `assert_eq!` reads better.
+Records large or structured output such as debug text, JSON, YAML, or RON. Later
+test runs fail on changes and `cargo insta review` shows the diff. For small
+values, a plain `assert_eq!` usually reads better.
 """
 
 [[pick]]
@@ -52,23 +52,23 @@ dev-dependency.
 [[pick]]
 tool = "cargo-llvm-cov"
 note = """
-The first measure of suite quality: accurate coverage showing which source lines
-actually ran. Publish it or gate on it so coverage is visible rather than
-assumed. Integrates with nextest.
+Shows which source lines actually ran during the tests. Publish the report or
+gate on it so coverage remains visible. It integrates with nextest.
 """
 
 [[pick]]
 tool = "cargo-mutants"
 note = """
-The second, deeper measure: it makes small changes to your code and reruns the
-tests, exposing assertions that don't truly pin behavior and gaps coverage can't
-see. It's slow, so scope it to changed files in CI rather than the whole tree.
+Makes small changes to your code and reruns the tests. If they still pass, they
+may not be checking the changed behavior. This can reveal gaps that coverage
+alone misses. It is slow, so scope it to changed files in CI rather than the
+whole tree.
 """
 
 [[pick]]
 tool = "loom"
 note = """
-The specialist: explores thread interleavings and memory orderings to find races
-in lock-free code. Reach for it only if you write your own synchronization
-primitives; for everyday `async` and channels it's overkill. A dev-dependency.
+Explores thread interleavings and memory orderings to find races in lock-free
+code. Use it only if you write your own synchronization primitives; everyday
+`async` code and channels rarely need it. Add it under `[dev-dependencies]`.
 """

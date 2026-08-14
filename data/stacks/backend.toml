@@ -9,17 +9,17 @@ and over in CI and Docker, and a binary whose provenance you may have to answer
 for later. The framework (axum, actix, tonic, …) is a per-project dependency;
 the operational tooling around it is not.
 
-This stack is that operational layer: keeping the async runtime observable,
-builds fast, and what you deploy auditable. It deliberately says nothing about
-your web framework or database.
+The tools here cover the work around the service itself. They help you inspect
+async tasks, avoid slow rebuilds, and record what went into the deployed binary.
+Choose the framework and database separately for each project.
 """
 
 [[pick]]
 tool = "tokio-console"
 note = """
-A live terminal view into a running Tokio app: task activity, wakeups, and
-resource usage. The fastest way to find a task that's stuck, busy-looping, or
-never waking. Development-time only: it needs `tokio_unstable`.
+A live terminal view into a running Tokio app. It shows task activity, wakeups,
+and resource usage, which helps you find work that's stuck, busy-looping, or
+never waking. It is for development and needs `tokio_unstable`.
 """
 
 [[pick]]

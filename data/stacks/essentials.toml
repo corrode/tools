@@ -3,22 +3,21 @@ name = "Everyday Essentials"
 description = "The small set every Rust project wants, whatever it ships."
 
 intro = """
-Before you specialize for the web, embedded, or a published crate, there's a
-baseline that pays off on essentially every Rust project: a managed toolchain,
-an editor that understands your code, a fast lint/format/test loop, and a way to
-install the rest without waiting on `cargo install` to compile from source.
+Almost every Rust project benefits from the same baseline. You need a managed
+toolchain, an editor that understands the code, a fast lint/format/test loop,
+and a way to install other tools without waiting on `cargo install` to compile
+them from source.
 
-This is that baseline. Everything here is general-purpose and low-commitment. If
-you adopt nothing else from the index, adopt these. The domain stacks build on
-top of it rather than repeating it.
+These tools provide that baseline. They are general-purpose and low-commitment,
+and the domain stacks build on top of them rather than repeating them.
 """
 
 [[pick]]
 tool = "rustup"
 note = """
 Manages your toolchains, components, and cross-compilation targets, and pins a
-per-project version via `rust-toolchain.toml`. Effectively mandatory: almost
-everything else here assumes a rustup-managed toolchain.
+per-project version via `rust-toolchain.toml`. Almost everything else here
+assumes a rustup-managed toolchain.
 """
 
 [[pick]]

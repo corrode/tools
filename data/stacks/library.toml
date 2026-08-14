@@ -24,17 +24,17 @@ CI.
 [[pick]]
 tool = "release-plz"
 note = """
-A hands-off, PR-based release flow: it derives version bumps and changelog
-entries from your commits and publishes on merge. Start here unless you want to
-drive releases by hand.
+Provides a hands-off, PR-based release flow. It derives version bumps and
+changelog entries from your commits, then publishes when the release PR merges.
+Start here unless you want to drive releases by hand.
 """
 
 [[pick]]
 tool = "cargo-release"
 note = """
-The manual counterpart to release-plz: explicit, command-driven version bump,
-tag, and publish. Reach for it when you'd rather run each release step yourself
-than hand it to a bot.
+Cargo-release gives you explicit commands for version bumps, tags, and
+publishing. Use it when you would rather run each release step yourself than
+hand it to a bot.
 """
 
 [[pick]]
@@ -52,15 +52,15 @@ note = "Catches dependencies you declared but no longer use, so users don't comp
 [[pick]]
 tool = "proptest"
 note = """
-Property tests check rules that should hold across many generated inputs, not
-just a handful of examples. When one fails, proptest shrinks it to a small,
-saved counterexample. Added as a dev-dependency, not installed.
+Property tests check rules across many generated inputs instead of relying on a
+handful of examples. When one fails, proptest shrinks it to a small, saved
+counterexample. Add it under `[dev-dependencies]`.
 """
 
 [[pick]]
 tool = "mdbook"
 note = """
-For the narrative guide rustdoc can't give you: tutorials, concepts, worked
-examples. Optional, but often the difference between a crate people adopt and
-one they bounce off.
+Builds the narrative guide rustdoc cannot provide, including tutorials,
+concepts, and worked examples. It is optional, but often helps people understand
+and adopt a crate.
 """
