@@ -422,43 +422,167 @@ html[data-theme="dark"] .theme-icon-sun {
     line-height: 1.55;
 }
 
-.stack-start-cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+.stack-start-picker {
+    position: relative;
+    min-width: 0;
+    align-self: center;
 }
 
-.stack-start .stack-start-card {
+.stack-dropdown {
+    position: relative;
+}
+
+.stack-start-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    min-height: 92px;
+    padding: 18px 20px;
+    color: var(--ink);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent-ring);
+    border-radius: var(--r-md);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.12s ease,
+        background-color 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.stack-start-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.stack-start-toggle::marker {
+    content: "";
+}
+
+.stack-start-toggle:hover {
+    border-color: var(--accent);
+    background-color: var(--surface-hover);
+}
+
+.stack-start-toggle:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.stack-start-toggle-copy {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-    min-width: 0;
-    padding: 13px 14px;
-    text-align: left;
-    border-radius: var(--r-md);
+    gap: 4px;
 }
 
-.stack-start-card .stack-card-name {
-    font-size: 0.86rem;
+.stack-start-toggle-label {
+    color: var(--accent-ink);
+    font-size: 1rem;
+    font-weight: 700;
 }
 
-.stack-start-card-desc {
+.stack-start-toggle-hint {
     color: var(--text-dim);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     line-height: 1.4;
 }
 
-.stack-start-card-action {
-    margin-top: auto;
-    padding-top: 3px;
+.stack-start-toggle-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+}
+
+.stack-dropdown[open] .stack-start-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.stack-dropdown-list {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-height: min(60vh, 480px);
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    list-style: none;
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    box-shadow:
+        var(--shadow),
+        0 16px 40px rgba(20, 28, 44, 0.16);
+}
+
+.stack-dropdown-list li + li {
+    border-top: 1px solid var(--border-soft);
+}
+
+.stack-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    width: 100%;
+    padding: 12px;
+    color: var(--text);
+    background: none;
+    border: none;
+    border-radius: var(--r-sm);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.stack-option:hover {
+    background-color: var(--surface-hover);
+}
+
+.stack-option:focus-visible {
+    outline: none;
+    background-color: var(--surface-hover);
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.stack-option[aria-pressed="true"] {
+    background-color: var(--accent-soft);
+}
+
+.stack-option-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.stack-option-name {
+    color: var(--ink);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.stack-option-description {
+    color: var(--text-dim);
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.stack-option-count {
+    flex-shrink: 0;
     color: var(--accent-ink);
     font-size: 0.72rem;
     font-weight: 600;
-}
-
-.stack-start-card[aria-pressed="true"] .stack-start-card-desc {
-    color: var(--text);
+    white-space: nowrap;
 }
 
 .catalog-controls {
@@ -467,227 +591,11 @@ html[data-theme="dark"] .theme-icon-sun {
     border-bottom: 1px solid var(--border);
 }
 
+
 /* Anchored jumps (category select, stack banner) clear the sticky header. */
 .category,
 .stack-banner {
     scroll-margin-top: calc(var(--header-h) + 16px);
-}
-
-/* ── Stacks menu: the sticky-header companion to the page-level chooser keeps
-   stacks one click away after the visitor has scrolled into the catalog. ───── */
-
-.stack-menu {
-    position: relative;
-    flex: 0 0 auto;
-}
-
-.stack-trigger {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 8px 14px;
-    color: var(--text);
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    white-space: nowrap;
-    transition:
-        background-color 0.12s ease,
-        border-color 0.12s ease,
-        box-shadow 0.12s ease;
-}
-
-.stack-trigger:hover {
-    background-color: var(--surface-hover);
-    border-color: var(--border-strong);
-}
-
-.stack-trigger:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-.stack-trigger-icon {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.stack-trigger-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.stack-trigger-caret {
-    width: 13px;
-    height: 13px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.85;
-    transition: transform 0.15s ease;
-}
-
-.stack-trigger[aria-expanded="true"] .stack-trigger-caret {
-    transform: rotate(180deg);
-}
-
-.stack-panel {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    z-index: 80;
-    width: 360px;
-    max-width: calc(100vw - 2 * var(--gutter));
-    max-height: min(70vh, 460px);
-    overflow-y: auto;
-    padding: 16px;
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-lg);
-    box-shadow:
-        var(--shadow),
-        0 14px 40px rgba(20, 28, 44, 0.14);
-}
-
-.stack-panel[hidden] {
-    display: none;
-}
-.stack-panel-head {
-    margin-bottom: 12px;
-}
-
-.stack-panel-title {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--ink);
-}
-
-.stack-panel-sub {
-    margin: 4px 0 0;
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: var(--text-dim);
-}
-
-.stack-panel-clear {
-    margin-top: 12px;
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--text-dim);
-    background: none;
-    border: none;
-    padding: 4px 0;
-    cursor: pointer;
-}
-
-.stack-panel-clear:hover {
-    color: var(--accent-ink);
-}
-
-/* Inside the popover the chips become a clean full-width menu list: name on
-   the left, count on the right, a quiet row highlight on hover/active. */
-.stack-panel .stack-cards {
-    flex-direction: column;
-    gap: 2px;
-}
-
-.stack-panel .stack-card {
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 10px;
-    background-color: transparent;
-    border-color: transparent;
-}
-
-.stack-panel .stack-card:hover {
-    background-color: var(--surface-hover);
-    border-color: transparent;
-}
-
-.stack-panel .stack-card[aria-pressed="true"] {
-    background-color: var(--accent-soft);
-    border-color: transparent;
-    box-shadow: none;
-}
-
-/* Compact, scannable chip row: prominent and first, but small enough that the
-   catalog stays near the top for browse-first visitors. The full editorial
-   pitch lives in each stack's banner, shown on selection. */
-.stack-cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.stack-card {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font: inherit;
-    cursor: pointer;
-    padding: 6px 12px;
-    color: var(--ink);
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    transition:
-        color 0.12s ease,
-        border-color 0.12s ease,
-        background-color 0.12s ease;
-}
-
-.stack-card:hover {
-    color: var(--accent-ink);
-    border-color: var(--accent);
-    background-color: var(--surface-hover);
-    opacity: 1;
-}
-
-.stack-card:focus-visible {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-.stack-card[aria-pressed="true"] {
-    color: var(--accent-ink);
-    border-color: var(--accent);
-    background-color: var(--accent-soft);
-    box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-.stack-card-name {
-    font-size: 0.84rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: inherit;
-}
-
-.stack-card-count {
-    font-size: 0.72rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-faint);
-}
-
-.stack-card:hover .stack-card-count,
-.stack-card[aria-pressed="true"] .stack-card-count {
-    color: var(--accent-ink);
 }
 
 .toggle {
@@ -707,8 +615,7 @@ html[data-theme="dark"] .theme-icon-sun {
     height: 15px;
 }
 
-/* Refine row: search-adjacent toggles + selects, in one quiet left-aligned
-   band beneath the stack picker. */
+/* Search-adjacent list controls in a compact toolbar below the stack picker. */
 .filter-controls {
     display: flex;
     flex-direction: column;
@@ -716,9 +623,11 @@ html[data-theme="dark"] .theme-icon-sun {
     gap: 12px;
 }
 
-/* The "Filters" disclosure button is mobile-only; on wider screens the
-   controls are always shown inline. */
-.filters-toggle {
+/* The "Filters" disclosure button and compact stack row are mobile-only; on
+   wider screens the controls are always shown inline and the rich stack banner
+   supplies the sticky state. */
+.filters-toggle,
+.mobile-stack-bar {
     display: none;
 }
 
@@ -728,8 +637,7 @@ html[data-theme="dark"] .theme-icon-sun {
     display: none;
 }
 
-/* Second row: the boolean toggles, right-aligned beneath the dropdown
-   filters. */
+/* Boolean filters align with the right-hand list controls above. */
 .filter-toggles {
     display: flex;
     align-items: center;
@@ -836,40 +744,7 @@ html[data-theme="dark"] .theme-icon-sun {
     text-decoration-color: var(--accent);
 }
 
-.collapse-all {
-    font: inherit;
-    font-size: 0.8rem;
-    color: var(--text);
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 4px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition:
-        color 0.15s ease,
-        border-color 0.15s ease;
-}
-
-.collapse-all:hover:not(:disabled) {
-    color: var(--ink);
-    border-color: var(--accent);
-}
-
-.collapse-all:focus-visible {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-.collapse-all:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-
-/* The dropdown-filter row (collapse + the select filters). One flex group so
-   that, when the row runs out of room, the whole cluster wraps together and
-   stays right-aligned instead of dropping a lone control. */
+/* List navigation and filters align to the right edge. */
 .filter-actions {
     display: flex;
     align-items: center;
@@ -913,45 +788,6 @@ html[data-theme="dark"] .theme-icon-sun {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-/* The curated stacks are the recommended starting point, so the catalog-row
-   control carries the prominent accent treatment (the header trigger is the
-   quiet, always-reachable twin). `margin-right: auto` anchors it to the left,
-   apart from the right-aligned utility filters. */
-.stack-select {
-    margin-right: auto;
-    gap: 9px;
-}
-
-.stack-select .select-filter-label {
-    color: var(--accent-ink);
-    font-weight: 600;
-}
-
-.stack-select-icon {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: var(--accent);
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.stack-select select {
-    color: #fff;
-    font-weight: 600;
-    background-color: var(--accent);
-    border-color: var(--accent);
-    padding: 6px 28px 6px 11px;
-    /* White caret to read on the accent fill. */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-}
-
-.stack-select select:hover {
-    filter: brightness(0.96);
 }
 
 /* ------------------------------------------------------------- Category --- */
@@ -1137,12 +973,19 @@ html[data-theme="dark"] .theme-icon-sun {
 
 .tool-table tbody tr {
     border-bottom: 1px solid var(--border-soft);
-    transition: background-color 0.1s ease;
+    transition:
+        background-color 0.1s ease,
+        opacity 0.16s ease;
     scroll-margin-top: calc(var(--header-h) + 16px);
 }
 
 .tool-table tbody tr:last-child {
     border-bottom: none;
+}
+
+/* Author-level mobile card display rules must never override filtered rows. */
+.tool[hidden] {
+    display: none !important;
 }
 
 .tool-table tbody tr:hover {
@@ -1169,6 +1012,21 @@ html[data-theme="dark"] .theme-icon-sun {
 .tool.is-recommended td:first-child {
     box-shadow: inset 3px 0 0 var(--accent);
 }
+
+/* Active stack picks lead with the same green language as the stack selector
+   and banner. This deliberately overrides the quieter staff-pick wash. */
+.tool.is-stack-pick td {
+    background-color: var(--accent-soft);
+}
+
+.tool.is-stack-pick td:first-child {
+    box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.tool.is-stack-pick .tool-name {
+    color: var(--accent-ink);
+}
+
 
 /* Eyebrow badge above the tool name. Only "New" lives here now (the staff
    pick moved down into the part-of tag row); kept quiet so the name leads. */
@@ -1528,6 +1386,15 @@ a.chip:focus-visible {
    a domain stack's own picks while that stack is the active filter. Kept visible
    for readers who open a stack cold, but de-emphasized — with an accent edge so
    it reads as "baseline", not the grey of a deprecated row. */
+.tool.is-baseline {
+    opacity: 0.62;
+}
+
+.tool.is-baseline:hover,
+.tool.is-baseline:focus-within {
+    opacity: 0.86;
+}
+
 .tool.is-baseline td {
     background-color: var(--surface-alt);
 }
@@ -1545,6 +1412,59 @@ a.chip:focus-visible {
 }
 
 /* ------------------------------------------------------------- Utilities -- */
+
+.section-toggle-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin: 0 0 24px;
+    padding: 13px 16px;
+    color: var(--accent-ink);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent-ring);
+    border-radius: var(--r-md);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        border-color 0.12s ease,
+        background-color 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.section-toggle-all:hover:not(:disabled) {
+    border-color: var(--accent);
+    background-color: var(--surface-hover);
+}
+
+.section-toggle-all:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.section-toggle-all:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.section-toggle-all-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+}
+
+.section-toggle-all[data-action="collapse"] .section-toggle-all-icon {
+    transform: rotate(180deg);
+}
 
 .no-results {
     text-align: center;
@@ -1641,12 +1561,6 @@ a.chip:focus-visible {
         max-width: none;
     }
 
-    /* On the wrapped header the trigger sits inline with the brand/meta, so it
-       reverts to its natural width instead of stretching across the row. */
-    .stack-menu {
-        flex: 0 1 auto;
-    }
-
     .header-meta {
         margin-left: auto;
     }
@@ -1654,10 +1568,6 @@ a.chip:focus-visible {
     .stack-start {
         grid-template-columns: 1fr;
         gap: 20px;
-    }
-
-    .stack-start-cards {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .table-wrap {
@@ -1691,27 +1601,21 @@ a.chip:focus-visible {
         font-size: 0.84rem;
     }
 
-    .stack-start-cards {
-        gap: 8px;
+    .stack-start-toggle {
+        min-height: 76px;
+        padding: 14px 16px;
     }
 
-    .stack-start .stack-start-card {
-        padding: 11px 12px;
-    }
-
-    .stack-start-card-desc {
-        display: none;
+    .stack-option {
+        align-items: flex-start;
+        gap: 10px;
+        padding: 11px 10px;
     }
 
     /* ── Catalog controls ────────────────────────────────────────────────
-       Condense the filters into a structured block. The header already carries
-       a stack entry on desktop; on a phone the in-content picker below is the
-       single, clearer one, so hide the redundant header trigger. Each filter
-       becomes a small label stacked above a full-width control, two per row,
-       instead of a ragged label-left / control-right stack. */
-    .stack-menu {
-        display: none;
-    }
+       Condense the filters into a structured block. Each filter becomes a small
+       label stacked above a full-width control, two per row, instead of a ragged
+       label-left / control-right stack. */
 
     /* The "Filters" disclosure button: a full-width control that opens the
        organized filter panel below it. An accent badge shows how many filters
@@ -1838,19 +1742,6 @@ a.chip:focus-visible {
         min-width: 0;
     }
 
-    /* The stack picker leads the block full-width; Collapse all is an action,
-       not a filter, so it drops to the end on its own row. */
-    .stack-select {
-        grid-column: 1 / -1;
-        margin-right: 0;
-    }
-
-    .collapse-all {
-        order: 9;
-        grid-column: 1 / -1;
-        justify-self: start;
-    }
-
     .filter-toggles {
         justify-content: flex-start;
         gap: 10px 18px;
@@ -1967,6 +1858,14 @@ a.chip:focus-visible {
         box-shadow: inset 3px 0 0 var(--accent);
     }
 
+    .tool.is-stack-pick td:first-child {
+        box-shadow: none;
+    }
+
+    .tool.is-stack-pick {
+        box-shadow: inset 4px 0 0 var(--accent);
+    }
+
     /* ── Tighter vertical rhythm on small screens ─────────────────────── */
     .catalog {
         padding-top: 22px;
@@ -1984,11 +1883,89 @@ a.chip:focus-visible {
         background-color: var(--bg);
     }
 
+    .mobile-stack-bar:not([hidden]) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 8px;
+        padding: 9px 10px;
+        background-color: var(--accent-soft);
+        border: 1px solid var(--accent-ring);
+        border-radius: var(--r-md);
+    }
+
+    .mobile-stack-bar-heading {
+        display: flex;
+        align-items: baseline;
+        min-width: 0;
+        gap: 7px;
+    }
+
+    .mobile-stack-bar-eyebrow {
+        flex-shrink: 0;
+        color: var(--accent-ink);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .mobile-stack-bar-heading strong {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 0.82rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-stack-bar-count {
+        flex-shrink: 0;
+        color: var(--accent-ink);
+        font-size: 0.68rem;
+        white-space: nowrap;
+    }
+
+    .mobile-stack-bar-clear {
+        flex-shrink: 0;
+        padding: 4px 9px;
+        color: var(--accent-ink);
+        background: var(--surface);
+        border: 1px solid var(--accent-ring);
+        border-radius: var(--r-sm);
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .mobile-stack-bar-clear:hover {
+        border-color: var(--accent);
+    }
+
+    .mobile-stack-bar-clear:focus-visible {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+
+    /* Mobile gets its persistent stack state inside `.catalog-controls`, so the
+       rich editorial banner scrolls normally instead of competing for sticky
+       space with Filters. */
+    .catalog .stack-banner {
+        position: relative;
+        top: auto;
+        z-index: auto;
+    }
+
     /* Anchored jumps must clear the header plus the pinned filter bar. */
     .category,
     .stack-banner,
     .tool-table tbody tr {
-        scroll-margin-top: calc(var(--header-sticky-h, 65px) + 80px);
+        scroll-margin-top: calc(
+            var(--header-sticky-h, 65px) +
+                var(--catalog-controls-sticky-h, 64px) + 12px
+        );
     }
 
     .category {
@@ -2069,12 +2046,42 @@ a.chip:focus-visible {
    selected. Carries the editorial intro and a derived install line that the
    plain dropdown filter can't. */
 .stack-banner {
+    position: sticky;
+    top: calc(var(--header-sticky-h, var(--header-h)) + 8px);
+    z-index: 35;
     margin-bottom: 40px;
     padding: 18px 20px;
     border: 1px solid var(--accent);
     border-radius: var(--r-lg);
-    background-color: var(--accent-soft);
+    background-color: var(--surface);
+    background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
     box-shadow: var(--shadow);
+    transition:
+        padding 0.18s ease,
+        border-radius 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.stack-banner.is-compact {
+    padding: 10px 14px;
+    box-shadow:
+        var(--shadow),
+        0 10px 30px rgba(20, 28, 44, 0.14);
+}
+
+.stack-banner-body {
+    max-height: 900px;
+    overflow: hidden;
+    opacity: 1;
+    transition:
+        max-height 0.22s ease,
+        opacity 0.14s ease;
+}
+
+.stack-banner.is-compact .stack-banner-body {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .stack-banner-bar {
@@ -2106,6 +2113,11 @@ a.chip:focus-visible {
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--ink);
+    transition: font-size 0.18s ease;
+}
+
+.stack-banner.is-compact .stack-banner-title {
+    font-size: 1rem;
 }
 
 .stack-banner-count {
@@ -2166,7 +2178,7 @@ a.chip:focus-visible {
     background-color: var(--ink);
     color: #eef2f7;
     font-size: 0.82rem;
-    overflow-x: auto;
+    overflow: hidden;
 }
 
 .stack-banner-install-label {
@@ -2179,8 +2191,30 @@ a.chip:focus-visible {
 }
 
 .stack-banner-install code {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
     font-family: inherit;
     white-space: nowrap;
+}
+
+.stack-banner-copy {
+    flex-shrink: 0;
+    margin: 0 0 0 auto;
+    color: #d5e0eb;
+    background-color: transparent;
+    border-color: rgba(213, 224, 235, 0.35);
+}
+
+.stack-banner-copy:hover,
+.stack-banner-copy.is-copied {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+}
+
+.stack-banner-copy:focus-visible {
+    box-shadow: 0 0 0 3px rgba(40, 176, 124, 0.35);
 }
 
 .stack-banner-uncovered {

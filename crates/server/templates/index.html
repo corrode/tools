@@ -89,75 +89,7 @@
                         </svg>
                     </button>
                 </div>
-                {% if !view.stacks.is_empty() %}
-                <div class="stack-menu">
-                    <button
-                        type="button"
-                        id="stack-trigger"
-                        class="stack-trigger"
-                        aria-haspopup="true"
-                        aria-expanded="false"
-                        aria-controls="stack-panel"
-                    >
-                        <svg
-                            class="stack-trigger-icon"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path d="M12 3 3 8l9 5 9-5-9-5Z" />
-                            <path d="M3 13l9 5 9-5" />
-                        </svg>
-                        <span
-                            class="stack-trigger-label"
-                            data-default-label="Select stack"
-                            >Select stack</span
-                        >
-                        <svg
-                            class="stack-trigger-caret"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path d="M6 9l6 6 6-6" />
-                        </svg>
-                    </button>
-                    <div class="stack-panel" id="stack-panel" hidden>
-                        <div class="stack-panel-head">
-                            <h2 class="stack-panel-title">
-                                Start with a stack
-                            </h2>
-                            <p class="stack-panel-sub">
-                                Curated tool sets for a use case — each builds
-                                on the Everyday Essentials baseline.
-                            </p>
-                        </div>
-                        <div class="stack-cards">
-                            {% for stack in view.stacks %}
-                            <button
-                                type="button"
-                                class="stack-card"
-                                data-stack="{{ stack.id }}"
-                                aria-pressed="false"
-                            >
-                                <span class="stack-card-name"
-                                    >{{ stack.name }}</span
-                                >
-                                <span class="stack-card-count"
-                                    >{{ stack.count }}</span
-                                >
-                            </button>
-                            {% endfor %}
-                        </div>
-                        <button
-                            type="button"
-                            class="stack-panel-clear"
-                            data-clear-stack
-                            hidden
-                        >
-                            Clear stack filter
-                        </button>
-                    </div>
-                </div>
-                {% endif %}
+
                 <div class="header-meta">
                     {% if let Some(updated) = view.last_updated %}
                     <span class="header-stat" title="Metrics last refreshed"
@@ -210,24 +142,82 @@
                         top of a practical baseline for every Rust project.
                     </p>
                 </div>
-                <div class="stack-start-cards">
-                    {% for stack in view.stacks %}
-                    <button
-                        type="button"
-                        class="stack-card stack-start-card"
-                        data-stack="{{ stack.id }}"
-                        aria-pressed="false"
-                    >
-                        <span class="stack-card-name">{{ stack.name }}</span>
-                        <span class="stack-start-card-desc"
-                            >{{ stack.description }}</span
+                <div class="stack-start-picker">
+                    <input type="hidden" id="stack-filter" value="" />
+                    <details class="stack-dropdown" id="stack-dropdown">
+                        <summary class="stack-start-toggle">
+                            <span class="stack-start-toggle-copy">
+                                <span
+                                    class="stack-start-toggle-label"
+                                    data-default-label="Choose a stack"
+                                    >Choose a stack</span
+                                >
+                                <span class="stack-start-toggle-hint"
+                                    >Browse curated tool sets for your use
+                                    case</span
+                                >
+                            </span>
+                            <svg
+                                class="stack-start-toggle-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </summary>
+                        <ul
+                            class="stack-dropdown-list"
+                            aria-label="Curated stacks"
                         >
-                        <span class="stack-start-card-action"
-                            >Show {{ stack.count }} picks
-                            <span aria-hidden="true">→</span></span
-                        >
-                    </button>
-                    {% endfor %}
+                            <li>
+                                <button
+                                    type="button"
+                                    class="stack-option"
+                                    data-stack=""
+                                    data-stack-name="All tools"
+                                    data-stack-count="{{ view.total }}"
+                                    aria-pressed="false"
+                                >
+                                    <span class="stack-option-copy">
+                                        <span class="stack-option-name"
+                                            >All tools</span
+                                        >
+                                        <span class="stack-option-description"
+                                            >Clear the stack filter and browse the
+                                            full index.</span
+                                        >
+                                    </span>
+                                    <span class="stack-option-count"
+                                        >{{ view.total }} tools</span
+                                    >
+                                </button>
+                            </li>
+                            {% for stack in view.stacks %}
+                            <li>
+                                <button
+                                    type="button"
+                                    class="stack-option"
+                                    data-stack="{{ stack.id }}"
+                                    data-stack-name="{{ stack.name }}"
+                                    data-stack-count="{{ stack.count }}"
+                                    aria-pressed="false"
+                                >
+                                    <span class="stack-option-copy">
+                                        <span class="stack-option-name"
+                                            >{{ stack.name }}</span
+                                        >
+                                        <span class="stack-option-description"
+                                            >{{ stack.description }}</span
+                                        >
+                                    </span>
+                                    <span class="stack-option-count"
+                                        >{{ stack.count }} picks</span
+                                    >
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
                 </div>
             </section>
             {% endif %}
@@ -257,42 +247,32 @@
                         <path d="M6 9l6 6 6-6" />
                     </svg>
                 </button>
+                <div
+                    class="mobile-stack-bar"
+                    id="mobile-stack-bar"
+                    role="status"
+                    aria-live="polite"
+                    hidden
+                >
+                    <div class="mobile-stack-bar-heading">
+                        <span class="mobile-stack-bar-eyebrow">Stack</span>
+                        <strong id="mobile-stack-bar-name"></strong>
+                        <span
+                            class="mobile-stack-bar-count"
+                            id="mobile-stack-bar-count"
+                        ></span>
+                    </div>
+                    <button
+                        type="button"
+                        class="mobile-stack-bar-clear"
+                        data-clear-stack
+                        aria-label="Clear selected stack filter"
+                    >
+                        Clear
+                    </button>
+                </div>
                 <div class="filter-controls" id="filter-controls">
                     <div class="filter-actions">
-                        {% if !view.stacks.is_empty() %}
-                        <label class="select-filter stack-select">
-                            <svg
-                                class="stack-select-icon"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path d="M12 3 3 8l9 5 9-5-9-5Z" />
-                                <path d="M3 13l9 5 9-5" />
-                            </svg>
-                            <span class="select-filter-label"
-                                >Start with a stack</span
-                            >
-                            <select
-                                id="stack-filter"
-                                aria-label="Filter by curated stack"
-                            >
-                                <option value="">All tools</option>
-                                {% for stack in view.stacks %}
-                                <option value="{{ stack.id }}">
-                                    {{ stack.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        {% endif %}
-                        <button
-                            type="button"
-                            id="collapse-all"
-                            class="collapse-all"
-                            aria-pressed="false"
-                        >
-                            Collapse all
-                        </button>
                         <label class="select-filter">
                             <span class="select-filter-label">Jump to</span>
                             <select
@@ -414,6 +394,7 @@
                 </div>
             </div>
 
+
             {% if !view.stacks.is_empty() %}{% for stack in view.stacks %}
             <aside
                 class="stack-banner"
@@ -437,6 +418,7 @@
                         Clear filter
                     </button>
                 </div>
+                <div class="stack-banner-body">
                 {% if !stack.description.is_empty() %}
                 <p class="stack-banner-desc">{{ stack.description }}</p>
                 {% endif %} {% if !stack.intro_html.is_empty() %}
@@ -462,6 +444,31 @@
                         >cargo install {{ stack.install_crates|join(" ")
                         }}</code
                     >
+                    <button
+                        type="button"
+                        class="copy-install stack-banner-copy"
+                        data-copy-label="copy"
+                        title="Copy stack install command"
+                        aria-label="Copy stack install command"
+                    >
+                        <svg
+                            class="copy-icon"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="9"
+                                y="9"
+                                width="11"
+                                height="11"
+                                rx="2"
+                            />
+                            <path
+                                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                            />
+                        </svg>
+                        <span class="copy-label" aria-live="polite">copy</span>
+                    </button>
                 </div>
                 {% if !stack.uncovered.is_empty() %}
                 <p class="stack-banner-uncovered">
@@ -470,8 +477,28 @@
                     setup (see the rows below).
                 </p>
                 {% endif %} {% endif %}
+                </div>
             </aside>
-            {% endfor %}{% endif %} {% for cat in view.categories %}
+            {% endfor %}{% endif %}
+
+            <button
+                type="button"
+                id="section-toggle-all"
+                class="section-toggle-all"
+                data-action="collapse"
+            >
+                <svg
+                    class="section-toggle-all-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <path d="m7 5 5 5 5-5" />
+                    <path d="m7 13 5 5 5-5" />
+                </svg>
+                <span id="section-toggle-all-label">Collapse all sections</span>
+            </button>
+
+            {% for cat in view.categories %}
             <section
                 class="category"
                 id="cat-{{ cat.id }}"
@@ -597,7 +624,9 @@
                                                 d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
                                             />
                                         </svg>
-                                        <span class="copy-label"
+                                        <span
+                                            class="copy-label"
+                                            aria-live="polite"
                                             >install</span
                                         ></button
                                     >{% endif %} {% if tool.version.is_some() ||

@@ -17,16 +17,21 @@
   const stackFilter = document.getElementById("stack-filter");
   const stackBanners = Array.from(document.querySelectorAll(".stack-banner"));
   const stackNotes = Array.from(document.querySelectorAll(".stack-note"));
-  const stackCards = Array.from(
-    document.querySelectorAll(".stack-card[data-stack]"),
+  const stackOptions = Array.from(
+    document.querySelectorAll(".stack-option[data-stack]"),
   );
-  const stackTrigger = document.getElementById("stack-trigger");
-  const stackPanel = document.getElementById("stack-panel");
+  const stackDropdown = document.getElementById("stack-dropdown");
+  const mobileStackBar = document.getElementById("mobile-stack-bar");
+  const mobileStackBarName = document.getElementById("mobile-stack-bar-name");
+  const mobileStackBarCount = document.getElementById("mobile-stack-bar-count");
   const categoryJump = document.getElementById("category-jump");
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
   const tools = Array.from(document.querySelectorAll(".tool"));
-  const collapseAllBtn = document.getElementById("collapse-all");
+  const sectionToggleAllBtn = document.getElementById("section-toggle-all");
+  const sectionToggleAllLabel = document.getElementById(
+    "section-toggle-all-label",
+  );
   const filtersToggle = document.getElementById("filters-toggle");
   const catalogControls = document.querySelector(".catalog-controls");
   const filtersCount = document.querySelector(".filters-count");
@@ -66,13 +71,17 @@
         toggle.setAttribute("aria-expanded", String(!isCollapsed));
       }
     }
-    if (collapseAllBtn) {
-      const shown = categories.filter((c) => !c.hidden);
-      const allCollapsed =
-        shown.length > 0 && shown.every((c) => collapsed.has(c.dataset.cat));
-      collapseAllBtn.disabled = searchActive;
-      collapseAllBtn.setAttribute("aria-pressed", String(allCollapsed));
-      collapseAllBtn.textContent = allCollapsed ? "Expand all" : "Collapse all";
+    const shown = categories.filter((c) => !c.hidden);
+    const anyCollapsed =
+      !searchActive && shown.some((c) => collapsed.has(c.dataset.cat));
+    if (sectionToggleAllBtn) {
+      sectionToggleAllBtn.disabled = searchActive;
+      sectionToggleAllBtn.dataset.action = anyCollapsed ? "expand" : "collapse";
+    }
+    if (sectionToggleAllLabel) {
+      sectionToggleAllLabel.textContent = anyCollapsed
+        ? "Expand all sections"
+        : "Collapse all sections";
     }
   }
 
@@ -138,6 +147,7 @@
     const msrv = msrvFilter ? msrvFilter.value : "";
     const stack = stackFilter ? stackFilter.value : "";
     let visible = 0;
+    let highlighted = 0;
 
     for (const tool of tools) {
       const haystack = tool.dataset.keywords || "";
@@ -152,25 +162,25 @@
       // MSRV is at most the selection. Tools with unknown MSRV can't be
       // guaranteed, so they drop out while the filter is active.
       const msrvOk = !msrv || (toolMsrv && cmpVersion(toolMsrv, msrv) <= 0);
-      const isPick = !stack || stacks.includes(stack);
+      const isPick = !!stack && stacks.includes(stack);
       const isBaseline = tool.dataset.baseline === "true";
-      // Baseline (Everyday Essentials) tools show under every stack as the
-      // assumed groundwork, even when they aren't one of its own picks.
+      // Ordinary filters and the active stack all narrow the result set. A stack
+      // keeps its curated picks plus the Everyday Essentials baseline.
       const matches =
         (!skipDeprecated || !deprecated) &&
         (!onlyRecommended || recommended) &&
         (!license || licenses.includes(license)) &&
         msrvOk &&
-        (isPick || isBaseline) &&
+        (!stack || isPick || isBaseline) &&
         terms.every((t) => haystack.includes(t));
       tool.hidden = !matches;
-      // Dim a row that's shown only because it's the baseline: a stack is
-      // active and this tool isn't one of that stack's own picks.
+      tool.classList.toggle("is-stack-pick", matches && isPick);
       tool.classList.toggle(
         "is-baseline",
-        matches && !!stack && isBaseline && !stacks.includes(stack),
+        matches && !!stack && isBaseline && !isPick,
       );
       if (matches) visible++;
+      if (matches && isPick) highlighted++;
     }
 
     sortRows(sortSelect.value);
@@ -178,20 +188,28 @@
     // Hide category sections that end up empty, and disable their entry in the
     // "Jump to category" menu so it can't scroll to nothing.
     for (const cat of categories) {
-      const any = cat.querySelector(".tool:not([hidden])");
+      const visibleRows = cat.querySelectorAll(".tool:not([hidden])");
+      const count = visibleRows.length;
+      const any = count > 0;
       cat.hidden = !any;
+      const countBadge = cat.querySelector(".category-count");
+      if (countBadge) countBadge.textContent = String(count);
       if (categoryJump) {
         const opt = categoryJump.querySelector(
           `option[value="cat-${cat.dataset.cat}"]`,
         );
-        if (opt) opt.disabled = !any;
+        if (opt) {
+          opt.disabled = !any;
+          const title = cat.querySelector(".category-title")?.textContent.trim();
+          if (title) opt.textContent = `${title} (${count})`;
+        }
       }
     }
 
     noResults.hidden = visible !== 0;
     if (searchClear) searchClear.hidden = input.value.length === 0;
     renderCollapsed();
-    updateStackContext(stack);
+    updateStackContext(stack, highlighted);
     updateFilterCount();
     syncUrl();
   }
@@ -220,7 +238,7 @@
   // Reveal the selected stack's banner and its picks' inline notes, plus the
   // Everyday Essentials baseline notes that ride along under any active stack;
   // everything else (and all of it, when no stack is active) stays hidden.
-  function updateStackContext(active) {
+  function updateStackContext(active, highlighted) {
     for (const banner of stackBanners) {
       banner.hidden = banner.dataset.stack !== active;
     }
@@ -230,23 +248,42 @@
         : note.dataset.stack === active;
       note.hidden = !show;
     }
-    for (const card of stackCards) {
-      card.setAttribute("aria-pressed", String(card.dataset.stack === active));
+    for (const option of stackOptions) {
+      option.setAttribute(
+        "aria-pressed",
+        String(!!active && option.dataset.stack === active),
+      );
     }
-    if (stackTrigger) {
-      const label = stackTrigger.querySelector(".stack-trigger-label");
-      const opt =
-        active && stackFilter
-          ? [...stackFilter.options].find((o) => o.value === active)
-          : null;
+    const selected = active
+      ? stackOptions.find((option) => option.dataset.stack === active)
+      : null;
+    if (stackDropdown) {
+      const label = stackDropdown.querySelector(".stack-start-toggle-label");
+      const hint = stackDropdown.querySelector(".stack-start-toggle-hint");
       if (label) {
-        label.textContent = opt
-          ? opt.textContent.trim()
-          : label.dataset.defaultLabel || "Select stack";
+        label.textContent = selected
+          ? selected.dataset.stackName
+          : label.dataset.defaultLabel || "Choose a stack";
+      }
+      if (hint) {
+        hint.textContent = selected
+          ? `${highlighted} picks highlighted — open to choose another`
+          : "Browse curated tool sets for your use case";
       }
     }
-    const panelClear = document.querySelector(".stack-panel-clear");
-    if (panelClear) panelClear.hidden = !active;
+    if (mobileStackBar) {
+      mobileStackBar.dataset.hasStack = String(!!selected);
+      if (!selected) mobileStackBar.hidden = true;
+      if (selected) {
+        if (mobileStackBarName) {
+          mobileStackBarName.textContent = selected.dataset.stackName;
+        }
+        if (mobileStackBarCount) {
+          mobileStackBarCount.textContent = `${selected.dataset.stackCount} picks`;
+        }
+      }
+    }
+    requestAnimationFrame(syncStickyOffsets);
   }
 
   // ── Shareable URL state ──────────────────────────────────────────────────
@@ -293,7 +330,7 @@
     if (
       stackFilter &&
       stack &&
-      [...stackFilter.options].some((o) => o.value === stack)
+      stackOptions.some((option) => option.dataset.stack === stack)
     ) {
       stackFilter.value = stack;
     }
@@ -315,7 +352,6 @@
   licenseFilter.addEventListener("change", apply);
   if (msrvFilter) msrvFilter.addEventListener("change", apply);
   sortSelect.addEventListener("change", apply);
-  if (stackFilter) stackFilter.addEventListener("change", apply);
 
   // Click a category header (or its chevron) to fold it away. The chevron is a
   // real <button>, so keyboard users get the same toggle for free.
@@ -345,16 +381,16 @@
     });
   }
 
-  // Fold or unfold every visible category at once — turns the page into a
-  // scannable index of category headers.
-  if (collapseAllBtn) {
-    collapseAllBtn.addEventListener("click", () => {
+  // Fold or unfold every visible category at once. If even one is folded, the
+  // action expands everything; otherwise it turns the page into a compact index
+  // of category headings. The button stays mounted, so keyboard focus is stable.
+  if (sectionToggleAllBtn) {
+    sectionToggleAllBtn.addEventListener("click", () => {
       const shown = categories.filter((c) => !c.hidden);
-      const allCollapsed = shown.every((c) => collapsed.has(c.dataset.cat));
-      if (allCollapsed) {
+      if (sectionToggleAllBtn.dataset.action === "expand") {
         collapsed.clear();
       } else {
-        for (const c of shown) collapsed.add(c.dataset.cat);
+        for (const category of shown) collapsed.add(category.dataset.cat);
       }
       persistCollapsed();
       renderCollapsed();
@@ -368,12 +404,14 @@
     if (!catalogControls) return;
     catalogControls.classList.remove("filters-open");
     if (filtersToggle) filtersToggle.setAttribute("aria-expanded", "false");
+    requestAnimationFrame(syncStickyOffsets);
   }
 
   if (filtersToggle && catalogControls) {
     filtersToggle.addEventListener("click", () => {
       const open = catalogControls.classList.toggle("filters-open");
       filtersToggle.setAttribute("aria-expanded", String(open));
+      requestAnimationFrame(syncStickyOffsets);
     });
   }
 
@@ -402,36 +440,89 @@
     });
   }
 
-  // The filter bar is pinned just below the (sticky) header. Since the header
-  // wraps to a taller stack on small screens, measure it and expose the height
-  // so CSS can park the bar at exactly the right offset.
-  function syncHeaderHeight() {
-    if (!siteHeader) return;
-    document.documentElement.style.setProperty(
-      "--header-sticky-h",
-      siteHeader.offsetHeight + "px",
+  // The selected stack banner becomes a compact sticky bar once its normal
+  // position reaches the sticky header. On mobile it sits below the independently
+  // sticky Filters control, whose current height can change when opened.
+  function syncStickyOffsets() {
+    if (siteHeader) {
+      document.documentElement.style.setProperty(
+        "--header-sticky-h",
+        siteHeader.offsetHeight + "px",
+      );
+    }
+    if (catalogControls) {
+      document.documentElement.style.setProperty(
+        "--catalog-controls-sticky-h",
+        catalogControls.offsetHeight + "px",
+      );
+    }
+    updateStickyStackBanner();
+  }
+
+  function updateStickyStackBanner() {
+    const active = stackBanners.find((banner) => !banner.hidden);
+    for (const banner of stackBanners) {
+      if (banner !== active) banner.classList.remove("is-compact");
+    }
+    if (!active) {
+      if (mobileStackBar) mobileStackBar.hidden = true;
+      return;
+    }
+
+    const rect = active.getBoundingClientRect();
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      active.classList.remove("is-compact");
+      if (mobileStackBar && catalogControls && filtersToggle) {
+        const controlsRect = catalogControls.getBoundingClientRect();
+        const controlsStyle = getComputedStyle(catalogControls);
+        const baseControlsHeight =
+          filtersToggle.offsetHeight +
+          (Number.parseFloat(controlsStyle.paddingTop) || 0) +
+          (Number.parseFloat(controlsStyle.paddingBottom) || 0);
+        const shouldShow =
+          mobileStackBar.dataset.hasStack === "true" &&
+          rect.top <= controlsRect.top + baseControlsHeight;
+        mobileStackBar.hidden = !shouldShow;
+        document.documentElement.style.setProperty(
+          "--catalog-controls-sticky-h",
+          catalogControls.offsetHeight + "px",
+        );
+      }
+      return;
+    }
+
+    if (mobileStackBar) mobileStackBar.hidden = true;
+    const stickyTop = Number.parseFloat(getComputedStyle(active).top) || 0;
+    active.classList.toggle(
+      "is-compact",
+      rect.top <= stickyTop + 1 && rect.bottom > stickyTop,
     );
   }
-  syncHeaderHeight();
-  window.addEventListener("resize", syncHeaderHeight);
 
-  // Stack selection flows through the <select> in the catalog controls (the
-  // single source of truth for the active stack, URL sync, and row filtering):
-  // the prominent page cards, header picker cards, "In <stack>" row chips, and
-  // a banner's "Clear filter" button all just set its value and re-apply.
+  let stickyBannerFrame = 0;
+  function queueStickyBannerUpdate() {
+    if (stickyBannerFrame) return;
+    stickyBannerFrame = requestAnimationFrame(() => {
+      stickyBannerFrame = 0;
+      updateStickyStackBanner();
+    });
+  }
+
+  syncStickyOffsets();
+  window.addEventListener("resize", syncStickyOffsets);
+  window.addEventListener("scroll", queueStickyBannerUpdate, { passive: true });
+
+  // Stack selection flows through the hidden input next to the semantic
+  // dropdown (the single source of truth for URL sync and row filtering).
   document.addEventListener("click", (e) => {
-    // Picker cards toggle the stack on/off in place. A choice from the large
-    // page-level chooser moves to the resulting stack overview; the compact
-    // header picker stays put because it is intended for in-page switching.
-    const card = e.target.closest(".stack-card[data-stack]");
-    if (card && stackFilter) {
+    const option = e.target.closest(".stack-option[data-stack]");
+    if (option && stackFilter) {
       e.preventDefault();
-      const id = card.dataset.stack;
-      const selecting = stackFilter.value !== id;
-      stackFilter.value = selecting ? id : "";
+      const id = option.dataset.stack;
+      stackFilter.value = id;
       apply();
-      closeStackMenu();
-      if (selecting && card.classList.contains("stack-start-card")) {
+      if (stackDropdown) stackDropdown.open = false;
+      if (id) {
         const banner = stackBanners.find((item) => item.dataset.stack === id);
         if (banner) {
           requestAnimationFrame(() =>
@@ -453,34 +544,21 @@
       e.preventDefault();
       stackFilter.value = "";
       apply();
-      closeStackMenu();
     }
   });
 
-  // ── Stacks popover ───────────────────────────────────────────────────────
-  // The header trigger toggles a panel of the curated stack chips; selecting a
-  // chip (handled above) or clicking outside / pressing Escape closes it.
-  function closeStackMenu() {
-    if (!stackTrigger || !stackPanel || stackPanel.hidden) return;
-    stackPanel.hidden = true;
-    stackTrigger.setAttribute("aria-expanded", "false");
-  }
-  if (stackTrigger && stackPanel) {
-    stackTrigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = stackPanel.hidden;
-      stackPanel.hidden = !open;
-      stackTrigger.setAttribute("aria-expanded", String(open));
-    });
+  // Native details/summary provides keyboard disclosure behavior. Add the two
+  // conventional dropdown affordances it does not provide itself.
+  if (stackDropdown) {
     document.addEventListener("click", (e) => {
-      if (!stackPanel.hidden && !e.target.closest(".stack-menu")) {
-        closeStackMenu();
+      if (stackDropdown.open && !e.target.closest("#stack-dropdown")) {
+        stackDropdown.open = false;
       }
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !stackPanel.hidden) {
-        closeStackMenu();
-        stackTrigger.focus();
+      if (e.key === "Escape" && stackDropdown.open) {
+        stackDropdown.open = false;
+        stackDropdown.querySelector("summary")?.focus();
       }
     });
   }
@@ -512,25 +590,35 @@
   });
 
   // ── Copy install command ─────────────────────────────────────────────────
-  // Each installable tool ships a small "install" button carrying its
-  // `cargo install …` line in data-copy. Click it to put the command on the
-  // clipboard, with a brief inline confirmation.
-  let copyResetTimer = null;
+  // Tool rows and stack banners expose their install commands through buttons
+  // carrying the command in data-copy. Both use the same clipboard behavior and
+  // brief inline confirmation.
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".copy-install");
     if (!btn) return;
     e.preventDefault();
-    const command = btn.dataset.copy || "";
+    const command =
+      btn.dataset.copy ||
+      btn
+        .closest(".stack-banner-install")
+        ?.querySelector("code")
+        ?.textContent.trim() ||
+      "";
     if (!command) return;
 
+    const idleLabel = btn.dataset.copyLabel || "install";
+    const idleAriaLabel = btn.getAttribute("aria-label");
     const confirm = () => {
       const label = btn.querySelector(".copy-label");
       btn.classList.add("is-copied");
+      btn.setAttribute("aria-label", "Copied install command");
       if (label) label.textContent = "copied";
-      clearTimeout(copyResetTimer);
-      copyResetTimer = setTimeout(() => {
+      clearTimeout(btn.copyResetTimer);
+      btn.copyResetTimer = setTimeout(() => {
         btn.classList.remove("is-copied");
-        if (label) label.textContent = "install";
+        if (idleAriaLabel) btn.setAttribute("aria-label", idleAriaLabel);
+        else btn.removeAttribute("aria-label");
+        if (label) label.textContent = idleLabel;
       }, 1500);
     };
 
