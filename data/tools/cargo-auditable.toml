@@ -9,8 +9,9 @@ Embeds the exact dependency list into compiled binaries so they can be audited
 after the fact, even without the original source or `Cargo.lock`.
 
 Build with `cargo auditable build --release`, then scan the artifact later with
-`cargo audit bin`. Useful for distributing binaries whose provenance must remain
-verifiable. It records dependencies; it does not itself detect vulnerabilities.
+`cargo audit bin`. Useful when a software bill of materials (SBOM) or later
+vulnerability scan must be tied to the binary you actually shipped. It records
+dependencies; it does not itself detect vulnerabilities.
 """
 
 related = ["cargo-audit"]

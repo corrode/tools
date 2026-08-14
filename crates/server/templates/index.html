@@ -198,6 +198,40 @@
         </header>
 
         <main class="catalog" id="catalog">
+            {% if !view.stacks.is_empty() %}
+            <section class="stack-start" aria-labelledby="stack-start-title">
+                <div class="stack-start-heading">
+                    <span class="stack-start-eyebrow">Curated stacks</span>
+                    <h1 class="stack-start-title" id="stack-start-title">
+                        What are you building?
+                    </h1>
+                    <p class="stack-start-subtitle">
+                        Pick a use case to show the tools that matter most, on
+                        top of a practical baseline for every Rust project.
+                    </p>
+                </div>
+                <div class="stack-start-cards">
+                    {% for stack in view.stacks %}
+                    <button
+                        type="button"
+                        class="stack-card stack-start-card"
+                        data-stack="{{ stack.id }}"
+                        aria-pressed="false"
+                    >
+                        <span class="stack-card-name">{{ stack.name }}</span>
+                        <span class="stack-start-card-desc"
+                            >{{ stack.description }}</span
+                        >
+                        <span class="stack-start-card-action"
+                            >Show {{ stack.count }} picks
+                            <span aria-hidden="true">→</span></span
+                        >
+                    </button>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
             <div class="catalog-controls">
                 <button
                     type="button"

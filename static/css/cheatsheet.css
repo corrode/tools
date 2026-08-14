@@ -377,6 +377,90 @@ html[data-theme="dark"] .theme-icon-sun {
     flex: 1;
 }
 
+/* Stacks are the quickest way into the catalog, so they lead the page as a
+   visible use-case chooser instead of living only behind a header control. */
+.stack-start {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2.2fr);
+    gap: 28px;
+    margin-bottom: 32px;
+    padding: 28px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow);
+}
+
+.stack-start-heading {
+    align-self: center;
+}
+
+.stack-start-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--accent-ink);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.stack-start-title {
+    display: block;
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(1.45rem, 2.4vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    white-space: normal;
+}
+
+.stack-start-subtitle {
+    margin: 10px 0 0;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.stack-start-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stack-start .stack-start-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    min-width: 0;
+    padding: 13px 14px;
+    text-align: left;
+    border-radius: var(--r-md);
+}
+
+.stack-start-card .stack-card-name {
+    font-size: 0.86rem;
+}
+
+.stack-start-card-desc {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.stack-start-card-action {
+    margin-top: auto;
+    padding-top: 3px;
+    color: var(--accent-ink);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.stack-start-card[aria-pressed="true"] .stack-start-card-desc {
+    color: var(--text);
+}
+
 .catalog-controls {
     padding-bottom: 16px;
     margin-bottom: 32px;
@@ -389,9 +473,8 @@ html[data-theme="dark"] .theme-icon-sun {
     scroll-margin-top: calc(var(--header-h) + 16px);
 }
 
-/* ── Stacks menu: a highlighted header trigger opens a popover of the curated
-   stack chips, reclaiming the old hero band's vertical space while keeping the
-   stacks one persistent (sticky-header) click away. ─────────────────────────── */
+/* ── Stacks menu: the sticky-header companion to the page-level chooser keeps
+   stacks one click away after the visitor has scrolled into the catalog. ───── */
 
 .stack-menu {
     position: relative;
@@ -1568,6 +1651,15 @@ a.chip:focus-visible {
         margin-left: auto;
     }
 
+    .stack-start {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .stack-start-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .table-wrap {
         overflow-x: auto;
     }
@@ -1584,6 +1676,31 @@ a.chip:focus-visible {
 
     .site-header-inner {
         gap: 12px 14px;
+    }
+
+    .stack-start {
+        margin-bottom: 20px;
+        padding: 20px;
+    }
+
+    .stack-start-heading {
+        text-align: left;
+    }
+
+    .stack-start-subtitle {
+        font-size: 0.84rem;
+    }
+
+    .stack-start-cards {
+        gap: 8px;
+    }
+
+    .stack-start .stack-start-card {
+        padding: 11px 12px;
+    }
+
+    .stack-start-card-desc {
+        display: none;
     }
 
     /* ── Catalog controls ────────────────────────────────────────────────

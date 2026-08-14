@@ -1,7 +1,7 @@
 id = "wasm-pack"
 name = "wasm-pack"
 repository = "https://github.com/rustwasm/wasm-pack"
-category = "cross-platform"
+category = "wasm"
 crate = "wasm-pack"
 
 remarks = """

@@ -1,7 +1,7 @@
 id = "wasm-bindgen-cli"
 name = "wasm-bindgen"
 repository = "https://github.com/rustwasm/wasm-bindgen"
-category = "cross-platform"
+category = "wasm"
 crate = "wasm-bindgen-cli"
 
 remarks = """

@@ -1,7 +1,7 @@
 id = "trunk"
 name = "trunk"
 repository = "https://github.com/trunk-rs/trunk"
-category = "cross-platform"
+category = "wasm"
 crate = "trunk"
 
 remarks = """

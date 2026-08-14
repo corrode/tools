@@ -69,7 +69,17 @@ description = "Versioning, changelogs, and shipping crates and binaries."
 [[category]]
 id = "cross-platform"
 name = "Cross-Compilation"
-description = "Building for other platforms, embedded, and WebAssembly."
+description = "Building binaries for a platform other than the host system."
+
+[[category]]
+id = "embedded"
+name = "Embedded"
+description = "Flashing, debugging, and inspecting firmware on microcontrollers."
+
+[[category]]
+id = "wasm"
+name = "WebAssembly"
+description = "Building, binding, and packaging Rust for browsers and JavaScript."
 
 [[category]]
 id = "productivity"

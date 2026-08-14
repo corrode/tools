@@ -1,7 +1,7 @@
 id = "probe-rs"
 name = "probe-rs"
 repository = "https://github.com/probe-rs/probe-rs"
-category = "cross-platform"
+category = "embedded"
 # The crates.io `probe-rs` crate (tracked for metrics) is a library; the CLI
 # ships as `probe-rs-tools`, so keep it out of derived `cargo install` lines.
 installable = false
@@ -14,9 +14,12 @@ and run an in-app log/RTT console, and ships `cargo embed` plus a GDB/DAP
 server for editor debugging. It's the modern replacement for OpenOCD-based
 workflows in the embedded Rust ecosystem.
 
-Reach for it whenever you develop firmware for microcontrollers. It's irrelevant
-for hosted (non-embedded) targets, and very capable probes with vendor-specific
-features may still need their proprietary tooling.
+This is not a cross-compilation tool: you still need to install the appropriate
+Rust target (for example with `rustup target add`) and configure the target and
+linker for your microcontroller. Reach for probe-rs once you need to put that
+firmware onto a device or inspect it while it runs. It's irrelevant for hosted
+(non-embedded) targets, and very capable probes with vendor-specific features
+may still need their proprietary tooling.
 """
 
 alternatives = ["OpenOCD", "cargo-flash", "cargo-embed"]

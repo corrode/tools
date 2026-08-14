@@ -417,19 +417,28 @@
 
   // Stack selection flows through the <select> in the catalog controls (the
   // single source of truth for the active stack, URL sync, and row filtering):
-  // the header picker cards, the "In <stack>" row chips, and a banner's "Clear
-  // filter" button all just set its value and re-apply.
+  // the prominent page cards, header picker cards, "In <stack>" row chips, and
+  // a banner's "Clear filter" button all just set its value and re-apply.
   document.addEventListener("click", (e) => {
-    // Picker chips toggle the stack on/off in place. We deliberately do NOT
-    // scroll: the chips sit at the top, the banner appears just below them, and
-    // scrolling would jump the page down out from under the user.
+    // Picker cards toggle the stack on/off in place. A choice from the large
+    // page-level chooser moves to the resulting stack overview; the compact
+    // header picker stays put because it is intended for in-page switching.
     const card = e.target.closest(".stack-card[data-stack]");
     if (card && stackFilter) {
       e.preventDefault();
       const id = card.dataset.stack;
-      stackFilter.value = stackFilter.value === id ? "" : id;
+      const selecting = stackFilter.value !== id;
+      stackFilter.value = selecting ? id : "";
       apply();
       closeStackMenu();
+      if (selecting && card.classList.contains("stack-start-card")) {
+        const banner = stackBanners.find((item) => item.dataset.stack === id);
+        if (banner) {
+          requestAnimationFrame(() =>
+            banner.scrollIntoView({ behavior: "smooth", block: "start" }),
+          );
+        }
+      }
       return;
     }
     const chip = e.target.closest(".chip[data-stack]");
