@@ -32,6 +32,10 @@
   const sectionToggleAllLabel = document.getElementById(
     "section-toggle-all-label",
   );
+  const catalogToolSummary = document.getElementById("catalog-tool-summary");
+  const catalogCategorySummary = document.getElementById(
+    "catalog-category-summary",
+  );
   const filtersToggle = document.getElementById("filters-toggle");
   const catalogControls = document.querySelector(".catalog-controls");
   const filtersCount = document.querySelector(".filters-count");
@@ -187,11 +191,13 @@
 
     // Hide category sections that end up empty, and disable their entry in the
     // "Jump to category" menu so it can't scroll to nothing.
+    let visibleCategories = 0;
     for (const cat of categories) {
       const visibleRows = cat.querySelectorAll(".tool:not([hidden])");
       const count = visibleRows.length;
       const any = count > 0;
       cat.hidden = !any;
+      if (any) visibleCategories++;
       const countBadge = cat.querySelector(".category-count");
       if (countBadge) countBadge.textContent = String(count);
       if (categoryJump) {
@@ -207,6 +213,14 @@
     }
 
     noResults.hidden = visible !== 0;
+    if (catalogToolSummary) {
+      const noun = visible === 1 ? "tool" : "tools";
+      catalogToolSummary.textContent = `${visible} ${noun}`;
+    }
+    if (catalogCategorySummary) {
+      const noun = visibleCategories === 1 ? "category" : "categories";
+      catalogCategorySummary.textContent = `${visibleCategories} ${noun}`;
+    }
     if (searchClear) searchClear.hidden = input.value.length === 0;
     renderCollapsed();
     updateStackContext(stack, highlighted);

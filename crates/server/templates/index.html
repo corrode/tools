@@ -223,30 +223,65 @@
             {% endif %}
 
             <div class="catalog-controls">
-                <button
-                    type="button"
-                    id="filters-toggle"
-                    class="filters-toggle"
-                    aria-expanded="false"
-                    aria-controls="filter-controls"
-                >
-                    <svg
-                        class="filters-toggle-icon"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
+                <div class="catalog-controls-bar">
+                    <p
+                        class="catalog-summary"
+                        aria-live="polite"
+                        aria-atomic="true"
                     >
-                        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-                    </svg>
-                    <span>Filters</span>
-                    <span class="filters-count" hidden>0</span>
-                    <svg
-                        class="filters-toggle-caret"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
-                </button>
+                        <strong id="catalog-tool-summary"
+                            >{{ view.total }} tools</strong
+                        >
+                        in
+                        <span id="catalog-category-summary"
+                            >{{ view.categories.len() }} categories</span
+                        >
+                    </p>
+                    <div class="catalog-control-actions">
+                        <button
+                            type="button"
+                            id="section-toggle-all"
+                            class="section-toggle-all"
+                            data-action="collapse"
+                        >
+                            <svg
+                                class="section-toggle-all-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="m7 5 5 5 5-5" />
+                                <path d="m7 13 5 5 5-5" />
+                            </svg>
+                            <span id="section-toggle-all-label"
+                                >Collapse all sections</span
+                            >
+                        </button>
+                        <button
+                            type="button"
+                            id="filters-toggle"
+                            class="filters-toggle"
+                            aria-expanded="false"
+                            aria-controls="filter-controls"
+                        >
+                            <svg
+                                class="filters-toggle-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+                            </svg>
+                            <span>Filters</span>
+                            <span class="filters-count" hidden>0</span>
+                            <svg
+                                class="filters-toggle-caret"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 <div
                     class="mobile-stack-bar"
                     id="mobile-stack-bar"
@@ -480,23 +515,6 @@
                 </div>
             </aside>
             {% endfor %}{% endif %}
-
-            <button
-                type="button"
-                id="section-toggle-all"
-                class="section-toggle-all"
-                data-action="collapse"
-            >
-                <svg
-                    class="section-toggle-all-icon"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path d="m7 5 5 5 5-5" />
-                    <path d="m7 13 5 5 5-5" />
-                </svg>
-                <span id="section-toggle-all-label">Collapse all sections</span>
-            </button>
 
             {% for cat in view.categories %}
             <section

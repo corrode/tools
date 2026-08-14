@@ -381,10 +381,10 @@ html[data-theme="dark"] .theme-icon-sun {
    visible use-case chooser instead of living only behind a header control. */
 .stack-start {
     display: grid;
-    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2.2fr);
-    gap: 28px;
-    margin-bottom: 32px;
-    padding: 28px;
+    grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.7fr);
+    gap: 20px;
+    margin-bottom: 24px;
+    padding: 20px;
     background-color: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
@@ -397,7 +397,7 @@ html[data-theme="dark"] .theme-icon-sun {
 
 .stack-start-eyebrow {
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: 4px;
     color: var(--accent-ink);
     font-size: 0.7rem;
     font-weight: 700;
@@ -409,17 +409,17 @@ html[data-theme="dark"] .theme-icon-sun {
     display: block;
     margin: 0;
     color: var(--ink);
-    font-size: clamp(1.45rem, 2.4vw, 2rem);
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
     line-height: 1.15;
     letter-spacing: -0.03em;
     white-space: normal;
 }
 
 .stack-start-subtitle {
-    margin: 10px 0 0;
+    margin: 6px 0 0;
     color: var(--text-dim);
-    font-size: 0.9rem;
-    line-height: 1.55;
+    font-size: 0.86rem;
+    line-height: 1.45;
 }
 
 .stack-start-picker {
@@ -436,10 +436,10 @@ html[data-theme="dark"] .theme-icon-sun {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
-    min-height: 92px;
-    padding: 18px 20px;
+    min-height: 64px;
+    padding: 12px 16px;
     color: var(--ink);
     background-color: var(--accent-soft);
     border: 1px solid var(--accent-ring);
@@ -586,11 +586,36 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .catalog-controls {
-    padding-bottom: 16px;
-    margin-bottom: 32px;
-    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-soft);
 }
 
+.catalog-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.catalog-summary {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.catalog-summary strong {
+    color: var(--ink);
+    font-weight: 650;
+}
+
+.catalog-control-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
 
 /* Anchored jumps (category select, stack banner) clear the sticky header. */
 .category,
@@ -620,7 +645,8 @@ html[data-theme="dark"] .theme-icon-sun {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 9px;
+    margin-top: 10px;
 }
 
 /* The "Filters" disclosure button and compact stack row are mobile-only; on
@@ -750,7 +776,7 @@ html[data-theme="dark"] .theme-icon-sun {
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 12px 18px;
+    gap: 8px 16px;
 }
 
 .select-filter {
@@ -1414,20 +1440,18 @@ a.chip:focus-visible {
 /* ------------------------------------------------------------- Utilities -- */
 
 .section-toggle-all {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 100%;
-    margin: 0 0 24px;
-    padding: 13px 16px;
-    color: var(--accent-ink);
-    background-color: var(--accent-soft);
-    border: 1px solid var(--accent-ring);
-    border-radius: var(--r-md);
+    gap: 7px;
+    padding: 7px 10px;
+    color: var(--text-dim);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
     font: inherit;
-    font-size: 0.88rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 600;
     cursor: pointer;
     transition:
         border-color 0.12s ease,
@@ -1436,7 +1460,8 @@ a.chip:focus-visible {
 }
 
 .section-toggle-all:hover:not(:disabled) {
-    border-color: var(--accent);
+    color: var(--ink);
+    border-color: var(--border-strong);
     background-color: var(--surface-hover);
 }
 
@@ -1452,8 +1477,8 @@ a.chip:focus-visible {
 }
 
 .section-toggle-all-icon {
-    width: 17px;
-    height: 17px;
+    width: 14px;
+    height: 14px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
@@ -1567,7 +1592,7 @@ a.chip:focus-visible {
 
     .stack-start {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 14px;
     }
 
     .table-wrap {
@@ -1589,8 +1614,8 @@ a.chip:focus-visible {
     }
 
     .stack-start {
-        margin-bottom: 20px;
-        padding: 20px;
+        margin-bottom: 16px;
+        padding: 16px;
     }
 
     .stack-start-heading {
@@ -1602,8 +1627,8 @@ a.chip:focus-visible {
     }
 
     .stack-start-toggle {
-        min-height: 76px;
-        padding: 14px 16px;
+        min-height: 60px;
+        padding: 10px 14px;
     }
 
     .stack-option {
@@ -1617,22 +1642,21 @@ a.chip:focus-visible {
        label stacked above a full-width control, two per row, instead of a ragged
        label-left / control-right stack. */
 
-    /* The "Filters" disclosure button: a full-width control that opens the
-       organized filter panel below it. An accent badge shows how many filters
-       are active while collapsed. */
+    /* The compact Filters disclosure shares the catalog action row. An accent
+       badge shows how many filters are active while the panel is closed. */
     .filters-toggle {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 9px;
-        width: 100%;
+        gap: 7px;
+        width: auto;
         font: inherit;
-        font-size: 0.92rem;
+        font-size: 0.8rem;
         font-weight: 600;
         color: var(--text);
         background-color: var(--surface);
         border: 1px solid var(--border);
-        border-radius: var(--r-md);
-        padding: 11px 14px;
+        border-radius: var(--r-sm);
+        padding: 7px 10px;
         cursor: pointer;
         transition:
             border-color 0.12s ease,
@@ -1872,15 +1896,34 @@ a.chip:focus-visible {
     }
 
     .catalog-controls {
-        /* Keep the filter bar pinned just beneath the sticky header while
-           scrolling. Bleed the background to the viewport edges so tool rows
-           pass cleanly underneath. */
+        /* Keep the compact catalog bar pinned just beneath the sticky header.
+           Bleed the background to the viewport edges so tool rows pass cleanly
+           underneath. */
         position: sticky;
         top: var(--header-sticky-h, 0);
         z-index: 40;
-        margin: 0 calc(-1 * var(--gutter)) 20px;
-        padding: 12px var(--gutter) 14px;
+        margin: 0 calc(-1 * var(--gutter)) 16px;
+        padding: 8px var(--gutter) 10px;
         background-color: var(--bg);
+    }
+
+    .catalog-controls-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .catalog-summary {
+        flex: 1 1 135px;
+        font-size: 0.78rem;
+    }
+
+    .catalog-control-actions {
+        gap: 6px;
+    }
+
+    .section-toggle-all {
+        padding: 7px 9px;
+        font-size: 0.76rem;
     }
 
     .mobile-stack-bar:not([hidden]) {
