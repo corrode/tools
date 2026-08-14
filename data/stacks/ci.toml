@@ -1,12 +1,13 @@
 id = "ci"
 name = "Continuous Integration"
-description = "The checks and caches you wire into the pipeline."
+description = "The checks and caches that run for every pull request."
 
 intro = """
-A good CI pipeline is a stack of gates (tests, lints, formatting, supply-chain
-policy) plus the caching that keeps all of it fast enough that people don't
-route around it. The individual tools appear in other stacks too; what's
-distinctive here is assembling them into one merge-blocking pass.
+A good CI pipeline puts every change through the same tests, lints, formatting,
+and dependency policy. Caching keeps those checks fast enough that people don't
+route around them. The individual tools appear in other stacks too; what's
+distinctive here is assembling them into one pass that must succeed before
+merge.
 
 This is the pipeline layer. It assumes the Everyday Essentials are already in
 place locally; CI is where you enforce them for everyone (`clippy -D warnings`
@@ -16,7 +17,7 @@ and caches only a pipeline needs.
 
 [[pick]]
 tool = "cargo-llvm-cov"
-note = "Source-based coverage you can publish or gate on, so coverage trends are visible rather than assumed."
+note = "Shows which lines and branches the tests exercise. Publish the report or set a minimum, so coverage trends are visible rather than assumed."
 
 [[pick]]
 tool = "taplo"
@@ -24,11 +25,11 @@ note = "Extends the formatting gate to `Cargo.toml` and other config with `taplo
 
 [[pick]]
 tool = "cargo-deny"
-note = "One pass for advisories, licenses, and banned crates: the supply-chain gate that belongs on every PR."
+note = "One pass for known vulnerabilities, licenses, and banned crates: the supply-chain gate that belongs on every PR."
 
 [[pick]]
 tool = "sccache"
 note = """
-Wrap the build in a shared compiler cache so CI re-uses artifacts across runs.
+Wrap the build in a shared compiler cache so CI reuses artifacts across runs.
 Often the difference between a pipeline people wait for and one they don't.
 """

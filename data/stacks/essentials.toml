@@ -24,17 +24,16 @@ everything else here assumes a rustup-managed toolchain.
 [[pick]]
 tool = "rust-analyzer"
 note = """
-The language server behind completion, go-to-definition, and inline diagnostics
-in VS Code, Zed, and Neovim. Install it as a rustup component or editor
-extension; it's the single biggest quality-of-life upgrade for writing Rust.
+The language server behind completion, go-to-definition, and inline errors in VS
+Code, Zed, and Neovim. Install it as a rustup component or editor extension; it's
+the single biggest quality-of-life upgrade for writing Rust.
 """
 
 [[pick]]
 tool = "clippy"
 note = """
-700+ lints that catch correctness traps and non-idiomatic code `rustc` waves
-through. Run `cargo clippy` locally and gate CI on it. There's rarely a reason
-not to.
+700+ lints that catch correctness traps and non-idiomatic code `rustc` accepts.
+Run `cargo clippy` locally and gate CI on it. There's rarely a reason not to.
 """
 
 [[pick]]
@@ -44,15 +43,15 @@ note = "Canonical, non-negotiable formatting. Wire it into the editor on save an
 [[pick]]
 tool = "cargo-nextest"
 note = """
-A faster, clearer `cargo test` with per-test process isolation. The default
-runner to reach for once a project has more than a handful of tests.
+A faster, clearer `cargo test` with each test isolated in its own process. The
+default runner to reach for once a project has more than a handful of tests.
 """
 
 [[pick]]
 tool = "bacon"
 note = """
 A background `cargo check`/`clippy`/`test` that repaints on save, giving you a
-fast error loop in a side pane without re-running anything by hand.
+fast error loop in a side pane without rerunning anything by hand.
 """
 
 [[pick]]

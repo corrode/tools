@@ -4,21 +4,21 @@ description = "Shipping a crate to crates.io and keeping its API honest over tim
 
 intro = """
 Publishing a library shifts the hard problems from "does it work" to "will this
-release break someone." That means watching the public API for accidental semver
-breaks, keeping changelogs and version bumps honest, and making sure what you
-ship is lean and license-clean.
+release break someone." That means watching the public API, the functions and
+types users call, for accidental semver breaks; keeping changelogs and version
+bumps honest; and making sure what you ship is lean and license-clean.
 
-This stack is about release hygiene and API stewardship. `rustdoc` already gives
-you API docs for free, so it isn't listed; the prose guide below is for
-everything rustdoc can't express.
+This stack keeps releases and API changes honest. `rustdoc` already generates
+the API reference from code comments, so it isn't listed; mdBook covers the
+tutorials and longer explanations that don't fit there.
 """
 
 [[pick]]
 tool = "cargo-semver-checks"
 note = """
-Scans your public API against the last published release and flags
-semver-breaking changes before you tag one. The single most valuable check a
-library can add to CI.
+Scans your public API against the last published release and flags breaking
+changes before you tag one. The single most valuable check a library can add to
+CI.
 """
 
 [[pick]]
@@ -40,26 +40,27 @@ than hand it to a bot.
 [[pick]]
 tool = "cargo-deny"
 note = """
-Gate CI on advisories, license policy, and banned or duplicate crates. It matters
-more for a library, whose dependency choices propagate into everyone downstream.
+Gate CI on known vulnerabilities, license policy, and banned or duplicate
+crates. It matters more for a library, whose dependency choices become its
+users' dependency choices.
 """
 
 [[pick]]
 tool = "cargo-machete"
-note = "Catches dependencies you declared but no longer use, so you don't ship dead weight to downstream crates. Fast enough for a CI gate."
+note = "Catches dependencies you declared but no longer use, so users don't compile dead weight. Fast enough for a CI gate."
 
 [[pick]]
 tool = "proptest"
 note = """
-Property tests fit libraries well: assert invariants over generated inputs rather
-than a handful of examples, and get a shrunk, saved counterexample when one
-fails. Added as a dev-dependency, not installed.
+Property tests check rules that should hold across many generated inputs, not
+just a handful of examples. When one fails, proptest shrinks it to a small,
+saved counterexample. Added as a dev-dependency, not installed.
 """
 
 [[pick]]
 tool = "mdbook"
 note = """
 For the narrative guide rustdoc can't give you: tutorials, concepts, worked
-examples. Optional, but often the difference between a crate people adopt and one
-they bounce off.
+examples. Optional, but often the difference between a crate people adopt and
+one they bounce off.
 """

@@ -1,12 +1,13 @@
 id = "backend"
 name = "Backend Services"
-description = "Long-running, async services you deploy in a container."
+description = "Tools for long-running Rust services you deploy in a container."
 
 intro = """
-Server-side Rust has a particular shape: an async runtime under load, a build
-that runs over and over in CI and Docker, and a binary whose provenance you may
-have to answer for later. The framework (axum, actix, tonic, …) is a per-project
-dependency; the operational tooling around it is not.
+Backend services answer requests or process jobs for as long as they are running.
+In Rust, that usually means an async runtime under load, a build that runs over
+and over in CI and Docker, and a binary whose provenance you may have to answer
+for later. The framework (axum, actix, tonic, …) is a per-project dependency;
+the operational tooling around it is not.
 
 This stack is that operational layer: keeping the async runtime observable,
 builds fast, and what you deploy auditable. It deliberately says nothing about
@@ -16,14 +17,14 @@ your web framework or database.
 [[pick]]
 tool = "tokio-console"
 note = """
-A live TUI into a running tokio app: per-task poll times, wakers, and resource
-usage. The fastest way to find the task that's stuck, busy-looping, or never
-waking. Development-time only: it needs `tokio_unstable`.
+A live terminal view into a running Tokio app: task activity, wakeups, and
+resource usage. The fastest way to find a task that's stuck, busy-looping, or
+never waking. Development-time only: it needs `tokio_unstable`.
 """
 
 [[pick]]
 tool = "cargo-flamegraph"
-note = "When a handler is slow under load, a flamegraph of a representative run shows where the wall-clock time actually goes."
+note = "When a handler is slow under load, a flamegraph gives you a visual map of where the runtime actually goes."
 
 [[pick]]
 tool = "cargo-chef"
@@ -39,7 +40,7 @@ note = "A shared compiler cache across local and CI builds; complements cargo-ch
 
 [[pick]]
 tool = "cargo-deny"
-note = "A policy gate on advisories, licenses, and banned crates for everything you're about to deploy."
+note = "A policy gate on known vulnerabilities, licenses, and banned crates for everything you're about to deploy."
 
 [[pick]]
 tool = "cargo-auditable"
