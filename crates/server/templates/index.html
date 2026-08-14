@@ -175,7 +175,6 @@
                                     class="stack-option"
                                     data-stack=""
                                     data-stack-name="All tools"
-                                    data-stack-count="{{ view.total }}"
                                     aria-pressed="false"
                                 >
                                     <span class="stack-option-copy">
@@ -199,7 +198,6 @@
                                     class="stack-option"
                                     data-stack="{{ stack.id }}"
                                     data-stack-name="{{ stack.name }}"
-                                    data-stack-count="{{ stack.count }}"
                                     aria-pressed="false"
                                 >
                                     <span class="stack-option-copy">
@@ -222,21 +220,88 @@
             </section>
             {% endif %}
 
+            {% if !view.stacks.is_empty() %}{% for stack in view.stacks %}
+            <aside
+                class="stack-banner"
+                data-stack="{{ stack.id }}"
+                aria-label="{{ stack.name }} stack"
+                hidden
+            >
+                <div class="stack-banner-bar">
+                    <div class="stack-banner-heading">
+                        <span class="stack-banner-eyebrow">Stack</span>
+                        <h2 class="stack-banner-title">{{ stack.name }}</h2>
+                        <span class="stack-banner-count"
+                            >{{ stack.count }} tools</span
+                        >
+                    </div>
+
+                </div>
+                <div class="stack-banner-body">
+                {% if !stack.description.is_empty() %}
+                <p class="stack-banner-desc">{{ stack.description }}</p>
+                {% endif %} {% if !stack.intro_html.is_empty() %}
+                <div class="stack-banner-intro">
+                    {{ stack.intro_html|safe }}
+                </div>
+                {% endif %}
+                <p class="stack-banner-baseline">
+                    On top of the <strong>Everyday Essentials</strong>{% if
+                    !view.baseline_names.is_empty() %} — {{
+                    view.baseline_names|join(", ") }} —{% endif %} shown below
+                    as the assumed baseline.{% if
+                    !view.baseline_install.is_empty() %} Binaries:
+                    <code
+                        >cargo install {{ view.baseline_install|join(" ")
+                        }}</code
+                    >.{% endif %}
+                </p>
+                {% if !stack.install_crates.is_empty() %}
+                <div class="stack-banner-install">
+                    <span class="stack-banner-install-label">Install</span>
+                    <code
+                        >cargo install {{ stack.install_crates|join(" ")
+                        }}</code
+                    >
+                    <button
+                        type="button"
+                        class="copy-install stack-banner-copy"
+                        data-copy-label="copy"
+                        title="Copy stack install command"
+                        aria-label="Copy stack install command"
+                    >
+                        <svg
+                            class="copy-icon"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="9"
+                                y="9"
+                                width="11"
+                                height="11"
+                                rx="2"
+                            />
+                            <path
+                                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                            />
+                        </svg>
+                        <span class="copy-label" aria-live="polite">copy</span>
+                    </button>
+                </div>
+                {% if !stack.uncovered.is_empty() %}
+                <p class="stack-banner-uncovered">
+                    Not shown: {{ stack.uncovered|join(", ") }}. These ship with
+                    the toolchain, are added as dependencies, or have their own
+                    setup (see the rows below).
+                </p>
+                {% endif %} {% endif %}
+                </div>
+            </aside>
+            {% endfor %}{% endif %}
+
             <div class="catalog-controls">
                 <div class="catalog-controls-bar">
-                    <p
-                        class="catalog-summary"
-                        aria-live="polite"
-                        aria-atomic="true"
-                    >
-                        <strong id="catalog-tool-summary"
-                            >{{ view.total }} tools</strong
-                        >
-                        in
-                        <span id="catalog-category-summary"
-                            >{{ view.categories.len() }} categories</span
-                        >
-                    </p>
                     <div class="catalog-control-actions">
                         <button
                             type="button"
@@ -282,30 +347,7 @@
                         </button>
                     </div>
                 </div>
-                <div
-                    class="mobile-stack-bar"
-                    id="mobile-stack-bar"
-                    role="status"
-                    aria-live="polite"
-                    hidden
-                >
-                    <div class="mobile-stack-bar-heading">
-                        <span class="mobile-stack-bar-eyebrow">Stack</span>
-                        <strong id="mobile-stack-bar-name"></strong>
-                        <span
-                            class="mobile-stack-bar-count"
-                            id="mobile-stack-bar-count"
-                        ></span>
-                    </div>
-                    <button
-                        type="button"
-                        class="mobile-stack-bar-clear"
-                        data-clear-stack
-                        aria-label="Clear selected stack filter"
-                    >
-                        Clear
-                    </button>
-                </div>
+
                 <div class="filter-controls" id="filter-controls">
                     <div class="filter-actions">
                         <label class="select-filter">
@@ -429,92 +471,6 @@
                 </div>
             </div>
 
-
-            {% if !view.stacks.is_empty() %}{% for stack in view.stacks %}
-            <aside
-                class="stack-banner"
-                data-stack="{{ stack.id }}"
-                aria-label="{{ stack.name }} stack"
-                hidden
-            >
-                <div class="stack-banner-bar">
-                    <div class="stack-banner-heading">
-                        <span class="stack-banner-eyebrow">Stack</span>
-                        <h2 class="stack-banner-title">{{ stack.name }}</h2>
-                        <span class="stack-banner-count"
-                            >{{ stack.count }} tools</span
-                        >
-                    </div>
-                    <button
-                        type="button"
-                        class="stack-banner-clear"
-                        data-clear-stack
-                    >
-                        Clear filter
-                    </button>
-                </div>
-                <div class="stack-banner-body">
-                {% if !stack.description.is_empty() %}
-                <p class="stack-banner-desc">{{ stack.description }}</p>
-                {% endif %} {% if !stack.intro_html.is_empty() %}
-                <div class="stack-banner-intro">
-                    {{ stack.intro_html|safe }}
-                </div>
-                {% endif %}
-                <p class="stack-banner-baseline">
-                    On top of the <strong>Everyday Essentials</strong>{% if
-                    !view.baseline_names.is_empty() %} — {{
-                    view.baseline_names|join(", ") }} —{% endif %} shown below
-                    as the assumed baseline.{% if
-                    !view.baseline_install.is_empty() %} Binaries:
-                    <code
-                        >cargo install {{ view.baseline_install|join(" ")
-                        }}</code
-                    >.{% endif %}
-                </p>
-                {% if !stack.install_crates.is_empty() %}
-                <div class="stack-banner-install">
-                    <span class="stack-banner-install-label">Install</span>
-                    <code
-                        >cargo install {{ stack.install_crates|join(" ")
-                        }}</code
-                    >
-                    <button
-                        type="button"
-                        class="copy-install stack-banner-copy"
-                        data-copy-label="copy"
-                        title="Copy stack install command"
-                        aria-label="Copy stack install command"
-                    >
-                        <svg
-                            class="copy-icon"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <rect
-                                x="9"
-                                y="9"
-                                width="11"
-                                height="11"
-                                rx="2"
-                            />
-                            <path
-                                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                            />
-                        </svg>
-                        <span class="copy-label" aria-live="polite">copy</span>
-                    </button>
-                </div>
-                {% if !stack.uncovered.is_empty() %}
-                <p class="stack-banner-uncovered">
-                    Not shown: {{ stack.uncovered|join(", ") }}. These ship with
-                    the toolchain, are added as dependencies, or have their own
-                    setup (see the rows below).
-                </p>
-                {% endif %} {% endif %}
-                </div>
-            </aside>
-            {% endfor %}{% endif %}
 
             {% for cat in view.categories %}
             <section

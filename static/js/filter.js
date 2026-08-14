@@ -21,9 +21,7 @@
     document.querySelectorAll(".stack-option[data-stack]"),
   );
   const stackDropdown = document.getElementById("stack-dropdown");
-  const mobileStackBar = document.getElementById("mobile-stack-bar");
-  const mobileStackBarName = document.getElementById("mobile-stack-bar-name");
-  const mobileStackBarCount = document.getElementById("mobile-stack-bar-count");
+  const stackStart = document.querySelector(".stack-start");
   const categoryJump = document.getElementById("category-jump");
   const noResults = document.getElementById("no-results");
   const categories = Array.from(document.querySelectorAll(".category"));
@@ -31,10 +29,6 @@
   const sectionToggleAllBtn = document.getElementById("section-toggle-all");
   const sectionToggleAllLabel = document.getElementById(
     "section-toggle-all-label",
-  );
-  const catalogToolSummary = document.getElementById("catalog-tool-summary");
-  const catalogCategorySummary = document.getElementById(
-    "catalog-category-summary",
   );
   const filtersToggle = document.getElementById("filters-toggle");
   const catalogControls = document.querySelector(".catalog-controls");
@@ -191,13 +185,11 @@
 
     // Hide category sections that end up empty, and disable their entry in the
     // "Jump to category" menu so it can't scroll to nothing.
-    let visibleCategories = 0;
     for (const cat of categories) {
       const visibleRows = cat.querySelectorAll(".tool:not([hidden])");
       const count = visibleRows.length;
       const any = count > 0;
       cat.hidden = !any;
-      if (any) visibleCategories++;
       const countBadge = cat.querySelector(".category-count");
       if (countBadge) countBadge.textContent = String(count);
       if (categoryJump) {
@@ -213,14 +205,6 @@
     }
 
     noResults.hidden = visible !== 0;
-    if (catalogToolSummary) {
-      const noun = visible === 1 ? "tool" : "tools";
-      catalogToolSummary.textContent = `${visible} ${noun}`;
-    }
-    if (catalogCategorySummary) {
-      const noun = visibleCategories === 1 ? "category" : "categories";
-      catalogCategorySummary.textContent = `${visibleCategories} ${noun}`;
-    }
     if (searchClear) searchClear.hidden = input.value.length === 0;
     renderCollapsed();
     updateStackContext(stack, highlighted);
@@ -265,12 +249,13 @@
     for (const option of stackOptions) {
       option.setAttribute(
         "aria-pressed",
-        String(!!active && option.dataset.stack === active),
+        String(option.dataset.stack ? option.dataset.stack === active : !active),
       );
     }
     const selected = active
       ? stackOptions.find((option) => option.dataset.stack === active)
       : null;
+
     if (stackDropdown) {
       const label = stackDropdown.querySelector(".stack-start-toggle-label");
       const hint = stackDropdown.querySelector(".stack-start-toggle-hint");
@@ -285,19 +270,6 @@
           : "Browse curated tool sets for your use case";
       }
     }
-    if (mobileStackBar) {
-      mobileStackBar.dataset.hasStack = String(!!selected);
-      if (!selected) mobileStackBar.hidden = true;
-      if (selected) {
-        if (mobileStackBarName) {
-          mobileStackBarName.textContent = selected.dataset.stackName;
-        }
-        if (mobileStackBarCount) {
-          mobileStackBarCount.textContent = `${selected.dataset.stackCount} picks`;
-        }
-      }
-    }
-    requestAnimationFrame(syncStickyOffsets);
   }
 
   // ── Shareable URL state ──────────────────────────────────────────────────
@@ -454,9 +426,8 @@
     });
   }
 
-  // The selected stack banner becomes a compact sticky bar once its normal
-  // position reaches the sticky header. On mobile it sits below the independently
-  // sticky Filters control, whose current height can change when opened.
+  // The stack picker is the single persistent stack control. It compacts once
+  // it reaches the sticky header; the catalog toolbar stays directly below it.
   function syncStickyOffsets() {
     if (siteHeader) {
       document.documentElement.style.setProperty(
@@ -470,61 +441,31 @@
         catalogControls.offsetHeight + "px",
       );
     }
-    updateStickyStackBanner();
+    updateStickyStackSelector();
   }
 
-  function updateStickyStackBanner() {
-    const active = stackBanners.find((banner) => !banner.hidden);
-    for (const banner of stackBanners) {
-      if (banner !== active) banner.classList.remove("is-compact");
-    }
-    if (!active) {
-      if (mobileStackBar) mobileStackBar.hidden = true;
-      return;
-    }
-
-    const rect = active.getBoundingClientRect();
-    if (window.matchMedia("(max-width: 640px)").matches) {
-      active.classList.remove("is-compact");
-      if (mobileStackBar && catalogControls && filtersToggle) {
-        const controlsRect = catalogControls.getBoundingClientRect();
-        const controlsStyle = getComputedStyle(catalogControls);
-        const baseControlsHeight =
-          filtersToggle.offsetHeight +
-          (Number.parseFloat(controlsStyle.paddingTop) || 0) +
-          (Number.parseFloat(controlsStyle.paddingBottom) || 0);
-        const shouldShow =
-          mobileStackBar.dataset.hasStack === "true" &&
-          rect.top <= controlsRect.top + baseControlsHeight;
-        mobileStackBar.hidden = !shouldShow;
-        document.documentElement.style.setProperty(
-          "--catalog-controls-sticky-h",
-          catalogControls.offsetHeight + "px",
-        );
-      }
-      return;
-    }
-
-    if (mobileStackBar) mobileStackBar.hidden = true;
-    const stickyTop = Number.parseFloat(getComputedStyle(active).top) || 0;
-    active.classList.toggle(
+  function updateStickyStackSelector() {
+    if (!stackStart) return;
+    const stickyTop = Number.parseFloat(getComputedStyle(stackStart).top) || 0;
+    const rect = stackStart.getBoundingClientRect();
+    stackStart.classList.toggle(
       "is-compact",
       rect.top <= stickyTop + 1 && rect.bottom > stickyTop,
     );
   }
 
-  let stickyBannerFrame = 0;
-  function queueStickyBannerUpdate() {
-    if (stickyBannerFrame) return;
-    stickyBannerFrame = requestAnimationFrame(() => {
-      stickyBannerFrame = 0;
-      updateStickyStackBanner();
+  let stickySelectorFrame = 0;
+  function queueStickySelectorUpdate() {
+    if (stickySelectorFrame) return;
+    stickySelectorFrame = requestAnimationFrame(() => {
+      stickySelectorFrame = 0;
+      updateStickyStackSelector();
     });
   }
 
   syncStickyOffsets();
   window.addEventListener("resize", syncStickyOffsets);
-  window.addEventListener("scroll", queueStickyBannerUpdate, { passive: true });
+  window.addEventListener("scroll", queueStickySelectorUpdate, { passive: true });
 
   // Stack selection flows through the hidden input next to the semantic
   // dropdown (the single source of truth for URL sync and row filtering).
@@ -536,27 +477,12 @@
       stackFilter.value = id;
       apply();
       if (stackDropdown) stackDropdown.open = false;
-      if (id) {
-        const banner = stackBanners.find((item) => item.dataset.stack === id);
-        if (banner) {
-          requestAnimationFrame(() =>
-            banner.scrollIntoView({ behavior: "smooth", block: "start" }),
-          );
-        }
-      }
       return;
     }
     const chip = e.target.closest(".chip[data-stack]");
     if (chip && stackFilter) {
       e.preventDefault();
       stackFilter.value = chip.dataset.stack;
-      apply();
-      document
-        .getElementById("catalog")
-        .scrollIntoView({ behavior: "smooth", block: "start" });
-    } else if (e.target.closest("[data-clear-stack]") && stackFilter) {
-      e.preventDefault();
-      stackFilter.value = "";
       apply();
     }
   });

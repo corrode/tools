@@ -55,6 +55,8 @@
     --max-width: 1200px;
     --gutter: 32px;
     --header-h: 65px;
+    --stack-selector-compact-offset: 76px;
+    --stack-selector-sticky-h: var(--stack-selector-compact-offset);
 }
 
 /* =============================================================================
@@ -94,10 +96,6 @@ html[data-theme="dark"] {
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
-/* The translucent sticky header needs a dark tint instead of a white one. */
-html[data-theme="dark"] .site-header {
-    background-color: rgba(15, 20, 25, 0.82);
-}
 
 /* Invert the black gear logo and the black corrode wordmark for dark mode. */
 html[data-theme="dark"] .brand-logo {
@@ -147,9 +145,7 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 50;
-    background-color: rgba(255, 255, 255, 0.82);
-    backdrop-filter: saturate(160%) blur(14px);
-    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    background-color: var(--bg);
     border-bottom: 1px solid var(--border);
     text-align: left;
     margin: 0;
@@ -388,7 +384,39 @@ html[data-theme="dark"] .theme-icon-sun {
     background-color: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
+    position: sticky;
+    top: calc(var(--header-sticky-h, var(--header-h)) + 8px);
+    z-index: 45;
     box-shadow: var(--shadow);
+    transition:
+        padding 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.stack-start.is-compact {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 16px;
+    padding: 8px;
+    border-color: var(--accent-ring);
+    box-shadow:
+        0 -8px 0 var(--bg),
+        0 8px 0 var(--bg),
+        var(--shadow),
+        0 10px 30px rgba(20, 28, 44, 0.14);
+}
+
+.stack-start.is-compact .stack-start-heading {
+    display: none;
+}
+
+.stack-start.is-compact .stack-start-toggle {
+    min-height: 44px;
+    padding: 8px 12px;
+}
+
+.stack-start.is-compact .stack-start-toggle-hint {
+    display: none;
 }
 
 .stack-start-heading {
@@ -586,41 +614,44 @@ html[data-theme="dark"] .theme-icon-sun {
 }
 
 .catalog-controls {
-    padding-bottom: 14px;
+    position: sticky;
+    top: calc(
+        var(--header-sticky-h, var(--header-h)) +
+            var(--stack-selector-sticky-h, 0px)
+    );
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0 10px;
     margin-bottom: 24px;
+    background-color: var(--bg);
     border-bottom: 1px solid var(--border-soft);
+    box-shadow:
+        0 -8px 0 var(--bg),
+        0 8px 0 var(--bg);
 }
 
 .catalog-controls-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.catalog-summary {
-    margin: 0;
-    color: var(--text-dim);
-    font-size: 0.82rem;
-    font-variant-numeric: tabular-nums;
-}
-
-.catalog-summary strong {
-    color: var(--ink);
-    font-weight: 650;
+    grid-column: 2;
+    grid-row: 1;
 }
 
 .catalog-control-actions {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-left: auto;
 }
 
-/* Anchored jumps (category select, stack banner) clear the sticky header. */
+/* Anchored jumps clear the sticky header, catalog toolbar, and, when no stack
+   is active, the compact stack selector above them. */
 .category,
 .stack-banner {
-    scroll-margin-top: calc(var(--header-h) + 16px);
+    scroll-margin-top: calc(
+        var(--header-h) + var(--stack-selector-sticky-h, 0px) +
+            var(--catalog-controls-sticky-h, 0px) + 16px
+    );
 }
 
 .toggle {
@@ -640,20 +671,20 @@ html[data-theme="dark"] .theme-icon-sun {
     height: 15px;
 }
 
-/* Search-adjacent list controls in a compact toolbar below the stack picker. */
+/* Navigation and filters share one compact desktop toolbar row. */
 .filter-controls {
+    grid-column: 1;
+    grid-row: 1;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 9px;
-    margin-top: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 10px;
 }
 
-/* The "Filters" disclosure button and compact stack row are mobile-only; on
-   wider screens the controls are always shown inline and the rich stack banner
-   supplies the sticky state. */
-.filters-toggle,
-.mobile-stack-bar {
+/* The Filters disclosure button is mobile-only; wider screens show the controls
+   inline in the sticky catalog toolbar. */
+.filters-toggle {
     display: none;
 }
 
@@ -667,9 +698,9 @@ html[data-theme="dark"] .theme-icon-sun {
 .filter-toggles {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 12px 18px;
+    gap: 8px 10px;
 }
 
 /* Staff-picks filter: the award glyph marks the toggle, and a small info
@@ -774,9 +805,9 @@ html[data-theme="dark"] .theme-icon-sun {
 .filter-actions {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 8px 16px;
+    gap: 8px 10px;
 }
 
 .select-filter {
@@ -1408,34 +1439,6 @@ a.chip:focus-visible {
     color: var(--text-dim);
 }
 
-/* A baseline (Everyday Essentials) tool, shown as the assumed groundwork beneath
-   a domain stack's own picks while that stack is the active filter. Kept visible
-   for readers who open a stack cold, but de-emphasized — with an accent edge so
-   it reads as "baseline", not the grey of a deprecated row. */
-.tool.is-baseline {
-    opacity: 0.62;
-}
-
-.tool.is-baseline:hover,
-.tool.is-baseline:focus-within {
-    opacity: 0.86;
-}
-
-.tool.is-baseline td {
-    background-color: var(--surface-alt);
-}
-
-.tool.is-baseline td:first-child {
-    box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.tool.is-baseline .tool-name {
-    color: var(--text-dim);
-}
-
-.tool.is-baseline .notes-body {
-    color: var(--text-dim);
-}
 
 /* ------------------------------------------------------------- Utilities -- */
 
@@ -1573,6 +1576,59 @@ a.chip:focus-visible {
 }
 
 /* ------------------------------------------------------------ Responsive -- */
+
+@media (max-width: 1199px) {
+    .filter-controls {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        flex-direction: column;
+        align-items: stretch;
+        margin-top: 8px;
+    }
+
+    .filter-actions,
+    .filter-toggles {
+        flex-wrap: wrap;
+    }
+}
+
+@media (min-width: 1200px) {
+    .select-filter {
+        gap: 6px;
+        font-size: 0.78rem;
+    }
+
+    .select-filter select {
+        padding-left: 7px;
+        padding-right: 22px;
+    }
+
+    #category-jump {
+        width: 128px;
+    }
+
+    #sort-select {
+        width: 112px;
+    }
+
+    #license-filter {
+        width: 108px;
+    }
+
+    #msrv-filter {
+        width: 112px;
+    }
+
+    .toggle {
+        gap: 6px;
+        font-size: 0.78rem;
+    }
+
+    .section-toggle-all {
+        padding: 7px 9px;
+        font-size: 0.76rem;
+    }
+}
 
 @media (max-width: 900px) {
     .site-header-inner {
@@ -1900,7 +1956,11 @@ a.chip:focus-visible {
            Bleed the background to the viewport edges so tool rows pass cleanly
            underneath. */
         position: sticky;
-        top: var(--header-sticky-h, 0);
+        display: block;
+        top: calc(
+            var(--header-sticky-h, 0px) +
+                var(--stack-selector-sticky-h, 0px)
+        );
         z-index: 40;
         margin: 0 calc(-1 * var(--gutter)) 16px;
         padding: 8px var(--gutter) 10px;
@@ -1908,13 +1968,8 @@ a.chip:focus-visible {
     }
 
     .catalog-controls-bar {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .catalog-summary {
-        flex: 1 1 135px;
-        font-size: 0.78rem;
+        display: flex;
+        justify-content: flex-end;
     }
 
     .catalog-control-actions {
@@ -1926,80 +1981,6 @@ a.chip:focus-visible {
         font-size: 0.76rem;
     }
 
-    .mobile-stack-bar:not([hidden]) {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-top: 8px;
-        padding: 9px 10px;
-        background-color: var(--accent-soft);
-        border: 1px solid var(--accent-ring);
-        border-radius: var(--r-md);
-    }
-
-    .mobile-stack-bar-heading {
-        display: flex;
-        align-items: baseline;
-        min-width: 0;
-        gap: 7px;
-    }
-
-    .mobile-stack-bar-eyebrow {
-        flex-shrink: 0;
-        color: var(--accent-ink);
-        font-size: 0.62rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-    }
-
-    .mobile-stack-bar-heading strong {
-        overflow: hidden;
-        color: var(--ink);
-        font-size: 0.82rem;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .mobile-stack-bar-count {
-        flex-shrink: 0;
-        color: var(--accent-ink);
-        font-size: 0.68rem;
-        white-space: nowrap;
-    }
-
-    .mobile-stack-bar-clear {
-        flex-shrink: 0;
-        padding: 4px 9px;
-        color: var(--accent-ink);
-        background: var(--surface);
-        border: 1px solid var(--accent-ring);
-        border-radius: var(--r-sm);
-        font: inherit;
-        font-size: 0.72rem;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .mobile-stack-bar-clear:hover {
-        border-color: var(--accent);
-    }
-
-    .mobile-stack-bar-clear:focus-visible {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-ring);
-    }
-
-    /* Mobile gets its persistent stack state inside `.catalog-controls`, so the
-       rich editorial banner scrolls normally instead of competing for sticky
-       space with Filters. */
-    .catalog .stack-banner {
-        position: relative;
-        top: auto;
-        z-index: auto;
-    }
 
     /* Anchored jumps must clear the header plus the pinned filter bar. */
     .category,
@@ -2007,6 +1988,7 @@ a.chip:focus-visible {
     .tool-table tbody tr {
         scroll-margin-top: calc(
             var(--header-sticky-h, 65px) +
+                var(--stack-selector-sticky-h, 0px) +
                 var(--catalog-controls-sticky-h, 64px) + 12px
         );
     }
@@ -2089,9 +2071,7 @@ a.chip:focus-visible {
    selected. Carries the editorial intro and a derived install line that the
    plain dropdown filter can't. */
 .stack-banner {
-    position: sticky;
-    top: calc(var(--header-sticky-h, var(--header-h)) + 8px);
-    z-index: 35;
+    position: relative;
     margin-bottom: 40px;
     padding: 18px 20px;
     border: 1px solid var(--accent);
@@ -2099,32 +2079,6 @@ a.chip:focus-visible {
     background-color: var(--surface);
     background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
     box-shadow: var(--shadow);
-    transition:
-        padding 0.18s ease,
-        border-radius 0.18s ease,
-        box-shadow 0.18s ease;
-}
-
-.stack-banner.is-compact {
-    padding: 10px 14px;
-    box-shadow:
-        var(--shadow),
-        0 10px 30px rgba(20, 28, 44, 0.14);
-}
-
-.stack-banner-body {
-    max-height: 900px;
-    overflow: hidden;
-    opacity: 1;
-    transition:
-        max-height 0.22s ease,
-        opacity 0.14s ease;
-}
-
-.stack-banner.is-compact .stack-banner-body {
-    max-height: 0;
-    opacity: 0;
-    pointer-events: none;
 }
 
 .stack-banner-bar {
@@ -2156,11 +2110,6 @@ a.chip:focus-visible {
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--ink);
-    transition: font-size 0.18s ease;
-}
-
-.stack-banner.is-compact .stack-banner-title {
-    font-size: 1rem;
 }
 
 .stack-banner-count {
@@ -2170,25 +2119,6 @@ a.chip:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 
-.stack-banner-clear {
-    font: inherit;
-    font-size: 0.78rem;
-    color: var(--accent-ink);
-    background-color: transparent;
-    border: 1px solid var(--accent);
-    border-radius: var(--r-sm);
-    padding: 4px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition:
-        background-color 0.12s ease,
-        color 0.12s ease;
-}
-
-.stack-banner-clear:hover {
-    background-color: var(--accent);
-    color: #fff;
-}
 
 .stack-banner-desc {
     margin: 10px 0 0;
@@ -2268,7 +2198,7 @@ a.chip:focus-visible {
 
 /* "On top of the Everyday Essentials …": names the assumed baseline that every
    domain stack inherits, so a reader who opens a stack cold still sees the
-   groundwork (shown, de-emphasized, in the rows below). */
+   groundwork included in the rows below. */
 .stack-banner-baseline {
     margin: 12px 0 0;
     font-size: 0.82rem;
@@ -2297,8 +2227,8 @@ a.chip:focus-visible {
     margin-bottom: 0;
 }
 
-/* The baseline (Everyday Essentials) note: quieter than a stack pick note, so
-   the de-emphasized baseline row doesn't compete with the stack's own picks. */
+/* The baseline (Everyday Essentials) note stays quieter than a stack-pick note
+   so the curated picks remain the strongest signal. */
 .stack-note--baseline {
     border-color: var(--border);
     color: var(--text-dim);
