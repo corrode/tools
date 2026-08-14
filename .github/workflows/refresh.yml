@@ -1,8 +1,8 @@
 name: Refresh metrics
 
 # Daily refresh of the bot-owned `[metrics]` tables from the source forges and
-# crates.io. Never commits to `main`: it opens (or updates) a single rolling PR
-# for human review. Editorial prose is never touched.
+# crates.io. Validated changes are squash-merged automatically, then the Docker
+# deployment workflow is dispatched explicitly. Editorial prose is never touched.
 
 on:
   schedule:
@@ -10,8 +10,13 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
+
+concurrency:
+  group: refresh-metrics
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -28,7 +33,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cargo run --release -p generator -- --data-dir data
 
+      - name: Validate refreshed catalog
+        run: |
+          cargo test --workspace
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+
       - name: Open or update pull request
+        id: refresh-pr
         uses: peter-evans/create-pull-request@v6
         with:
           branch: bot/refresh-metrics
@@ -43,5 +55,23 @@ jobs:
             Only the `[metrics]` tables change. Human-authored editorial fields
             (`remarks`, `alternatives`, `successors`, …) are never modified.
 
-            Review the diff and merge to publish. Merging rebuilds the image and
-            triggers a redeploy.
+            The refresh workflow validates these changes, squash-merges the PR,
+            rebuilds the image, and triggers a redeploy automatically.
+
+      - name: Merge validated metrics
+        if: steps.refresh-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge "${{ steps.refresh-pr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}" \
+            --squash \
+            --delete-branch
+
+      # Merges performed with GITHUB_TOKEN do not emit a downstream push workflow,
+      # so dispatch the deployment explicitly after the merge reaches main.
+      - name: Build and deploy refreshed index
+        if: steps.refresh-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docker.yml --repo "${{ github.repository }}" --ref main
