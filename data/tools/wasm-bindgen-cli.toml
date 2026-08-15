@@ -25,13 +25,13 @@ open_issues = 560
 last_commit = "2026-08-14"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-14T21:45:42.447639568+00:00"
+updated_at = "2026-08-15T03:34:04.375572492+00:00"
 stale = false
 
 [metrics.crate]
 name = "wasm-bindgen-cli"
-downloads_total = 9150527
-downloads_recent = 826629
+downloads_total = 9153239
+downloads_recent = 825725
 latest_version = "0.2.127"
 latest_release = "2026-08-08"
 msrv = "1.86"

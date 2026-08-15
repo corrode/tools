@@ -25,13 +25,13 @@ open_issues = 392
 last_commit = "2026-08-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-14T21:45:43.377094093+00:00"
+updated_at = "2026-08-15T03:34:05.137187900+00:00"
 stale = false
 
 [metrics.crate]
 name = "wasm-pack"
-downloads_total = 5767278
-downloads_recent = 1380940
+downloads_total = 5770049
+downloads_recent = 1377520
 latest_version = "0.15.0"
 latest_release = "2026-05-15"
 license = "MIT OR Apache-2.0"
