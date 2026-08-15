@@ -25,13 +25,13 @@ open_issues = 168
 last_commit = "2026-08-12"
 archived = false
 license = "CC0-1.0"
-updated_at = "2026-08-14T21:45:28.310666345+00:00"
+updated_at = "2026-08-15T03:33:53.575425661+00:00"
 stale = false
 
 [metrics.crate]
 name = "just"
-downloads_total = 2383028
-downloads_recent = 475239
+downloads_total = 2384275
+downloads_recent = 474571
 latest_version = "1.58.0"
 latest_release = "2026-08-03"
 msrv = "1.89.0"

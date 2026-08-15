@@ -30,13 +30,13 @@ open_issues = 100
 last_commit = "2026-07-06"
 archived = false
 license = "MIT"
-updated_at = "2026-08-14T21:45:06.197287063+00:00"
+updated_at = "2026-08-15T03:33:37.868325060+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-mutants"
-downloads_total = 469119
-downloads_recent = 166929
+downloads_total = 469482
+downloads_recent = 166699
 latest_version = "27.1.0"
 latest_release = "2026-06-02"
 msrv = "1.88"

@@ -34,13 +34,13 @@ open_issues = 4
 last_commit = "2026-08-13"
 archived = false
 license = "MIT"
-updated_at = "2026-08-14T21:45:24.683016274+00:00"
+updated_at = "2026-08-15T03:33:51.173005611+00:00"
 stale = false
 
 [metrics.crate]
 name = "hotpath"
-downloads_total = 394446
-downloads_recent = 285315
+downloads_total = 395779
+downloads_recent = 285907
 latest_version = "0.23.2"
 latest_release = "2026-08-11"
 license = "MIT"
