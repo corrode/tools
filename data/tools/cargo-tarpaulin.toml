@@ -21,17 +21,17 @@ alternatives = ["cargo-llvm-cov"]
 stars = 3007
 forks = 197
 open_issues = 32
-last_commit = "2026-08-10"
+last_commit = "2026-08-15"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-15T03:33:42.323188724+00:00"
+updated_at = "2026-08-16T03:42:44.168137269+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-tarpaulin"
-downloads_total = 2907858
-downloads_recent = 320160
-latest_version = "0.37.1"
-latest_release = "2026-08-10"
+downloads_total = 2910540
+downloads_recent = 318866
+latest_version = "0.37.2"
+latest_release = "2026-08-15"
 license = "MIT OR Apache-2.0"
 owners = ["xd009642"]
