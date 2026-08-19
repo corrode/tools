@@ -21,16 +21,16 @@ recommended = true
 [metrics]
 stars = 1935
 forks = 192
-open_issues = 120
+open_issues = 121
 last_commit = "2026-08-17"
 archived = false
-updated_at = "2026-08-18T03:38:58.498962095+00:00"
+updated_at = "2026-08-19T03:40:36.482190165+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-audit"
-downloads_total = 10622496
-downloads_recent = 2924596
+downloads_total = 10663425
+downloads_recent = 2939083
 latest_version = "0.22.2"
 latest_release = "2026-06-05"
 msrv = "1.88"
