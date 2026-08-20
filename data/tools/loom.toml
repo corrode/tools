@@ -27,17 +27,17 @@ added = "2026-06-04"
 [metrics]
 stars = 2785
 forks = 147
-open_issues = 125
+open_issues = 126
 last_commit = "2026-02-20"
 archived = false
 license = "MIT"
-updated_at = "2026-08-19T03:41:16.349968683+00:00"
+updated_at = "2026-08-20T03:41:20.668836526+00:00"
 stale = false
 
 [metrics.crate]
 name = "loom"
-downloads_total = 59459179
-downloads_recent = 10843132
+downloads_total = 59622472
+downloads_recent = 10894329
 latest_version = "0.7.2"
 latest_release = "2024-04-23"
 msrv = "1.65"
