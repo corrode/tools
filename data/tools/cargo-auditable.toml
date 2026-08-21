@@ -20,17 +20,17 @@ related = ["cargo-audit"]
 [metrics]
 stars = 842
 forks = 40
-open_issues = 17
+open_issues = 18
 last_commit = "2026-07-24"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-20T03:40:41.529084543+00:00"
+updated_at = "2026-08-21T03:45:18.758372570+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-auditable"
-downloads_total = 934828
-downloads_recent = 232555
+downloads_total = 938486
+downloads_recent = 235320
 latest_version = "0.7.5"
 latest_release = "2026-06-28"
 license = "MIT OR Apache-2.0"
