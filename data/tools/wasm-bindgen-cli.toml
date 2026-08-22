@@ -21,17 +21,17 @@ related = ["trunk", "wasm-pack"]
 [metrics]
 stars = 9121
 forks = 1233
-open_issues = 564
+open_issues = 565
 last_commit = "2026-08-21"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-21T03:46:10.392347272+00:00"
+updated_at = "2026-08-22T03:37:14.189816786+00:00"
 stale = false
 
 [metrics.crate]
 name = "wasm-bindgen-cli"
-downloads_total = 9224547
-downloads_recent = 862717
+downloads_total = 9240487
+downloads_recent = 875113
 latest_version = "0.2.127"
 latest_release = "2026-08-08"
 msrv = "1.86"
