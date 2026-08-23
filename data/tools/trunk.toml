@@ -24,13 +24,13 @@ open_issues = 139
 last_commit = "2026-08-01"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-22T03:37:13.391714378+00:00"
+updated_at = "2026-08-23T03:44:56.595274957+00:00"
 stale = false
 
 [metrics.crate]
 name = "trunk"
-downloads_total = 1122922
-downloads_recent = 103281
+downloads_total = 1123911
+downloads_recent = 103101
 latest_version = "0.22.0-beta.2"
 latest_release = "2026-07-24"
 msrv = "1.96.1"

@@ -25,13 +25,13 @@ open_issues = 70
 last_commit = "2026-08-20"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-22T03:36:48.842149994+00:00"
+updated_at = "2026-08-23T03:44:32.560384032+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-release"
-downloads_total = 536257
-downloads_recent = 15156
+downloads_total = 536340
+downloads_recent = 15091
 latest_version = "1.1.5"
 latest_release = "2026-08-11"
 msrv = "1.92"
