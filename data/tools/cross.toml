@@ -26,13 +26,13 @@ open_issues = 257
 last_commit = "2026-08-19"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-27T13:29:12.279181713+00:00"
+updated_at = "2026-08-28T14:48:10.042520574+00:00"
 stale = false
 
 [metrics.crate]
 name = "cross"
-downloads_total = 6214231
-downloads_recent = 301853
+downloads_total = 6218184
+downloads_recent = 303186
 latest_version = "0.2.5"
 latest_release = "2023-02-04"
 license = "MIT OR Apache-2.0"
