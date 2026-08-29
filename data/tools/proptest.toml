@@ -29,13 +29,13 @@ open_issues = 148
 last_commit = "2026-08-21"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-28T14:48:24.138232866+00:00"
+updated_at = "2026-08-29T09:38:36.257183168+00:00"
 stale = false
 
 [metrics.crate]
 name = "proptest"
-downloads_total = 176153562
-downloads_recent = 45122323
+downloads_total = 176637822
+downloads_recent = 45354141
 latest_version = "1.11.0"
 latest_release = "2026-03-24"
 msrv = "1.85"

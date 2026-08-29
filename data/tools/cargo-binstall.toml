@@ -20,17 +20,17 @@ alternatives = ["cargo-install", "cargo-quickinstall"]
 [metrics]
 stars = 2843
 forks = 112
-open_issues = 105
-last_commit = "2026-08-27"
+open_issues = 106
+last_commit = "2026-08-28"
 archived = false
 license = "GPL-3.0"
-updated_at = "2026-08-28T14:47:38.286933612+00:00"
+updated_at = "2026-08-29T09:38:12.928495110+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-binstall"
-downloads_total = 3461122
-downloads_recent = 121499
+downloads_total = 3462311
+downloads_recent = 121689
 latest_version = "1.22.0"
 latest_release = "2026-08-22"
 msrv = "1.79.0"

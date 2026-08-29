@@ -24,13 +24,13 @@ open_issues = 3
 last_commit = "2026-08-27"
 archived = false
 license = "MIT"
-updated_at = "2026-08-28T14:48:07.572501096+00:00"
+updated_at = "2026-08-29T09:38:27.816317053+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-zigbuild"
-downloads_total = 6797854
-downloads_recent = 1519773
+downloads_total = 6814729
+downloads_recent = 1527767
 latest_version = "0.23.3"
 latest_release = "2026-08-27"
 msrv = "1.88"
