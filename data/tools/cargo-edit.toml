@@ -20,17 +20,17 @@ alternatives = ["cargo add (built-in)", "cargo-upgrades", "cargo-set-version"]
 [metrics]
 stars = 3446
 forks = 166
-open_issues = 75
+open_issues = 74
 last_commit = "2026-07-15"
 archived = false
 license = "MIT"
-updated_at = "2026-08-28T14:47:43.740578531+00:00"
+updated_at = "2026-08-29T09:38:15.600603520+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-edit"
-downloads_total = 3483378
-downloads_recent = 533244
+downloads_total = 3488113
+downloads_recent = 531736
 latest_version = "0.13.13"
 latest_release = "2026-07-15"
 msrv = "1.92"

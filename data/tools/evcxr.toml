@@ -23,13 +23,13 @@ forks = 242
 open_issues = 123
 last_commit = "2026-08-25"
 archived = false
-updated_at = "2026-08-28T14:48:12.042266376+00:00"
+updated_at = "2026-08-29T09:38:30.284825351+00:00"
 stale = false
 
 [metrics.crate]
 name = "evcxr_repl"
-downloads_total = 865364
-downloads_recent = 119585
+downloads_total = 866557
+downloads_recent = 120311
 latest_version = "0.22.0"
 latest_release = "2026-08-18"
 license = "MIT OR Apache-2.0"

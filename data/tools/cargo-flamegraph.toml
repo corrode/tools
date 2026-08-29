@@ -21,17 +21,17 @@ alternatives = ["samply", "perf"]
 [metrics]
 stars = 6015
 forks = 194
-open_issues = 76
+open_issues = 75
 last_commit = "2026-08-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-08-28T14:47:45.592349246+00:00"
+updated_at = "2026-08-29T09:38:16.589940747+00:00"
 stale = false
 
 [metrics.crate]
 name = "flamegraph"
-downloads_total = 991578
-downloads_recent = 309584
+downloads_total = 992178
+downloads_recent = 307196
 latest_version = "0.6.14"
 latest_release = "2026-08-12"
 msrv = "1.86"
