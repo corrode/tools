@@ -25,13 +25,13 @@ open_issues = 33
 last_commit = "2026-04-03"
 archived = false
 license = "Unlicense"
-updated_at = "2026-08-30T08:50:26.454158774+00:00"
+updated_at = "2026-08-31T09:13:03.728208379+00:00"
 stale = false
 
 [metrics.crate]
 name = "quickcheck"
-downloads_total = 65813513
-downloads_recent = 10076743
+downloads_total = 65898181
+downloads_recent = 10044666
 latest_version = "1.1.0"
 latest_release = "2026-02-10"
 msrv = "1.85.0"

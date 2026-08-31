@@ -23,13 +23,13 @@ open_issues = 237
 last_commit = "2026-07-28"
 archived = false
 license = "MIT"
-updated_at = "2026-08-30T08:50:31.281374624+00:00"
+updated_at = "2026-08-31T09:13:09.309919510+00:00"
 stale = false
 
 [metrics.crate]
 name = "taplo-cli"
-downloads_total = 2153607
-downloads_recent = 183794
+downloads_total = 2154986
+downloads_recent = 182669
 latest_version = "0.10.0"
 latest_release = "2025-05-23"
 msrv = "1.74"
