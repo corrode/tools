@@ -23,16 +23,16 @@ recommended = true
 [metrics]
 stars = 1644
 forks = 79
-open_issues = 54
-last_commit = "2026-09-01"
+open_issues = 55
+last_commit = "2026-09-02"
 archived = false
-updated_at = "2026-09-01T08:11:54.735742020+00:00"
+updated_at = "2026-09-02T07:30:51.671151850+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-geiger"
-downloads_total = 230732
-downloads_recent = 50682
+downloads_total = 231466
+downloads_recent = 50970
 latest_version = "0.13.0"
 latest_release = "2025-08-31"
 msrv = "1.85"
