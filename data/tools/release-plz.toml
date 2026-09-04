@@ -21,18 +21,18 @@ recommended = true
 [metrics]
 stars = 1470
 forks = 189
-open_issues = 150
-last_commit = "2026-08-31"
+open_issues = 149
+last_commit = "2026-09-03"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-03T07:38:33.679589319+00:00"
+updated_at = "2026-09-04T07:37:44.261257790+00:00"
 stale = false
 
 [metrics.crate]
 name = "release-plz"
-downloads_total = 342678
-downloads_recent = 59013
-latest_version = "0.3.160"
-latest_release = "2026-07-14"
+downloads_total = 343634
+downloads_recent = 59016
+latest_version = "0.3.161"
+latest_release = "2026-09-03"
 license = "MIT OR Apache-2.0"
 owners = ["Marco Ieni"]
