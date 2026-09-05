@@ -22,17 +22,17 @@ recommended = true
 [metrics]
 stars = 8311
 forks = 461
-open_issues = 257
+open_issues = 258
 last_commit = "2026-08-19"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-04T07:37:35.280126072+00:00"
+updated_at = "2026-09-05T07:18:03.927377377+00:00"
 stale = false
 
 [metrics.crate]
 name = "cross"
-downloads_total = 6244694
-downloads_recent = 306161
+downloads_total = 6248429
+downloads_recent = 307806
 latest_version = "0.2.5"
 latest_release = "2023-02-04"
 license = "MIT OR Apache-2.0"
