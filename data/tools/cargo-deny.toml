@@ -24,13 +24,13 @@ open_issues = 88
 last_commit = "2026-09-03"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-04T07:37:19.120459079+00:00"
+updated_at = "2026-09-05T07:17:36.175221074+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-deny"
-downloads_total = 5462065
-downloads_recent = 1519307
+downloads_total = 5486159
+downloads_recent = 1534884
 latest_version = "0.20.2"
 latest_release = "2026-07-09"
 msrv = "1.88.0"
