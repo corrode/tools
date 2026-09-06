@@ -24,13 +24,13 @@ open_issues = 661
 last_commit = "2026-09-03"
 archived = false
 license = "MPL-2.0"
-updated_at = "2026-09-05T07:18:13.770453170+00:00"
+updated_at = "2026-09-06T07:30:21.337021986+00:00"
 stale = false
 
 [metrics.crate]
 name = "mdbook"
-downloads_total = 10114853
-downloads_recent = 854361
+downloads_total = 10125728
+downloads_recent = 856431
 latest_version = "0.5.4"
 latest_release = "2026-07-06"
 msrv = "1.88.0"
