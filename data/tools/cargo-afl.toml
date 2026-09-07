@@ -24,13 +24,13 @@ open_issues = 41
 last_commit = "2026-08-10"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-06T07:29:57.707719137+00:00"
+updated_at = "2026-09-07T07:46:38.864388765+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-afl"
-downloads_total = 204796
-downloads_recent = 31169
+downloads_total = 205031
+downloads_recent = 31111
 latest_version = "0.18.2"
 latest_release = "2026-05-11"
 license = "Apache-2.0"
