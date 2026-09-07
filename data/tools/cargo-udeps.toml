@@ -25,13 +25,13 @@ forks = 53
 open_issues = 44
 last_commit = "2026-04-29"
 archived = false
-updated_at = "2026-09-06T07:30:11.421295027+00:00"
+updated_at = "2026-09-07T07:46:56.457548837+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-udeps"
-downloads_total = 1451510
-downloads_recent = 136330
+downloads_total = 1453799
+downloads_recent = 136956
 latest_version = "0.1.61"
 latest_release = "2026-04-29"
 license = "MIT OR Apache-2.0"

@@ -24,13 +24,13 @@ open_issues = 33
 last_commit = "2026-09-06"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-06T07:30:30.642119940+00:00"
+updated_at = "2026-09-07T07:47:20.557173803+00:00"
 stale = false
 
 [metrics.crate]
 name = "watchexec-cli"
-downloads_total = 659114
-downloads_recent = 8452
+downloads_total = 659207
+downloads_recent = 8478
 latest_version = "2.7.2"
 latest_release = "2026-09-06"
 license = "Apache-2.0"
