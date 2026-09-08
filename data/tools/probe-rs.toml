@@ -29,17 +29,17 @@ recommended = true
 [metrics]
 stars = 2930
 forks = 633
-open_issues = 365
+open_issues = 366
 last_commit = "2026-09-07"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-07T07:47:10.866342594+00:00"
+updated_at = "2026-09-08T07:41:45.726596699+00:00"
 stale = false
 
 [metrics.crate]
 name = "probe-rs"
-downloads_total = 674725
-downloads_recent = 172922
+downloads_total = 677910
+downloads_recent = 173866
 latest_version = "0.32.0"
 latest_release = "2026-07-22"
 msrv = "1.89"
