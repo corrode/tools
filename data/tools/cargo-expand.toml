@@ -23,16 +23,16 @@ recommended = true
 stars = 3127
 forks = 78
 open_issues = 10
-last_commit = "2026-08-19"
+last_commit = "2026-09-10"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-09T07:45:11.436554838+00:00"
+updated_at = "2026-09-10T07:45:37.052113653+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-expand"
-downloads_total = 3488385
-downloads_recent = 599693
+downloads_total = 3495797
+downloads_recent = 599936
 latest_version = "1.0.126"
 latest_release = "2026-08-19"
 msrv = "1.88"
