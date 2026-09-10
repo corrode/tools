@@ -19,17 +19,17 @@ alternatives = ["rustfmt"]
 [metrics]
 stars = 2385
 forks = 187
-open_issues = 239
+open_issues = 240
 last_commit = "2026-07-28"
 archived = false
 license = "MIT"
-updated_at = "2026-09-09T07:45:37.846665140+00:00"
+updated_at = "2026-09-10T07:46:03.815328566+00:00"
 stale = false
 
 [metrics.crate]
 name = "taplo-cli"
-downloads_total = 2178644
-downloads_recent = 188070
+downloads_total = 2181853
+downloads_recent = 188989
 latest_version = "0.10.0"
 latest_release = "2025-05-23"
 msrv = "1.74"

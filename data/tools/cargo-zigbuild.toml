@@ -20,17 +20,17 @@ alternatives = ["cross"]
 [metrics]
 stars = 2646
 forks = 100
-open_issues = 7
-last_commit = "2026-09-08"
+open_issues = 4
+last_commit = "2026-09-09"
 archived = false
 license = "MIT"
-updated_at = "2026-09-09T07:45:24.204245629+00:00"
+updated_at = "2026-09-10T07:45:49.980690865+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-zigbuild"
-downloads_total = 7011734
-downloads_recent = 1541651
+downloads_total = 7030423
+downloads_recent = 1542628
 latest_version = "0.23.4"
 latest_release = "2026-09-02"
 msrv = "1.88"
