@@ -24,13 +24,13 @@ open_issues = 32
 last_commit = "2026-08-15"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-10T07:45:45.540948896+00:00"
+updated_at = "2026-09-11T07:40:21.094267655+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-tarpaulin"
-downloads_total = 2992124
-downloads_recent = 300801
+downloads_total = 2995385
+downloads_recent = 301253
 latest_version = "0.37.2"
 latest_release = "2026-08-15"
 license = "MIT OR Apache-2.0"
