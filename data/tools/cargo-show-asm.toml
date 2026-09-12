@@ -22,18 +22,18 @@ related = ["cargo-bloat"]
 stars = 979
 forks = 50
 open_issues = 26
-last_commit = "2026-09-10"
+last_commit = "2026-09-11"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-11T07:40:20.394315529+00:00"
+updated_at = "2026-09-12T07:34:19.413775162+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-show-asm"
-downloads_total = 193293
-downloads_recent = 12948
-latest_version = "0.2.62"
-latest_release = "2026-06-26"
-msrv = "1.86"
+downloads_total = 193441
+downloads_recent = 13050
+latest_version = "0.2.63"
+latest_release = "2026-09-11"
+msrv = "1.88"
 license = "MIT OR Apache-2.0"
 owners = ["pacak"]
