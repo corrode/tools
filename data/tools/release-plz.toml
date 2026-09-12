@@ -21,17 +21,17 @@ recommended = true
 [metrics]
 stars = 1474
 forks = 193
-open_issues = 130
-last_commit = "2026-09-10"
+open_issues = 131
+last_commit = "2026-09-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-11T07:40:38.562958256+00:00"
+updated_at = "2026-09-12T07:34:42.302342086+00:00"
 stale = false
 
 [metrics.crate]
 name = "release-plz"
-downloads_total = 350397
-downloads_recent = 64576
+downloads_total = 351278
+downloads_recent = 64686
 latest_version = "0.3.165"
 latest_release = "2026-09-10"
 license = "MIT OR Apache-2.0"

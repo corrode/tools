@@ -20,17 +20,17 @@ alternatives = ["cargo-flamegraph", "perf"]
 [metrics]
 stars = 4414
 forks = 104
-open_issues = 111
-last_commit = "2026-09-08"
+open_issues = 105
+last_commit = "2026-09-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-11T07:40:41.322663544+00:00"
+updated_at = "2026-09-12T07:34:45.203858942+00:00"
 stale = false
 
 [metrics.crate]
 name = "samply"
-downloads_total = 132163
-downloads_recent = 10140
+downloads_total = 132313
+downloads_recent = 10239
 latest_version = "0.13.1"
 latest_release = "2025-02-01"
 msrv = "1.77"
