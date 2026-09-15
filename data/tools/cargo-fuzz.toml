@@ -26,13 +26,13 @@ open_issues = 115
 last_commit = "2026-07-20"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-14T08:26:48.295685124+00:00"
+updated_at = "2026-09-15T08:17:35.718577781+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-fuzz"
-downloads_total = 4589879
-downloads_recent = 1321205
+downloads_total = 4610564
+downloads_recent = 1331276
 latest_version = "0.13.2"
 latest_release = "2026-06-09"
 license = "MIT OR Apache-2.0"
