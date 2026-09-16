@@ -25,13 +25,13 @@ open_issues = 33
 last_commit = "2025-01-14"
 archived = true
 license = "CC0-1.0"
-updated_at = "2026-09-15T08:17:54.464020669+00:00"
+updated_at = "2026-09-16T08:11:39.705542963+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-watch"
-downloads_total = 1975321
-downloads_recent = 175186
+downloads_total = 1978085
+downloads_recent = 175935
 latest_version = "8.5.3"
 latest_release = "2024-10-02"
 msrv = "1.75.0"
