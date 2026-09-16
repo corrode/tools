@@ -25,13 +25,13 @@ open_issues = 515
 last_commit = "2026-09-14"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-15T08:18:18.014558169+00:00"
+updated_at = "2026-09-16T08:12:03.365170094+00:00"
 stale = false
 
 [metrics.crate]
 name = "sccache"
-downloads_total = 1332348
-downloads_recent = 129933
+downloads_total = 1334164
+downloads_recent = 129913
 latest_version = "0.17.0"
 latest_release = "2026-07-29"
 msrv = "1.85.0"
