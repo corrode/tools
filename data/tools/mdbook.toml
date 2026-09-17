@@ -20,17 +20,17 @@ recommended = true
 [metrics]
 stars = 22148
 forks = 1900
-open_issues = 654
+open_issues = 656
 last_commit = "2026-09-15"
 archived = false
 license = "MPL-2.0"
-updated_at = "2026-09-16T08:11:53.928073612+00:00"
+updated_at = "2026-09-17T08:18:34.824394586+00:00"
 stale = false
 
 [metrics.crate]
 name = "mdbook"
-downloads_total = 10301440
-downloads_recent = 951442
+downloads_total = 10338795
+downloads_recent = 978886
 latest_version = "0.5.4"
 latest_release = "2026-07-06"
 msrv = "1.88.0"
