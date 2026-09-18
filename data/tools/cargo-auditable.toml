@@ -24,13 +24,13 @@ open_issues = 17
 last_commit = "2026-09-13"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-17T08:17:51.263126429+00:00"
+updated_at = "2026-09-18T07:51:12.296698435+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-auditable"
-downloads_total = 1048588
-downloads_recent = 289148
+downloads_total = 1053487
+downloads_recent = 292865
 latest_version = "0.7.6"
 latest_release = "2026-09-13"
 license = "MIT OR Apache-2.0"
