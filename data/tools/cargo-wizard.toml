@@ -28,13 +28,13 @@ open_issues = 7
 last_commit = "2026-07-25"
 archived = false
 license = "MIT"
-updated_at = "2026-09-18T07:51:31.542323116+00:00"
+updated_at = "2026-09-19T07:43:39.566992690+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-wizard"
-downloads_total = 11306
-downloads_recent = 319
+downloads_total = 11307
+downloads_recent = 312
 latest_version = "0.2.3"
 latest_release = "2026-04-13"
 license = "MIT"
