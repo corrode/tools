@@ -27,13 +27,13 @@ open_issues = 222
 last_commit = "2026-04-23"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-20T08:12:00.227775937+00:00"
+updated_at = "2026-09-21T08:28:34.748641930+00:00"
 stale = false
 
 [metrics.crate]
 name = "criterion"
-downloads_total = 284473990
-downloads_recent = 58146680
+downloads_total = 285023327
+downloads_recent = 58111782
 latest_version = "0.8.2"
 latest_release = "2026-02-04"
 msrv = "1.86"
