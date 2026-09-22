@@ -21,17 +21,17 @@ related = ["cargo-bloat"]
 [metrics]
 stars = 981
 forks = 50
-open_issues = 26
-last_commit = "2026-09-11"
+open_issues = 27
+last_commit = "2026-09-21"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-21T08:28:29.588106641+00:00"
+updated_at = "2026-09-22T08:09:08.732599729+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-show-asm"
-downloads_total = 194254
-downloads_recent = 13247
+downloads_total = 194352
+downloads_recent = 13244
 latest_version = "0.2.63"
 latest_release = "2026-09-11"
 msrv = "1.88"
