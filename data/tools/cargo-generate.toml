@@ -24,17 +24,17 @@ added = "2026-06-04"
 [metrics]
 stars = 2488
 forks = 206
-open_issues = 27
-last_commit = "2026-09-18"
+open_issues = 29
+last_commit = "2026-09-21"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-21T08:28:24.578251789+00:00"
+updated_at = "2026-09-22T08:08:59.038096016+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-generate"
-downloads_total = 2426849
-downloads_recent = 304659
+downloads_total = 2431490
+downloads_recent = 305633
 latest_version = "0.25.0"
 latest_release = "2026-09-18"
 license = "MIT OR Apache-2.0"
