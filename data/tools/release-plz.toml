@@ -25,13 +25,13 @@ open_issues = 133
 last_commit = "2026-09-24"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-24T08:02:41.145256411+00:00"
+updated_at = "2026-09-25T08:27:54.102654429+00:00"
 stale = false
 
 [metrics.crate]
 name = "release-plz"
-downloads_total = 361723
-downloads_recent = 64989
+downloads_total = 362042
+downloads_recent = 64136
 latest_version = "0.3.169"
 latest_release = "2026-09-19"
 license = "MIT OR Apache-2.0"
