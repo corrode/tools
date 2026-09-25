@@ -24,13 +24,13 @@ open_issues = 74
 last_commit = "2026-07-15"
 archived = false
 license = "MIT"
-updated_at = "2026-09-24T08:02:18.230207092+00:00"
+updated_at = "2026-09-25T08:27:12.273568290+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-edit"
-downloads_total = 3614116
-downloads_recent = 454569
+downloads_total = 3618161
+downloads_recent = 456284
 latest_version = "0.13.13"
 latest_release = "2026-07-15"
 msrv = "1.92"
