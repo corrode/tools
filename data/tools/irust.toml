@@ -24,13 +24,13 @@ open_issues = 10
 last_commit = "2026-07-23"
 archived = false
 license = "MIT"
-updated_at = "2026-09-25T08:27:45.491733621+00:00"
+updated_at = "2026-09-26T08:14:32.681299802+00:00"
 stale = false
 
 [metrics.crate]
 name = "irust"
-downloads_total = 318542
-downloads_recent = 1357
+downloads_total = 318546
+downloads_recent = 1356
 latest_version = "1.77.0"
 latest_release = "2026-07-23"
 license = "MIT"
