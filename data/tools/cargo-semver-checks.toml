@@ -19,17 +19,17 @@ related = ["clippy"]
 [metrics]
 stars = 1681
 forks = 139
-open_issues = 187
-last_commit = "2026-09-21"
+open_issues = 185
+last_commit = "2026-09-28"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-27T08:50:56.459714927+00:00"
+updated_at = "2026-09-28T09:15:11.411332966+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-semver-checks"
-downloads_total = 652475
-downloads_recent = 164302
+downloads_total = 653782
+downloads_recent = 163251
 latest_version = "0.50.0"
 latest_release = "2026-08-01"
 msrv = "1.93"
