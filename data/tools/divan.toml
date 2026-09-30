@@ -26,13 +26,13 @@ open_issues = 51
 last_commit = "2026-07-19"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-09-29T09:23:20.043396697+00:00"
+updated_at = "2026-09-30T09:13:13.905924896+00:00"
 stale = false
 
 [metrics.crate]
 name = "divan"
-downloads_total = 8726796
-downloads_recent = 3634865
+downloads_total = 8801339
+downloads_recent = 3686308
 latest_version = "0.1.21"
 latest_release = "2025-04-10"
 msrv = "1.80.0"

@@ -22,16 +22,16 @@ recommended = true
 stars = 3433
 forks = 127
 open_issues = 34
-last_commit = "2026-09-26"
+last_commit = "2026-09-30"
 archived = false
 license = "AGPL-3.0"
-updated_at = "2026-09-29T09:22:44.324091416+00:00"
+updated_at = "2026-09-30T09:12:38.173968730+00:00"
 stale = false
 
 [metrics.crate]
 name = "bacon"
-downloads_total = 333271
-downloads_recent = 23119
+downloads_total = 333668
+downloads_recent = 23378
 latest_version = "3.26.0"
 latest_release = "2026-09-26"
 msrv = "1.85"
