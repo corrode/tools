@@ -28,7 +28,7 @@ open_issues = 7
 last_commit = "2026-07-25"
 archived = false
 license = "MIT"
-updated_at = "2026-10-01T09:40:35.549930822+00:00"
+updated_at = "2026-10-02T09:15:21.984242463+00:00"
 stale = false
 
 [metrics.crate]

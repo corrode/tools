@@ -30,13 +30,13 @@ open_issues = 74
 last_commit = "2026-09-06"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-01T09:40:46.864943209+00:00"
+updated_at = "2026-10-02T09:15:32.892779078+00:00"
 stale = false
 
 [metrics.crate]
 name = "rstest"
-downloads_total = 126469307
-downloads_recent = 28432423
+downloads_total = 126953215
+downloads_recent = 28779417
 latest_version = "0.27.0"
 latest_release = "2026-09-06"
 msrv = "1.85.0"
