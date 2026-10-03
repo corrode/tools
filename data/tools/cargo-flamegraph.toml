@@ -25,13 +25,13 @@ open_issues = 75
 last_commit = "2026-09-01"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-02T09:15:11.664274998+00:00"
+updated_at = "2026-10-03T08:47:06.420331273+00:00"
 stale = false
 
 [metrics.crate]
 name = "flamegraph"
-downloads_total = 1009937
-downloads_recent = 181458
+downloads_total = 1010579
+downloads_recent = 179558
 latest_version = "0.6.14"
 latest_release = "2026-08-12"
 msrv = "1.86"
