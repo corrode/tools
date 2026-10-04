@@ -24,13 +24,13 @@ open_issues = 116
 last_commit = "2026-10-02"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-03T08:47:18.681226076+00:00"
+updated_at = "2026-10-04T09:13:58.717857902+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-vet"
-downloads_total = 650692
-downloads_recent = 104682
+downloads_total = 652164
+downloads_recent = 104889
 latest_version = "0.10.2"
 latest_release = "2026-01-13"
 msrv = "1.82"
