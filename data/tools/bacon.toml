@@ -25,13 +25,13 @@ open_issues = 34
 last_commit = "2026-09-30"
 archived = false
 license = "AGPL-3.0"
-updated_at = "2026-10-03T08:46:58.625937653+00:00"
+updated_at = "2026-10-04T09:13:32.479974810+00:00"
 stale = false
 
 [metrics.crate]
 name = "bacon"
-downloads_total = 334615
-downloads_recent = 23860
+downloads_total = 334841
+downloads_recent = 23891
 latest_version = "3.26.0"
 latest_release = "2026-09-26"
 msrv = "1.85"
