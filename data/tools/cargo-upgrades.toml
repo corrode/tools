@@ -23,12 +23,12 @@ stars = 17
 forks = 8
 last_commit = "2026-07-03"
 archived = false
-updated_at = "2026-10-04T09:13:58.063905211+00:00"
+updated_at = "2026-10-05T09:54:05.790202636+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-upgrades"
-downloads_total = 84099
+downloads_total = 84127
 downloads_recent = 3243
 latest_version = "3.1.0"
 latest_release = "2026-05-11"
