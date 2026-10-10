@@ -22,19 +22,19 @@ recommended = true
 [metrics]
 stars = 3133
 forks = 79
-open_issues = 11
-last_commit = "2026-09-10"
+open_issues = 9
+last_commit = "2026-10-09"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-09T09:53:40.507230530+00:00"
+updated_at = "2026-10-10T09:17:37.767475660+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-expand"
-downloads_total = 3669882
-downloads_recent = 563656
-latest_version = "1.0.126"
-latest_release = "2026-08-19"
-msrv = "1.88"
+downloads_total = 3676846
+downloads_recent = 565451
+latest_version = "1.0.127"
+latest_release = "2026-10-09"
+msrv = "1.90"
 license = "MIT OR Apache-2.0"
 owners = ["David Tolnay"]
