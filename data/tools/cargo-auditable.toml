@@ -25,7 +25,8 @@ last_commit = "2026-10-02"
 archived = false
 license = "Apache-2.0"
 updated_at = "2026-10-13T09:57:42.336133798+00:00"
-stale = false
+stale = true
+error = "requesting https://api.github.com/repos/rust-secure-code/cargo-auditable: error sending request for url (https://api.github.com/repos/rust-secure-code/cargo-auditable): client error (SendRequest): connection closed before message completed"
 
 [metrics.crate]
 name = "cargo-auditable"

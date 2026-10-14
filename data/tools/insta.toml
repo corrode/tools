@@ -24,17 +24,17 @@ related = ["rstest"]
 [metrics]
 stars = 2973
 forks = 168
-open_issues = 77
+open_issues = 78
 last_commit = "2026-10-10"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-13T09:58:18.551953334+00:00"
+updated_at = "2026-10-14T08:18:02.766494180+00:00"
 stale = false
 
 [metrics.crate]
 name = "insta"
-downloads_total = 110900106
-downloads_recent = 31271854
+downloads_total = 111488192
+downloads_recent = 31544542
 latest_version = "1.49.0"
 latest_release = "2026-10-03"
 msrv = "1.66.0"
