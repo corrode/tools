@@ -21,17 +21,16 @@ related = ["cargo-audit"]
 stars = 863
 forks = 44
 open_issues = 18
-last_commit = "2026-10-02"
+last_commit = "2026-10-14"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-13T09:57:42.336133798+00:00"
-stale = true
-error = "requesting https://api.github.com/repos/rust-secure-code/cargo-auditable: error sending request for url (https://api.github.com/repos/rust-secure-code/cargo-auditable): client error (SendRequest): connection closed before message completed"
+updated_at = "2026-10-15T07:54:26.053176008+00:00"
+stale = false
 
 [metrics.crate]
 name = "cargo-auditable"
-downloads_total = 1200120
-downloads_recent = 379486
+downloads_total = 1215842
+downloads_recent = 384824
 latest_version = "0.7.7"
 latest_release = "2026-10-02"
 license = "MIT OR Apache-2.0"
