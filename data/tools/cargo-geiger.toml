@@ -26,13 +26,13 @@ forks = 82
 open_issues = 49
 last_commit = "2026-10-14"
 archived = false
-updated_at = "2026-10-15T07:54:36.373289989+00:00"
+updated_at = "2026-10-16T07:48:04.938980901+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-geiger"
-downloads_total = 255989
-downloads_recent = 55753
+downloads_total = 256742
+downloads_recent = 55982
 latest_version = "0.14.0"
 latest_release = "2026-10-12"
 msrv = "1.97"
