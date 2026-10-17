@@ -28,13 +28,13 @@ open_issues = 107
 last_commit = "2026-08-08"
 archived = false
 license = "MIT"
-updated_at = "2026-10-16T07:48:29.287894618+00:00"
+updated_at = "2026-10-17T07:26:00.433670446+00:00"
 stale = false
 
 [metrics.crate]
 name = "tokio-console"
-downloads_total = 533958
-downloads_recent = 32491
+downloads_total = 535102
+downloads_recent = 33533
 latest_version = "0.1.14"
 latest_release = "2025-10-30"
 msrv = "1.74.0"
