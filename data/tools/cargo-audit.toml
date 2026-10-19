@@ -24,13 +24,13 @@ forks = 204
 open_issues = 124
 last_commit = "2026-10-15"
 archived = false
-updated_at = "2026-10-18T07:40:21.682913785+00:00"
+updated_at = "2026-10-19T08:22:16.202512250+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-audit"
-downloads_total = 13434135
-downloads_recent = 3892287
+downloads_total = 13484937
+downloads_recent = 3905575
 latest_version = "0.22.2"
 latest_release = "2026-06-05"
 msrv = "1.88"
