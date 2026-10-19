@@ -26,19 +26,19 @@ added = "2026-06-04"
 [metrics]
 stars = 1593
 forks = 77
-open_issues = 75
-last_commit = "2026-09-06"
+open_issues = 72
+last_commit = "2026-10-18"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-18T07:40:48.421617794+00:00"
+updated_at = "2026-10-19T08:22:56.382665322+00:00"
 stale = false
 
 [metrics.crate]
 name = "rstest"
-downloads_total = 133333867
-downloads_recent = 31047730
-latest_version = "0.27.0"
-latest_release = "2026-09-06"
+downloads_total = 133537265
+downloads_recent = 30905518
+latest_version = "0.28.0"
+latest_release = "2026-10-18"
 msrv = "1.85.0"
 license = "MIT OR Apache-2.0"
 owners = ["Michele d'Amico"]
