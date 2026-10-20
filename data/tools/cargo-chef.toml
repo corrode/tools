@@ -26,13 +26,13 @@ open_issues = 51
 last_commit = "2026-08-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-19T08:22:19.549650443+00:00"
+updated_at = "2026-10-20T08:06:07.277233742+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-chef"
-downloads_total = 4704753
-downloads_recent = 1160182
+downloads_total = 4725901
+downloads_recent = 1168740
 latest_version = "0.1.78"
 latest_release = "2026-08-12"
 license = "Apache-2.0 OR MIT"

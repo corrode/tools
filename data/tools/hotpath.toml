@@ -30,17 +30,17 @@ added = "2026-06-04"
 [metrics]
 stars = 1895
 forks = 61
-open_issues = 7
-last_commit = "2026-10-18"
+open_issues = 10
+last_commit = "2026-10-19"
 archived = false
 license = "MIT"
-updated_at = "2026-10-19T08:22:46.560039215+00:00"
+updated_at = "2026-10-20T08:06:35.573567779+00:00"
 stale = false
 
 [metrics.crate]
 name = "hotpath"
-downloads_total = 881294
-downloads_recent = 633906
+downloads_total = 886098
+downloads_recent = 635258
 latest_version = "0.28.6"
 latest_release = "2026-10-08"
 license = "MIT"
