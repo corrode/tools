@@ -25,13 +25,13 @@ open_issues = 27
 last_commit = "2026-09-21"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-20T08:06:22.530818797+00:00"
+updated_at = "2026-10-21T08:11:34.780135380+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-show-asm"
-downloads_total = 198090
-downloads_recent = 9597
+downloads_total = 198143
+downloads_recent = 9596
 latest_version = "0.2.63"
 latest_release = "2026-09-11"
 msrv = "1.88"
