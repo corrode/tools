@@ -27,13 +27,13 @@ open_issues = 68
 last_commit = "2026-10-15"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-21T08:11:26.490554857+00:00"
+updated_at = "2026-10-22T08:12:52.609051619+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-llvm-cov"
-downloads_total = 8561887
-downloads_recent = 1842887
+downloads_total = 8588615
+downloads_recent = 1852574
 latest_version = "0.9.1"
 latest_release = "2026-09-06"
 msrv = "1.87"
