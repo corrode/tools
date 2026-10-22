@@ -29,13 +29,13 @@ open_issues = 18
 last_commit = "2024-05-10"
 archived = false
 license = "MIT"
-updated_at = "2026-10-21T08:11:16.609142558+00:00"
+updated_at = "2026-10-22T08:12:45.139901470+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-bloat"
-downloads_total = 429536
-downloads_recent = 58053
+downloads_total = 430062
+downloads_recent = 58324
 latest_version = "0.12.1"
 latest_release = "2024-05-10"
 license = "MIT"
