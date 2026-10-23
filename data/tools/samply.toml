@@ -24,13 +24,13 @@ open_issues = 116
 last_commit = "2026-10-18"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-22T08:13:22.165669784+00:00"
+updated_at = "2026-10-23T08:11:06.215000535+00:00"
 stale = false
 
 [metrics.crate]
 name = "samply"
-downloads_total = 139727
-downloads_recent = 13861
+downloads_total = 140007
+downloads_recent = 14081
 latest_version = "0.13.1"
 latest_release = "2025-02-01"
 msrv = "1.77"
