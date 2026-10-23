@@ -31,13 +31,13 @@ open_issues = 130
 last_commit = "2026-02-20"
 archived = false
 license = "MIT"
-updated_at = "2026-10-22T08:13:14.479548831+00:00"
+updated_at = "2026-10-23T08:10:57.039248191+00:00"
 stale = false
 
 [metrics.crate]
 name = "loom"
-downloads_total = 73506154
-downloads_recent = 17760380
+downloads_total = 73780276
+downloads_recent = 17948756
 latest_version = "0.7.2"
 latest_release = "2024-04-23"
 msrv = "1.65"
