@@ -20,17 +20,17 @@ alternatives = ["cargo-fuzz"]
 [metrics]
 stars = 1855
 forks = 119
-open_issues = 39
-last_commit = "2026-10-13"
+open_issues = 40
+last_commit = "2026-10-26"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-25T08:00:30.603846510+00:00"
+updated_at = "2026-10-26T08:22:30.878473831+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-afl"
-downloads_total = 224264
-downloads_recent = 35642
+downloads_total = 224436
+downloads_recent = 35462
 latest_version = "0.18.2"
 latest_release = "2026-05-11"
 license = "Apache-2.0"
