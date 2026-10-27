@@ -20,17 +20,17 @@ recommended = true
 [metrics]
 stars = 2465
 forks = 135
-open_issues = 87
-last_commit = "2026-10-21"
+open_issues = 85
+last_commit = "2026-10-26"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-26T08:22:37.204288888+00:00"
+updated_at = "2026-10-27T08:33:33.749960193+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-deny"
-downloads_total = 6765015
-downloads_recent = 2058650
+downloads_total = 6812398
+downloads_recent = 2087316
 latest_version = "0.20.2"
 latest_release = "2026-07-09"
 msrv = "1.88.0"
