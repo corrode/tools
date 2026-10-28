@@ -28,13 +28,13 @@ open_issues = 73
 last_commit = "2026-10-26"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-27T08:34:03.232167430+00:00"
+updated_at = "2026-10-28T09:12:55.548831858+00:00"
 stale = false
 
 [metrics.crate]
 name = "insta"
-downloads_total = 118371875
-downloads_recent = 34797083
+downloads_total = 119012623
+downloads_recent = 35089362
 latest_version = "1.49.0"
 latest_release = "2026-10-03"
 msrv = "1.66.0"
