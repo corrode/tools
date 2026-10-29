@@ -21,16 +21,16 @@ alternatives = ["cargo-binstall"]
 stars = 316
 forks = 22
 open_issues = 73
-last_commit = "2026-10-28"
+last_commit = "2026-10-29"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-28T09:12:43.100593162+00:00"
+updated_at = "2026-10-29T09:12:33.040762302+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-quickinstall"
-downloads_total = 511145
-downloads_recent = 13544
+downloads_total = 511281
+downloads_recent = 13584
 latest_version = "0.3.53"
 latest_release = "2026-07-12"
 license = "MIT OR Apache-2.0"

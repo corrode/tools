@@ -25,16 +25,16 @@ recommended = true
 stars = 3372
 forks = 180
 open_issues = 105
-last_commit = "2026-10-28"
+last_commit = "2026-10-29"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-28T09:12:42.031791163+00:00"
+updated_at = "2026-10-29T09:12:31.992730979+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-nextest"
-downloads_total = 13493871
-downloads_recent = 1825025
+downloads_total = 13515394
+downloads_recent = 1824347
 latest_version = "0.9.150"
 latest_release = "2026-10-26"
 msrv = "1.91"
