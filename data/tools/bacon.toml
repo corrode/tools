@@ -26,7 +26,8 @@ last_commit = "2026-10-17"
 archived = false
 license = "AGPL-3.0"
 updated_at = "2026-10-29T09:12:20.834842688+00:00"
-stale = false
+stale = true
+error = "requesting https://crates.io/api/v1/crates/bacon: error sending request for url (https://crates.io/api/v1/crates/bacon): client error (Connect): dns error: failed to lookup address information: Temporary failure in name resolution"
 
 [metrics.crate]
 name = "bacon"
