@@ -30,13 +30,13 @@ open_issues = 54
 last_commit = "2026-10-08"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-30T09:26:36.642983351+00:00"
+updated_at = "2026-10-31T09:10:41.935183580+00:00"
 stale = false
 
 [metrics.crate]
 name = "mockall"
-downloads_total = 185901230
-downloads_recent = 33220737
+downloads_total = 186412546
+downloads_recent = 33586774
 latest_version = "0.15.0"
 latest_release = "2026-06-28"
 msrv = "1.77.0"

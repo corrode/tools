@@ -24,13 +24,13 @@ open_issues = 121
 last_commit = "2026-10-24"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-30T09:26:28.783282842+00:00"
+updated_at = "2026-10-31T09:10:36.887064971+00:00"
 stale = false
 
 [metrics.crate]
 name = "git-cliff"
-downloads_total = 357168
-downloads_recent = 50916
+downloads_total = 357560
+downloads_recent = 50864
 latest_version = "2.14.2"
 latest_release = "2026-09-18"
 msrv = "1.88.0"
