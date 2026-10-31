@@ -24,7 +24,8 @@ forks = 8
 last_commit = "2026-07-03"
 archived = false
 updated_at = "2026-10-30T09:26:19.939867741+00:00"
-stale = false
+stale = true
+error = "GitLab returned an error for kornelski/cargo-upgrades: HTTP status client error (429 Too Many Requests) for url (https://gitlab.com/api/v4/projects/kornelski%2Fcargo-upgrades?license=true)"
 
 [metrics.crate]
 name = "cargo-upgrades"

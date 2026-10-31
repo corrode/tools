@@ -23,9 +23,9 @@ recommended = true
 [metrics]
 stars = 6707
 forks = 542
-open_issues = 196
+open_issues = 195
 last_commit = "2026-10-30"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-30T09:26:35.749391356+00:00"
+updated_at = "2026-10-31T09:10:41.432337363+00:00"
 stale = false
