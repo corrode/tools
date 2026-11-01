@@ -23,17 +23,17 @@ related = ["cargo-mutants"]
 [metrics]
 stars = 1486
 forks = 98
-open_issues = 68
-last_commit = "2026-10-15"
+open_issues = 67
+last_commit = "2026-10-31"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-10-31T09:10:24.076243470+00:00"
+updated_at = "2026-11-01T09:57:48.557157023+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-llvm-cov"
-downloads_total = 8830228
-downloads_recent = 1928969
+downloads_total = 8849092
+downloads_recent = 1925302
 latest_version = "0.9.1"
 latest_release = "2026-09-06"
 msrv = "1.87"

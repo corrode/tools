@@ -23,14 +23,13 @@ stars = 17
 forks = 8
 last_commit = "2026-07-03"
 archived = false
-updated_at = "2026-10-30T09:26:19.939867741+00:00"
-stale = true
-error = "GitLab returned an error for kornelski/cargo-upgrades: HTTP status client error (429 Too Many Requests) for url (https://gitlab.com/api/v4/projects/kornelski%2Fcargo-upgrades?license=true)"
+updated_at = "2026-11-01T09:58:00.786190097+00:00"
+stale = false
 
 [metrics.crate]
 name = "cargo-upgrades"
-downloads_total = 85552
-downloads_recent = 3607
+downloads_total = 85658
+downloads_recent = 3661
 latest_version = "3.1.0"
 latest_release = "2026-05-11"
 msrv = "1.92"
