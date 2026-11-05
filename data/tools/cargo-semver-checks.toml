@@ -23,13 +23,13 @@ open_issues = 193
 last_commit = "2026-11-02"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-03T10:23:22.798816595+00:00"
+updated_at = "2026-11-05T10:11:29.261992348+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-semver-checks"
-downloads_total = 716434
-downloads_recent = 168742
+downloads_total = 720429
+downloads_recent = 169554
 latest_version = "0.51.0"
 latest_release = "2026-10-03"
 msrv = "1.93"

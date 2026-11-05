@@ -24,13 +24,13 @@ open_issues = 92
 last_commit = "2026-02-05"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-03T10:23:16.619718254+00:00"
+updated_at = "2026-11-05T10:11:23.645603094+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-make"
-downloads_total = 3814510
-downloads_recent = 254328
+downloads_total = 3820679
+downloads_recent = 253642
 latest_version = "0.37.24"
 latest_release = "2025-01-18"
 license = "Apache-2.0"
