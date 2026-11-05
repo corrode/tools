@@ -27,16 +27,16 @@ added = "2026-06-04"
 stars = 1851
 forks = 83
 open_issues = 54
-last_commit = "2026-10-08"
+last_commit = "2026-11-03"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-03T10:23:46.075431738+00:00"
+updated_at = "2026-11-05T10:11:52.634049022+00:00"
 stale = false
 
 [metrics.crate]
 name = "mockall"
-downloads_total = 187387266
-downloads_recent = 33357229
+downloads_total = 188657748
+downloads_recent = 33842202
 latest_version = "0.15.0"
 latest_release = "2026-06-28"
 msrv = "1.77.0"
