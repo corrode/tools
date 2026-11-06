@@ -30,18 +30,18 @@ added = "2026-06-04"
 [metrics]
 stars = 1917
 forks = 64
-open_issues = 6
-last_commit = "2026-11-04"
+open_issues = 5
+last_commit = "2026-11-06"
 archived = false
 license = "MIT"
-updated_at = "2026-11-05T10:11:44.825506257+00:00"
+updated_at = "2026-11-06T10:14:56.256886506+00:00"
 stale = false
 
 [metrics.crate]
 name = "hotpath"
-downloads_total = 1135720
-downloads_recent = 791695
-latest_version = "0.31.0"
-latest_release = "2026-11-03"
+downloads_total = 1177520
+downloads_recent = 826598
+latest_version = "0.31.1"
+latest_release = "2026-11-06"
 license = "MIT"
 owners = ["Paweł Urbanek"]
