@@ -28,13 +28,13 @@ open_issues = 25
 last_commit = "2026-11-05"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-07T09:30:38.210591857+00:00"
+updated_at = "2026-11-08T09:46:33.904766792+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-generate"
-downloads_total = 2638555
-downloads_recent = 362738
+downloads_total = 2641386
+downloads_recent = 361593
 latest_version = "0.26.0"
 latest_release = "2026-10-30"
 license = "MIT OR Apache-2.0"
