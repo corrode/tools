@@ -26,13 +26,13 @@ open_issues = 28
 last_commit = "2026-11-06"
 archived = false
 license = "MIT"
-updated_at = "2026-11-07T09:30:39.612585211+00:00"
+updated_at = "2026-11-08T09:46:36.115231579+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-machete"
-downloads_total = 3259287
-downloads_recent = 630670
+downloads_total = 3265128
+downloads_recent = 630211
 latest_version = "0.9.2"
 latest_release = "2026-04-15"
 license = "MIT"
