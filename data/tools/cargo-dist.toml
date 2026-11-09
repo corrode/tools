@@ -21,17 +21,17 @@ alternatives = ["release-plz", "cargo-release"]
 [metrics]
 stars = 2147
 forks = 156
-open_issues = 349
-last_commit = "2026-11-02"
+open_issues = 341
+last_commit = "2026-11-09"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-08T09:46:26.992220864+00:00"
+updated_at = "2026-11-09T10:46:12.681859617+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-dist"
-downloads_total = 188847
-downloads_recent = 19105
+downloads_total = 189026
+downloads_recent = 19125
 latest_version = "0.34.0"
 latest_release = "2026-11-02"
 msrv = "1.74"
