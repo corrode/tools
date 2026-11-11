@@ -26,13 +26,13 @@ open_issues = 17
 last_commit = "2020-06-04"
 archived = true
 license = "Apache-2.0"
-updated_at = "2026-11-10T10:40:43.664043051+00:00"
+updated_at = "2026-11-11T10:09:10.009857941+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-tree"
-downloads_total = 243293
-downloads_recent = 7100
+downloads_total = 243326
+downloads_recent = 7001
 latest_version = "0.29.0"
 latest_release = "2020-01-30"
 license = "MIT OR Apache-2.0"
