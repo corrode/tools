@@ -21,18 +21,18 @@ recommended = true
 [metrics]
 stars = 1990
 forks = 211
-open_issues = 114
-last_commit = "2026-11-09"
+open_issues = 110
+last_commit = "2026-11-11"
 archived = false
-updated_at = "2026-11-10T10:40:29.251528736+00:00"
+updated_at = "2026-11-11T10:08:52.461974667+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-audit"
-downloads_total = 14748116
-downloads_recent = 4321017
-latest_version = "0.22.2"
-latest_release = "2026-06-05"
+downloads_total = 14812581
+downloads_recent = 4343480
+latest_version = "0.23.0"
+latest_release = "2026-11-10"
 msrv = "1.88"
 license = "Apache-2.0 OR MIT"
 owners = ["Alex Gaynor", "Tony Arcieri", "Dirkjan Ochtman", 'Sergey "Shnatsel" Davidoff', "Working Group"]
