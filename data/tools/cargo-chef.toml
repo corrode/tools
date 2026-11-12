@@ -22,17 +22,17 @@ recommended = true
 [metrics]
 stars = 2747
 forks = 149
-open_issues = 52
+open_issues = 53
 last_commit = "2026-08-12"
 archived = false
 license = "Apache-2.0"
-updated_at = "2026-11-11T10:08:55.477765553+00:00"
+updated_at = "2026-11-12T10:31:57.911165096+00:00"
 stale = false
 
 [metrics.crate]
 name = "cargo-chef"
-downloads_total = 5137483
-downloads_recent = 1336004
+downloads_total = 5157771
+downloads_recent = 1345145
 latest_version = "0.1.78"
 latest_release = "2026-08-12"
 license = "Apache-2.0 OR MIT"
